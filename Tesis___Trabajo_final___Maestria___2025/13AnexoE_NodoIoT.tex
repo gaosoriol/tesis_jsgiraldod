@@ -1,0 +1,1000 @@
+\chapter{Anexo E: Implementación Nodo IoT de Referencia}
+\label{anexo:nodo}
+
+Este anexo documenta la implementación de referencia de un nodo IoT sensor basado en ESP32-C6, utilizando el protocolo LwM2M (Lightweight M2M) sobre Thread, con integración a ThingsBoard Edge vía el gateway. El código fuente completo está disponible en el repositorio \texttt{jsebgiraldo/Tesis-app} en la ruta \texttt{projects/lwm2m/esp-idf/thingsboard\_lwm2m\_temperature\_humidity}.
+
+\section{Arquitectura del Nodo}
+
+\subsection{Hardware}
+
+\begin{itemize}
+    \item \textbf{MCU}: ESP32-C6 (RISC-V, 160 MHz, 512 KB SRAM)
+    \item \textbf{Radio}: IEEE 802.15.4 (Thread 1.3) integrado
+    \item \textbf{Sensores}: DHT22 simulado (temperatura/humedad)
+    \item \textbf{Alimentación}: Batería Li-Ion 18650 3.7V + regulador 3.3V
+    \item \textbf{Modos de bajo consumo}: Deep sleep (<20 µA), light sleep (~800 µA)
+\end{itemize}
+
+\subsection{Stack de Software}
+
+\begin{itemize}
+    \item \textbf{Framework}: ESP-IDF 5.1+ (FreeRTOS)
+    \item \textbf{Pila Thread}: OpenThread (Joiner commissioning)
+    \item \textbf{Pila LwM2M}: AVSystems Anjay 3.x (cliente LwM2M 1.1)
+    \item \textbf{Objetos IPSO}: Temperature (3303), Humidity (3304)
+    \item \textbf{Objetos LwM2M}: Device (3), Connectivity Monitoring (4), Location (6)
+    \item \textbf{Transporte}: CoAP sobre UDP/IPv6 (Thread)
+\end{itemize}
+
+\section{Código Principal}
+
+\subsection{main.c}
+
+Punto de entrada de la aplicación con inicialización de subsistemas:
+
+\begin{verbatim}
+#include <stdio.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_log.h"
+#include "nvs_flash.h"
+#include "esp_sleep.h"
+#include "driver/gpio.h"
+
+// Módulos locales
+#include "wifi_provisioning.h"
+#include "thread_prov.h"
+#include "led_status.h"
+
+void lwm2m_client_start(void);
+
+static const char *TAG = "lwm2m_main";
+
+// GPIO para botón de factory reset (ESP32-C6: GPIO9 típico)
+#define CONFIG_BOARD_BOOT_BUTTON_GPIO 9
+#define CONFIG_FACTORY_RESET_HOLD_MS 5000
+
+static inline bool is_deep_sleep_wake_capable_gpio(gpio_num_t gpio)
+{
+    // En ESP32-C6, GPIO0-GPIO7 son LP GPIOs (wake from deep sleep)
+    return (gpio >= GPIO_NUM_0 && gpio <= GPIO_NUM_7);
+}
+
+static void factory_reset_task(void* arg)
+{
+    const gpio_num_t btn = (gpio_num_t)CONFIG_BOARD_BOOT_BUTTON_GPIO;
+    const TickType_t hold_ticks = pdMS_TO_TICKS(CONFIG_FACTORY_RESET_HOLD_MS);
+    
+    gpio_config_t io_conf = {
+        .pin_bit_mask = (1ULL << btn),
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_ENABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    gpio_config(&io_conf);
+    
+    while (1) {
+        if (gpio_get_level(btn) == 0) {  // Botón presionado (activo bajo)
+            TickType_t press_start = xTaskGetTickCount();
+            
+            while (gpio_get_level(btn) == 0) {
+                TickType_t elapsed = xTaskGetTickCount() - press_start;
+                if (elapsed >= hold_ticks) {
+                    ESP_LOGW(TAG, "Factory reset triggered! Erasing NVS...");
+                    
+                    // Parpadeo LED rápido para indicar reset
+                    led_status_factory_reset();
+                    
+                    // Borrar partición NVS
+                    nvs_flash_erase();
+                    nvs_flash_init();
+                    
+                    ESP_LOGW(TAG, "Factory reset complete. Rebooting...");
+                    vTaskDelay(pdMS_TO_TICKS(1000));
+                    esp_restart();
+                }
+                vTaskDelay(pdMS_TO_TICKS(100));
+            }
+        }
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
+}
+
+void app_main(void)
+{
+    ESP_LOGI(TAG, "=== LwM2M Temperature/Humidity Node ===");
+    ESP_LOGI(TAG, "ESP-IDF version: %s", esp_get_idf_version());
+    
+    // Inicializar NVS (almacenamiento persistente)
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || 
+        ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
+    
+    // Inicializar LED de estado
+    led_status_init();
+    led_status_set(LED_STATUS_BOOTING);
+    
+    // Iniciar tarea de factory reset en background
+    xTaskCreate(factory_reset_task, "factory_rst", 2048, NULL, 
+                tskIDLE_PRIORITY + 1, NULL);
+    
+#if CONFIG_LWM2M_NETWORK_USE_THREAD
+    ESP_LOGI(TAG, "Starting Thread Provisioning...");
+    thread_provisioning_init();
+    
+    ESP_LOGI(TAG, "Waiting for Thread network attachment...");
+    thread_provisioning_wait_connected();
+    
+    ESP_LOGI(TAG, "Thread connected! Starting LwM2M client...");
+    led_status_set(LED_STATUS_CONNECTED);
+    lwm2m_client_start();
+    
+#elif CONFIG_LWM2M_NETWORK_USE_WIFI
+    ESP_LOGI(TAG, "Starting WiFi Provisioning...");
+    wifi_provisioning_init();
+    
+    ESP_LOGI(TAG, "Waiting for WiFi connection...");
+    wifi_provisioning_wait_connected();
+    
+    ESP_LOGI(TAG, "WiFi connected! Starting LwM2M client...");
+    led_status_set(LED_STATUS_CONNECTED);
+    lwm2m_client_start();
+    
+#else
+    ESP_LOGE(TAG, "No network backend enabled. "
+                  "Enable Thread or WiFi in menuconfig.");
+    led_status_set(LED_STATUS_ERROR);
+#endif
+}
+\end{verbatim}
+
+\section{Cliente LwM2M}
+
+\subsection{lwm2m\_client.c (fragmento principal)}
+
+Cliente Anjay con registro de objetos IPSO y manejo de eventos:
+
+\begin{verbatim}
+#include "sdkconfig.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_log.h"
+#include "esp_event.h"
+#include "esp_system.h"
+#include "esp_wifi.h"
+#include "esp_netif.h"
+#include <string.h>
+#include <stdlib.h>
+
+// Objetos LwM2M
+#include "device_object.h"
+#include "firmware_update.h"
+#include "temp_object.h"
+#include "humidity_object.h"
+#include "onoff_object.h"
+#include "connectivity_object.h"
+#include "location_object.h"
+
+// AVSystems Anjay
+#include <anjay/anjay.h>
+#include <anjay/security.h>
+#include <anjay/server.h>
+#include <avsystem/commons/avs_time.h>
+#include <avsystem/commons/avs_log.h>
+
+static const char *TAG = "lwm2m_client";
+
+// Endpoint name (único por dispositivo, basado en MAC)
+static char g_endpoint_name[32] = {0};
+
+static void resolve_endpoint_name(void)
+{
+    if (strlen(g_endpoint_name) > 0) {
+        return;  // Ya resuelto
+    }
+    
+#ifdef CONFIG_LWM2M_ENDPOINT_NAME
+    strncpy(g_endpoint_name, CONFIG_LWM2M_ENDPOINT_NAME, 
+            sizeof(g_endpoint_name) - 1);
+#else
+    // Generar desde MAC address
+    uint8_t mac[6];
+    esp_efuse_mac_get_default(mac);
+    snprintf(g_endpoint_name, sizeof(g_endpoint_name),
+             "esp32c6_%02x%02x%02x", mac[3], mac[4], mac[5]);
+#endif
+}
+
+static int setup_security(anjay_t *anjay)
+{
+    // Servidor LwM2M (ThingsBoard Edge en gateway Thread)
+    const anjay_security_instance_t security = {
+        .ssid = 123,  // Server Short ID
+        .server_uri = CONFIG_LWM2M_SERVER_URI,  // coap://[fd00::1]:5683
+        .security_mode = ANJAY_SECURITY_NOSEC,  // Sin DTLS (red Thread confiable)
+        .bootstrap_server = false
+    };
+    
+    anjay_iid_t security_iid = ANJAY_ID_INVALID;
+    int result = anjay_security_object_add_instance(anjay, &security, 
+                                                     &security_iid);
+    if (result) {
+        ESP_LOGE(TAG, "Failed to add Security instance: %d", result);
+        return result;
+    }
+    
+    ESP_LOGI(TAG, "Security object configured: URI=%s SSID=%d",
+             security.server_uri, security.ssid);
+    return 0;
+}
+
+static int setup_server(anjay_t *anjay)
+{
+    const anjay_server_instance_t server = {
+        .ssid = 123,
+        .lifetime = 300,             // 5 min
+        .default_min_period = 1,     // Notificaciones: mín 1s
+        .default_max_period = -1,    // Servidor define máximo
+        .disable_timeout = -1,
+        .binding = "U"               // UDP
+    };
+    
+    anjay_iid_t server_iid = ANJAY_ID_INVALID;
+    int result = anjay_server_object_add_instance(anjay, &server, 
+                                                   &server_iid);
+    if (result) {
+        ESP_LOGE(TAG, "Failed to add Server instance: %d", result);
+        return result;
+    }
+    
+    ESP_LOGI(TAG, "Server object configured: Lifetime=%ds Binding=%s",
+             server.lifetime, server.binding);
+    return 0;
+}
+
+static void lwm2m_client_task(void *arg)
+{
+    avs_log_set_default_level(AVS_LOG_DEBUG);
+    
+    const anjay_dm_object_def_t **dev_obj = NULL;
+    const anjay_dm_object_def_t **loc_obj = NULL;
+    
+    resolve_endpoint_name();
+    ESP_LOGI(TAG, "LwM2M Endpoint: %s", g_endpoint_name);
+    
+    // Configuración Anjay
+    anjay_configuration_t cfg = {
+        .endpoint_name = g_endpoint_name,
+        .in_buffer_size = CONFIG_LWM2M_IN_BUFFER_SIZE,   // 4096
+        .out_buffer_size = CONFIG_LWM2M_OUT_BUFFER_SIZE, // 4096
+        .msg_cache_size = CONFIG_LWM2M_MSG_CACHE_SIZE,   // 4096
+    };
+    
+#ifdef ANJAY_WITH_LWM2M11
+    // Forzar LwM2M 1.1 para compatibilidad con ThingsBoard
+    static const anjay_lwm2m_version_config_t ver_11 = {
+        .minimum_version = ANJAY_LWM2M_VERSION_1_1,
+        .maximum_version = ANJAY_LWM2M_VERSION_1_1
+    };
+    cfg.lwm2m_version_config = &ver_11;
+#endif
+    
+    anjay_t *anjay = anjay_new(&cfg);
+    if (!anjay) {
+        ESP_LOGE(TAG, "Could not create Anjay instance");
+        vTaskDelete(NULL);
+    }
+    
+    // Instalar objetos Security/Server
+    if (anjay_security_object_install(anjay) || 
+        anjay_server_object_install(anjay)) {
+        ESP_LOGE(TAG, "Could not install Security/Server objects");
+        goto cleanup;
+    }
+    
+    if (setup_security(anjay) || setup_server(anjay)) {
+        goto cleanup;
+    }
+    
+    // Registrar objetos IPSO
+    if (anjay_register_object(anjay, temp_object_def())) {
+        ESP_LOGE(TAG, "Could not register Temperature (3303)");
+        goto cleanup;
+    }
+    
+    if (anjay_register_object(anjay, humidity_object_def())) {
+        ESP_LOGE(TAG, "Could not register Humidity (3304)");
+        goto cleanup;
+    }
+    
+    if (anjay_register_object(anjay, connectivity_object_def())) {
+        ESP_LOGE(TAG, "Could not register Connectivity (4)");
+        goto cleanup;
+    }
+    
+    // Registrar objeto Device (3)
+    dev_obj = device_object_create(g_endpoint_name);
+    if (!dev_obj || anjay_register_object(anjay, dev_obj)) {
+        ESP_LOGE(TAG, "Could not register Device (3)");
+        goto cleanup;
+    }
+    
+    // Registrar objeto Location (6)
+    loc_obj = location_object_create();
+    if (!loc_obj || anjay_register_object(anjay, loc_obj)) {
+        ESP_LOGE(TAG, "Could not register Location (6)");
+        goto cleanup;
+    }
+    
+    ESP_LOGI(TAG, "Starting Anjay event loop");
+    
+    // Notificar objetos al servidor al inicio
+    anjay_notify_instances_changed(anjay, 3303);  // Temperature
+    anjay_notify_instances_changed(anjay, 3304);  // Humidity
+    anjay_notify_instances_changed(anjay, 4);     // Connectivity
+    
+    // Instalar Firmware Update (OTA)
+    ESP_LOGI(TAG, "Installing Firmware Update object...");
+    int fw_result = fw_update_install(anjay);
+    if (fw_result) {
+        ESP_LOGW(TAG, "Firmware Update install failed: %d", fw_result);
+    } else {
+        ESP_LOGI(TAG, "Firmware Update object ready");
+    }
+    
+    // Loop principal
+    const avs_time_duration_t max_wait = 
+        avs_time_duration_from_scalar(100, AVS_TIME_MS);
+    
+    while (1) {
+        anjay_event_loop_run(anjay, max_wait);
+        
+        // Actualizar objetos cada 100ms
+        device_object_update(anjay, dev_obj);
+        temp_object_update(anjay);
+        humidity_object_update(anjay);
+        onoff_object_update(anjay);
+        connectivity_object_update(anjay);
+        location_object_update(anjay, loc_obj);
+        
+        // Verificar si hay OTA pendiente
+        if (fw_update_requested()) {
+            ESP_LOGW(TAG, "Firmware update ready, rebooting...");
+            vTaskDelay(pdMS_TO_TICKS(1000));
+            fw_update_reboot();
+        }
+    }
+    
+cleanup:
+    if (dev_obj) device_object_release(dev_obj);
+    if (loc_obj) location_object_release(loc_obj);
+    anjay_delete(anjay);
+    vTaskDelete(NULL);
+}
+
+void lwm2m_client_start(void)
+{
+    xTaskCreate(lwm2m_client_task, "lwm2m", 
+                CONFIG_LWM2M_TASK_STACK_SIZE,  // 8192
+                NULL, tskIDLE_PRIORITY + 2, NULL);
+}
+\end{verbatim}
+
+\section{Objetos IPSO}
+
+\subsection{temp\_object.c}
+
+Implementación del objeto Temperature (3303):
+
+\begin{verbatim}
+#include "temp_object.h"
+#include <math.h>
+#include <stdbool.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <anjay/io.h>
+#include <esp_log.h>
+
+#define OID_TEMPERATURE 3303
+#define IID_DEFAULT 0
+
+// Resource IDs (según OMA SpecWorks IPSO)
+#define RID_SENSOR_VALUE 5700
+#define RID_SENSOR_UNITS 5701
+#define RID_MIN_MEASURED 5601
+#define RID_MAX_MEASURED 5602
+#define RID_RESET_MIN_MAX 5605
+
+#define TEMP_SAMPLE_INTERVAL_MS 1000
+#define TEMP_DELTA_EPS 0.01f
+
+static const char *TAG = "temp_obj";
+
+// Estado interno
+static float g_current_value = 0.0f;
+static float g_min_measured = 100.0f;
+static float g_max_measured = -100.0f;
+static TickType_t g_last_sample_tick = 0;
+
+static float read_temperature_sensor(void)
+{
+    // Simulación: senoidal 20-30°C con ruido
+    TickType_t ticks = xTaskGetTickCount();
+    float base = 25.0f;
+    float phase = (float)(ticks % 10000) / 250.0f;
+    float delta = 5.0f * sinf(phase);
+    float noise = ((float)(esp_random() % 100) / 1000.0f) - 0.05f;
+    
+    return base + delta + noise;
+}
+
+static void ensure_sample(void)
+{
+    if (g_last_sample_tick == 0) {
+        float value = read_temperature_sensor();
+        g_current_value = value;
+        g_min_measured = value;
+        g_max_measured = value;
+        g_last_sample_tick = xTaskGetTickCount();
+        
+        ESP_LOGD(TAG, "init sample: value=%.3fC min=%.3f max=%.3f",
+                 g_current_value, g_min_measured, g_max_measured);
+    }
+}
+
+static int temp_list_instances(anjay_t *anjay,
+                               const anjay_dm_object_def_t *const *def,
+                               anjay_dm_list_ctx_t *ctx) {
+    (void) anjay; (void) def;
+    anjay_dm_emit(ctx, IID_DEFAULT);
+    return 0;
+}
+
+static int temp_list_resources(anjay_t *anjay,
+                               const anjay_dm_object_def_t *const *def,
+                               anjay_iid_t iid,
+                               anjay_dm_resource_list_ctx_t *ctx) {
+    (void) anjay; (void) def; (void) iid;
+    anjay_dm_emit_res(ctx, RID_MIN_MEASURED, ANJAY_DM_RES_R, 
+                      ANJAY_DM_RES_PRESENT);
+    anjay_dm_emit_res(ctx, RID_MAX_MEASURED, ANJAY_DM_RES_R, 
+                      ANJAY_DM_RES_PRESENT);
+    anjay_dm_emit_res(ctx, RID_RESET_MIN_MAX, ANJAY_DM_RES_E, 
+                      ANJAY_DM_RES_PRESENT);
+    anjay_dm_emit_res(ctx, RID_SENSOR_VALUE, ANJAY_DM_RES_R, 
+                      ANJAY_DM_RES_PRESENT);
+    anjay_dm_emit_res(ctx, RID_SENSOR_UNITS, ANJAY_DM_RES_R, 
+                      ANJAY_DM_RES_PRESENT);
+    return 0;
+}
+
+static int temp_read(anjay_t *anjay,
+                     const anjay_dm_object_def_t *const *def,
+                     anjay_iid_t iid,
+                     anjay_rid_t rid,
+                     anjay_riid_t riid,
+                     anjay_output_ctx_t *ctx) {
+    (void) anjay; (void) def; (void) iid; (void) riid;
+    ensure_sample();
+    
+    switch (rid) {
+    case RID_SENSOR_VALUE:
+        ESP_LOGD(TAG, "read Temperature -> %.3f C", g_current_value);
+        return anjay_ret_float(ctx, g_current_value);
+    
+    case RID_SENSOR_UNITS:
+        return anjay_ret_string(ctx, "Cel");  // Celsius
+    
+    case RID_MIN_MEASURED:
+        ESP_LOGD(TAG, "read Min -> %.3f C", g_min_measured);
+        return anjay_ret_float(ctx, g_min_measured);
+    
+    case RID_MAX_MEASURED:
+        ESP_LOGD(TAG, "read Max -> %.3f C", g_max_measured);
+        return anjay_ret_float(ctx, g_max_measured);
+    
+    default:
+        return ANJAY_ERR_METHOD_NOT_ALLOWED;
+    }
+}
+
+static int temp_execute(anjay_t *anjay,
+                        const anjay_dm_object_def_t *const *def,
+                        anjay_iid_t iid,
+                        anjay_rid_t rid,
+                        anjay_execute_ctx_t *ctx) {
+    (void) anjay; (void) def; (void) iid; (void) ctx;
+    
+    if (rid == RID_RESET_MIN_MAX) {
+        ESP_LOGI(TAG, "Resetting min/max values");
+        g_min_measured = g_current_value;
+        g_max_measured = g_current_value;
+        
+        // Notificar cambios al servidor
+        anjay_notify_changed(anjay, OID_TEMPERATURE, IID_DEFAULT, 
+                             RID_MIN_MEASURED);
+        anjay_notify_changed(anjay, OID_TEMPERATURE, IID_DEFAULT, 
+                             RID_MAX_MEASURED);
+        return 0;
+    }
+    
+    return ANJAY_ERR_METHOD_NOT_ALLOWED;
+}
+
+static const anjay_dm_object_def_t OBJ_DEF = {
+    .oid = OID_TEMPERATURE,
+    .version = "1.1",
+    .handlers = {
+        .list_instances = temp_list_instances,
+        .list_resources = temp_list_resources,
+        .resource_read = temp_read,
+        .resource_execute = temp_execute
+    }
+};
+
+static const anjay_dm_object_def_t *const OBJ_DEF_PTR = &OBJ_DEF;
+
+const anjay_dm_object_def_t *const *temp_object_def(void) {
+    ensure_sample();
+    return &OBJ_DEF_PTR;
+}
+
+void temp_object_update(anjay_t *anjay) {
+    if (!anjay) {
+        return;
+    }
+    
+    TickType_t now = xTaskGetTickCount();
+    if (g_last_sample_tick == 0 || 
+        (now - g_last_sample_tick) >= pdMS_TO_TICKS(TEMP_SAMPLE_INTERVAL_MS)) {
+        
+        g_last_sample_tick = now;
+        bool min_changed = false;
+        bool max_changed = false;
+        
+        float new_value = read_temperature_sensor();
+        
+        // Actualizar min/max
+        if (new_value < g_min_measured) {
+            g_min_measured = new_value;
+            min_changed = true;
+        }
+        if (new_value > g_max_measured) {
+            g_max_measured = new_value;
+            max_changed = true;
+        }
+        
+        // Solo notificar si cambió significativamente
+        if (fabsf(new_value - g_current_value) > TEMP_DELTA_EPS) {
+            ESP_LOGD(TAG, "Temperature changed: %.3f -> %.3f C",
+                     g_current_value, new_value);
+            g_current_value = new_value;
+            anjay_notify_changed(anjay, OID_TEMPERATURE, IID_DEFAULT, 
+                                 RID_SENSOR_VALUE);
+        }
+        
+        if (min_changed) {
+            anjay_notify_changed(anjay, OID_TEMPERATURE, IID_DEFAULT, 
+                                 RID_MIN_MEASURED);
+        }
+        if (max_changed) {
+            anjay_notify_changed(anjay, OID_TEMPERATURE, IID_DEFAULT, 
+                                 RID_MAX_MEASURED);
+        }
+    }
+}
+\end{verbatim}
+
+\subsection{humidity\_object.c}
+
+Implementación del objeto Humidity (3304), análogo a Temperature:
+
+\begin{verbatim}
+#include "humidity_object.h"
+#include <math.h>
+#include <stdbool.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <anjay/io.h>
+#include <esp_log.h>
+
+#define OID_HUMIDITY 3304
+#define IID_DEFAULT 0
+#define RID_SENSOR_VALUE 5700
+#define RID_SENSOR_UNITS 5701
+#define RID_MIN_MEASURED 5601
+#define RID_MAX_MEASURED 5602
+#define RID_RESET_MIN_MAX 5605
+
+#define HUM_SAMPLE_INTERVAL_MS 1000
+#define HUM_DELTA_EPS 0.01f
+
+static const char *TAG = "humid_obj";
+
+static float g_current_value = 0.0f;
+static float g_min_measured = 100.0f;
+static float g_max_measured = 0.0f;
+static TickType_t g_last_sample_tick = 0;
+
+static float read_humidity_sensor(void)
+{
+    // Simulación: senoidal 45-75%RH
+    TickType_t ticks = xTaskGetTickCount();
+    float base = 55.0f;
+    float phase = (float)(ticks % 12000) / 300.0f;
+    float delta = 10.0f * sinf(phase);
+    float noise = ((float)(esp_random() % 100) / 1000.0f) - 0.05f;
+    
+    float value = base + delta + noise;
+    
+    // Clamp 0-100%
+    if (value < 0.0f) value = 0.0f;
+    if (value > 100.0f) value = 100.0f;
+    
+    return value;
+}
+
+// [Resto de funciones similar a temp_object.c]
+// list_instances, list_resources, resource_read, resource_execute
+// con lógica adaptada para humedad
+
+static const anjay_dm_object_def_t OBJ_DEF = {
+    .oid = OID_HUMIDITY,
+    .version = "1.1",
+    .handlers = {
+        .list_instances = hum_list_instances,
+        .list_resources = hum_list_resources,
+        .resource_read = hum_read,
+        .resource_execute = hum_execute
+    }
+};
+
+// Implementaciones análogas...
+\end{verbatim}
+
+\section{Objetos LwM2M Core}
+
+\subsection{device\_object.c (fragmento)}
+
+Objeto Device (3) con métricas del dispositivo:
+
+\begin{verbatim}
+#include "device_object.h"
+#include "sdkconfig.h"
+#include <anjay/anjay.h>
+#include <anjay/io.h>
+#include <esp_system.h>
+#include <esp_log.h>
+#include <esp_heap_caps.h>
+#include <esp_idf_version.h>
+
+#define RID_MANUFACTURER 0
+#define RID_MODEL_NUMBER 1
+#define RID_SERIAL_NUMBER 2
+#define RID_FIRMWARE_VERSION 3
+#define RID_REBOOT 4
+#define RID_BATTERY_LEVEL 9
+#define RID_MEMORY_FREE 10
+#define RID_ERROR_CODE 11
+#define RID_CURRENT_TIME 13
+
+#define DEVICE_MANUFACTURER "Universidad Nacional"
+#define DEVICE_MODEL "ESP32-C6 LwM2M Node"
+#define DEVICE_TYPE "Temperature/Humidity Sensor"
+
+static const char *TAG = "device_obj";
+
+typedef struct {
+    const anjay_dm_object_def_t *def;
+    char serial_number[32];
+    int32_t battery_level;
+    int32_t power_voltage_mv;
+    int32_t power_current_ma;
+    TickType_t last_update_tick;
+    bool do_reboot;
+} device_object_t;
+
+static int resource_read(anjay_t *anjay,
+                         const anjay_dm_object_def_t *const *obj_ptr,
+                         anjay_iid_t iid,
+                         anjay_rid_t rid,
+                         anjay_riid_t riid,
+                         anjay_output_ctx_t *ctx) {
+    device_object_t *obj = get_obj(obj_ptr);
+    
+    switch (rid) {
+    case RID_MANUFACTURER:
+        return anjay_ret_string(ctx, DEVICE_MANUFACTURER);
+    
+    case RID_MODEL_NUMBER:
+        return anjay_ret_string(ctx, DEVICE_MODEL);
+    
+    case RID_SERIAL_NUMBER:
+        return anjay_ret_string(ctx, obj->serial_number);
+    
+    case RID_FIRMWARE_VERSION:
+        return anjay_ret_string(ctx, esp_get_idf_version());
+    
+    case RID_BATTERY_LEVEL:
+        return anjay_ret_i32(ctx, obj->battery_level);
+    
+    case RID_MEMORY_FREE:
+        return anjay_ret_i32(ctx, (int32_t)esp_get_free_heap_size());
+    
+    case RID_CURRENT_TIME:
+        return anjay_ret_i64(ctx, (int64_t)time(NULL));
+    
+    default:
+        return ANJAY_ERR_NOT_FOUND;
+    }
+}
+
+static int resource_execute(anjay_t *anjay,
+                            const anjay_dm_object_def_t *const *obj_ptr,
+                            anjay_iid_t iid,
+                            anjay_rid_t rid,
+                            anjay_execute_ctx_t *ctx) {
+    device_object_t *obj = get_obj(obj_ptr);
+    
+    if (rid == RID_REBOOT) {
+        ESP_LOGW(TAG, "Reboot requested via LwM2M");
+        obj->do_reboot = true;
+        return 0;
+    }
+    
+    return ANJAY_ERR_METHOD_NOT_ALLOWED;
+}
+
+void device_object_update(anjay_t *anjay, 
+                          const anjay_dm_object_def_t *const *def) {
+    device_object_t *obj = get_obj(def);
+    
+    if (obj->do_reboot) {
+        ESP_LOGW(TAG, "Rebooting...");
+        esp_restart();
+    }
+    
+    // Actualizar nivel de batería simulado cada 10s
+    TickType_t now = xTaskGetTickCount();
+    if ((now - obj->last_update_tick) >= pdMS_TO_TICKS(10000)) {
+        obj->last_update_tick = now;
+        
+        // Simulación: batería 70-100% con lenta descarga
+        obj->battery_level -= 1;
+        if (obj->battery_level < 70) obj->battery_level = 100;
+        
+        anjay_notify_changed(anjay, 3, 0, RID_BATTERY_LEVEL);
+    }
+}
+\end{verbatim}
+
+\section{Conectividad Thread}
+
+\subsection{thread\_prov.c (fragmento)}
+
+Provisioning de red Thread con OpenThread Joiner:
+
+\begin{verbatim}
+#include "thread_prov.h"
+#include <string.h>
+#include <esp_log.h>
+#include <esp_openthread.h>
+#include <esp_openthread_lock.h>
+#include <openthread/thread.h>
+#include <openthread/joiner.h>
+
+static const char *TAG = "thread_prov";
+
+static void ot_joiner_callback(otError error, void *context)
+{
+    if (error == OT_ERROR_NONE) {
+        ESP_LOGI(TAG, "Joiner success! Attached to Thread network");
+        
+        esp_openthread_lock_acquire(portMAX_DELAY);
+        otThreadSetEnabled(esp_openthread_get_instance(), true);
+        esp_openthread_lock_release();
+    } else {
+        ESP_LOGE(TAG, "Joiner failed: %d", error);
+    }
+}
+
+void thread_provisioning_init(void)
+{
+    ESP_LOGI(TAG, "Initializing OpenThread...");
+    
+    // Configuración Thread por defecto
+    esp_openthread_platform_config_t config = {
+        .radio_config = ESP_OPENTHREAD_DEFAULT_RADIO_CONFIG(),
+        .host_config = ESP_OPENTHREAD_DEFAULT_HOST_CONFIG(),
+        .port_config = ESP_OPENTHREAD_DEFAULT_PORT_CONFIG(),
+    };
+    
+    ESP_ERROR_CHECK(esp_openthread_init(&config));
+    
+    otInstance *instance = esp_openthread_get_instance();
+    
+    // Iniciar Joiner con PSKd (pre-shared key for device)
+    esp_openthread_lock_acquire(portMAX_DELAY);
+    
+    const char *pskd = CONFIG_THREAD_JOINER_PSKD;  // "J01NME"
+    otError error = otJoinerStart(instance, pskd, NULL, PACKAGE_NAME,
+                                   NULL, NULL, NULL, 
+                                   ot_joiner_callback, NULL);
+    
+    esp_openthread_lock_release();
+    
+    if (error != OT_ERROR_NONE) {
+        ESP_LOGE(TAG, "Failed to start Joiner: %d", error);
+    } else {
+        ESP_LOGI(TAG, "Joiner started with PSKd");
+    }
+}
+
+void thread_provisioning_wait_connected(void)
+{
+    ESP_LOGI(TAG, "Waiting for Thread attachment...");
+    
+    while (1) {
+        esp_openthread_lock_acquire(portMAX_DELAY);
+        otInstance *instance = esp_openthread_get_instance();
+        otDeviceRole role = otThreadGetDeviceRole(instance);
+        esp_openthread_lock_release();
+        
+        if (role >= OT_DEVICE_ROLE_CHILD) {
+            ESP_LOGI(TAG, "Thread attached! Role: %d", role);
+            break;
+        }
+        
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+\end{verbatim}
+
+\section{CMakeLists.txt}
+
+\subsection{Configuración de Build}
+
+\begin{verbatim}
+idf_component_register(
+    SRCS 
+        "main.c" 
+        "lwm2m_client.c" 
+        "device_object.c" 
+        "temp_object.c" 
+        "humidity_object.c" 
+        "onoff_object.c" 
+        "connectivity_object.c" 
+        "firmware_update.c" 
+        "location_object.c" 
+        "wifi_provisioning.c" 
+        "thread_prov.c" 
+        "led_status.c"
+    
+    INCLUDE_DIRS 
+        "." 
+        "${IDF_PATH}/components/app_update/include"
+    
+    REQUIRES 
+        freertos 
+        esp_netif 
+        esp_wifi 
+        nvs_flash 
+        lwip 
+        anjay-esp-idf 
+        wifi_provisioning 
+        openthread 
+        driver 
+        app_update 
+        led_strip
+    
+    PRIV_REQUIRES 
+        app_update
+)
+
+# Asegurar headers app_update visibles
+target_include_directories(${COMPONENT_LIB} PRIVATE 
+    "${IDF_PATH}/components/app_update/include")
+\end{verbatim}
+
+\section{sdkconfig.defaults}
+
+\subsection{Configuración por Defecto}
+
+\begin{verbatim}
+# LwM2M Server URI (gateway Thread border router)
+CONFIG_LWM2M_SERVER_URI="coap://[fd00::1]:5683"
+CONFIG_LWM2M_ENDPOINT_NAME="esp32c6_temphumid"
+
+# Buffer sizes
+CONFIG_LWM2M_IN_BUFFER_SIZE=4096
+CONFIG_LWM2M_OUT_BUFFER_SIZE=4096
+CONFIG_LWM2M_MSG_CACHE_SIZE=4096
+CONFIG_LWM2M_TASK_STACK_SIZE=8192
+
+# Thread Joiner
+CONFIG_LWM2M_NETWORK_USE_THREAD=y
+CONFIG_THREAD_JOINER_PSKD="J01NME"
+
+# OpenThread
+CONFIG_OPENTHREAD_ENABLED=y
+CONFIG_OPENTHREAD_COMMISSIONER=n
+CONFIG_OPENTHREAD_JOINER=y
+CONFIG_OPENTHREAD_NETWORK_NAME="SmartGrid-Thread"
+CONFIG_OPENTHREAD_NETWORK_CHANNEL=15
+CONFIG_OPENTHREAD_NETWORK_PANID=0x1234
+CONFIG_OPENTHREAD_NETWORK_EXTPANID="1111111122222222"
+
+# Anjay
+CONFIG_ANJAY_WITH_ATTR_STORAGE=y
+CONFIG_ANJAY_WITH_LWM2M11=y
+
+# FreeRTOS
+CONFIG_FREERTOS_HZ=1000
+CONFIG_FREERTOS_UNICORE=n
+
+# ESP32-C6
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_160=y
+CONFIG_ESP_PHY_RF_CAL_FULL=y
+
+# Power Management
+CONFIG_PM_ENABLE=y
+CONFIG_PM_DFS_INIT_AUTO=y
+CONFIG_PM_POWER_DOWN_CPU_IN_LIGHT_SLEEP=y
+CONFIG_PM_POWER_DOWN_PERIPHERAL_IN_LIGHT_SLEEP=y
+
+# Logging
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+CONFIG_LOG_MAXIMUM_LEVEL_DEBUG=y
+\end{verbatim}
+
+\section{Uso del Nodo}
+
+\subsection{Compilación y Flash}
+
+\begin{verbatim}
+# Desde directorio del proyecto
+cd projects/lwm2m/esp-idf/thingsboard_lwm2m_temperature_humidity
+
+# Configurar (opcional, solo primera vez)
+idf.py menuconfig
+
+# Compilar
+idf.py build
+
+# Flash al ESP32-C6
+idf.py -p COM3 flash monitor  # Windows
+idf.py -p /dev/ttyUSB0 flash monitor  # Linux
+
+# Solo monitor
+idf.py -p COM3 monitor
+\end{verbatim}
+
+\subsection{Comisionamiento Thread}
+
+En el gateway OTBR:
+
+\begin{verbatim}
+# Habilitar comisionado
+docker exec -it otbr ot-ctl commissioner start
+docker exec -it otbr ot-ctl commissioner joiner add * J01NME
+
+# Verificar dispositivo unido
+docker exec -it otbr ot-ctl child table
+# Output esperado: Child ID | RLOC16 | Timeout | ... | IPv6 Address
+\end{verbatim}
+
+\subsection{Verificación LwM2M}
+
+En ThingsBoard Edge:
+
+\begin{enumerate}
+    \item Navegar a \textit{Devices} → se debe crear automáticamente \texttt{esp32c6\_xxxxxx}
+    \item \textit{Latest Telemetry} mostrará: temperature, humidity, battery\_level, memory\_free
+    \item \textit{Attributes} mostrará: manufacturer, model, fw\_version
+    \item Configurar \textit{Observe} en recursos 3303/0/5700 y 3304/0/5700 para notificaciones automáticas
+\end{enumerate}

@@ -1,0 +1,792 @@
+\chapter{Anexo C: Scripts y Código de Integración}
+\label{anexo:scripts}
+
+Este anexo presenta el código fuente completo de los componentes de software desarrollados para la integración de protocolos y servicios en el gateway. Incluye la implementación del servidor IEEE 2030.5, el bridge de traducción Thread-ThingsBoard, y los productores/consumidores Kafka.
+
+\section{Servidor IEEE 2030.5 (SEP 2.0)}
+
+\subsection{Aplicación Flask Principal}
+
+Implementación del servidor RESTful IEEE 2030.5 en Python con Flask, proporcionando los Function Sets DCAP, Time y Metering Mirror.
+
+\subsubsection{app.py}
+
+\begin{verbatim}
+from flask import Flask, Response, request
+import requests
+import json
+import time
+import os
+
+app = Flask(__name__)
+
+# Configuración ThingsBoard Edge
+TB_EDGE_URL = os.getenv('TB_EDGE_URL', 'http://tb-edge:8080')
+TB_EDGE_TOKEN = os.getenv('TB_EDGE_TOKEN', '')
+
+# Namespace IEEE 2030.5
+SEP_NS = 'urn:ieee:std:2030.5:ns'
+
+@app.route('/dcap', methods=['GET'])
+def device_capability():
+    """
+    IEEE 2030.5 Device Capability (DCAP)
+    Endpoint de descubrimiento que expone los Function Sets disponibles.
+    """
+    xml = f'''<?xml version="1.0" encoding="UTF-8"?>
+<DeviceCapability xmlns="{SEP_NS}">
+  <href>/dcap</href>
+  <TimeLink href="/tm"/>
+  <MirrorUsagePointListLink href="/mup" all="0"/>
+  <MessagingProgramListLink href="/msg" all="0"/>
+  <EndDeviceListLink href="/edev" all="0"/>
+  <SelfDeviceLink href="/sdev"/>
+</DeviceCapability>'''
+    return Response(xml, mimetype='application/sep+xml')
+
+@app.route('/tm', methods=['GET'])
+def time_sync():
+    """
+    IEEE 2030.5 Time (TM)
+    Sincronización horaria para clientes SEP 2.0.
+    Calidad 7 = máxima precisión (< 100ms via NTP).
+    """
+    current_time = int(time.time())
+    xml = f'''<?xml version="1.0" encoding="UTF-8"?>
+<Time xmlns="{SEP_NS}">
+  <currentTime>{current_time}</currentTime>
+  <dstEndTime>0</dstEndTime>
+  <dstOffset>0</dstOffset>
+  <dstStartTime>0</dstStartTime>
+  <localTime>{current_time}</localTime>
+  <quality>7</quality>
+  <tzOffset>-18000</tzOffset>
+</Time>'''
+    return Response(xml, mimetype='application/sep+xml')
+
+@app.route('/mup', methods=['GET'])
+def mirror_usage_point_list():
+    """
+    IEEE 2030.5 Mirror Usage Point List
+    Lista de dispositivos con datos de medición disponibles.
+    """
+    # Consultar dispositivos en ThingsBoard Edge
+    try:
+        resp = requests.get(
+            f"{TB_EDGE_URL}/api/tenant/devices?pageSize=100",
+            headers={"X-Authorization": f"Bearer {TB_EDGE_TOKEN}"},
+            timeout=5
+        )
+        devices = resp.json().get('data', [])
+        
+        device_links = []
+        for idx, device in enumerate(devices):
+            device_id = device['id']['id']
+            device_links.append(
+                f'  <MirrorUsagePoint href="/mup/{device_id}"/>'
+            )
+        
+        xml = f'''<?xml version="1.0" encoding="UTF-8"?>
+<MirrorUsagePointList xmlns="{SEP_NS}" all="{len(devices)}">
+{chr(10).join(device_links)}
+</MirrorUsagePointList>'''
+        return Response(xml, mimetype='application/sep+xml')
+    
+    except Exception as e:
+        app.logger.error(f"Error fetching devices: {e}")
+        return Response('Error fetching devices', status=500)
+
+@app.route('/mup/<device_id>', methods=['GET'])
+def mirror_usage_point(device_id):
+    """
+    IEEE 2030.5 Mirror Usage Point (individual device)
+    Telemetría de medición reflejada desde ThingsBoard Edge.
+    Granularidad: 15 minutos (900 segundos).
+    """
+    try:
+        # Obtener últimas lecturas de telemetría
+        resp = requests.get(
+            f"{TB_EDGE_URL}/api/plugins/telemetry/DEVICE/{device_id}"
+            "/values/timeseries?keys=energy_kwh,power_w,voltage_v",
+            headers={"X-Authorization": f"Bearer {TB_EDGE_TOKEN}"},
+            timeout=5
+        )
+        data = resp.json()
+        
+        # Extraer valores (último timestamp)
+        energy_entry = data.get('energy_kwh', [{}])[0]
+        power_entry = data.get('power_w', [{}])[0]
+        voltage_entry = data.get('voltage_v', [{}])[0]
+        
+        energy_kwh = energy_entry.get('value', 0.0)
+        power_w = power_entry.get('value', 0.0)
+        voltage_v = voltage_entry.get('value', 0.0)
+        timestamp = energy_entry.get('ts', int(time.time() * 1000)) // 1000
+        
+        # Convertir kWh a Wh (IEEE 2030.5 usa Wh entero)
+        energy_wh = int(energy_kwh * 1000)
+        
+        xml = f'''<?xml version="1.0" encoding="UTF-8"?>
+<MirrorUsagePoint xmlns="{SEP_NS}">
+  <mRID>{device_id}</mRID>
+  <deviceLFDI>{device_id[:16].upper()}</deviceLFDI>
+  <MirrorMeterReading>
+    <mRID>mr_{device_id}</mRID>
+    <Reading>
+      <value>{energy_wh}</value>
+      <localID>1</localID>
+      <timePeriod>
+        <duration>900</duration>
+        <start>{timestamp}</start>
+      </timePeriod>
+    </Reading>
+    <ReadingType>
+      <powerOfTenMultiplier>0</powerOfTenMultiplier>
+      <uom>72</uom>
+    </ReadingType>
+  </MirrorMeterReading>
+  <MirrorMeterReading>
+    <mRID>mr_p_{device_id}</mRID>
+    <Reading>
+      <value>{int(power_w)}</value>
+      <localID>2</localID>
+      <timePeriod>
+        <duration>900</duration>
+        <start>{timestamp}</start>
+      </timePeriod>
+    </Reading>
+    <ReadingType>
+      <powerOfTenMultiplier>0</powerOfTenMultiplier>
+      <uom>38</uom>
+    </ReadingType>
+  </MirrorMeterReading>
+</MirrorUsagePoint>'''
+        return Response(xml, mimetype='application/sep+xml')
+    
+    except Exception as e:
+        app.logger.error(f"Error fetching telemetry for {device_id}: {e}")
+        return Response('Device not found or telemetry unavailable', 
+                        status=404)
+
+@app.route('/msg', methods=['GET'])
+def messaging_program_list():
+    """
+    IEEE 2030.5 Messaging Program List
+    Lista de programas de mensajería para alertas y notificaciones.
+    """
+    xml = f'''<?xml version="1.0" encoding="UTF-8"?>
+<MessagingProgramList xmlns="{SEP_NS}" all="1">
+  <MessagingProgram href="/msg/1">
+    <mRID>msg-grid-alerts</mRID>
+    <description>Grid Alerts and Notifications</description>
+  </MessagingProgram>
+</MessagingProgramList>'''
+    return Response(xml, mimetype='application/sep+xml')
+
+@app.route('/edev', methods=['GET'])
+def end_device_list():
+    """
+    IEEE 2030.5 End Device List
+    Lista de dispositivos registrados en el sistema.
+    """
+    try:
+        resp = requests.get(
+            f"{TB_EDGE_URL}/api/tenant/devices?pageSize=100",
+            headers={"X-Authorization": f"Bearer {TB_EDGE_TOKEN}"},
+            timeout=5
+        )
+        devices = resp.json().get('data', [])
+        
+        device_entries = []
+        for device in devices:
+            device_id = device['id']['id']
+            device_name = device.get('name', 'Unknown')
+            device_entries.append(f'''  <EndDevice href="/edev/{device_id}">
+    <lFDI>{device_id[:16].upper()}</lFDI>
+    <sFDI>{device_id[:8]}</sFDI>
+  </EndDevice>''')
+        
+        xml = f'''<?xml version="1.0" encoding="UTF-8"?>
+<EndDeviceList xmlns="{SEP_NS}" all="{len(devices)}">
+{chr(10).join(device_entries)}
+</EndDeviceList>'''
+        return Response(xml, mimetype='application/sep+xml')
+    
+    except Exception as e:
+        app.logger.error(f"Error fetching devices: {e}")
+        return Response('Error fetching devices', status=500)
+
+if __name__ == '__main__':
+    # Configuración TLS/mTLS
+    cert_file = os.getenv('TLS_CERT', '/certs/server.crt')
+    key_file = os.getenv('TLS_KEY', '/certs/server.key')
+    
+    app.run(
+        host='0.0.0.0',
+        port=8883,
+        ssl_context=(cert_file, key_file),
+        debug=False
+    )
+\end{verbatim}
+
+\subsection{Dockerfile}
+
+\begin{verbatim}
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Dependencias del sistema
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Dependencias Python
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Código de aplicación
+COPY app.py .
+
+# Usuario no privilegiado
+RUN useradd -m -u 1000 sepuser && \
+    chown -R sepuser:sepuser /app
+USER sepuser
+
+EXPOSE 8883
+
+CMD ["python", "app.py"]
+\end{verbatim}
+
+\subsection{requirements.txt}
+
+\begin{verbatim}
+Flask==3.0.0
+requests==2.31.0
+pyOpenSSL==23.3.0
+Werkzeug==3.0.1
+\end{verbatim}
+
+\section{Bridge Thread $\leftrightarrow$ ThingsBoard Edge}
+
+\subsection{Script Bridge Principal}
+
+Traductor de protocolos que convierte mensajes CoAP/MQTT desde dispositivos Thread a formato ThingsBoard.
+
+\subsubsection{bridge.py}
+
+\begin{verbatim}
+import paho.mqtt.client as mqtt
+import json
+import time
+import logging
+import os
+
+# Configuración de logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Configuración MQTT
+THREAD_BROKER = os.getenv('THREAD_BROKER', 'localhost')
+THREAD_PORT = int(os.getenv('THREAD_PORT', '1883'))
+THREAD_TOPIC = os.getenv('THREAD_TOPIC', 'thread/telemetry/#')
+
+TB_BROKER = os.getenv('TB_BROKER', 'localhost')
+TB_PORT = int(os.getenv('TB_PORT', '1883'))
+TB_ACCESS_TOKEN = os.getenv('TB_ACCESS_TOKEN', '')
+
+# Cliente MQTT para dispositivos Thread
+thread_client = mqtt.Client(client_id='thread_bridge')
+
+# Cliente MQTT para ThingsBoard Edge
+tb_client = mqtt.Client(client_id='tb_bridge')
+
+# Contador de mensajes procesados
+message_count = 0
+last_log_time = time.time()
+
+def on_thread_connect(client, userdata, flags, rc):
+    """Callback al conectar con broker Thread"""
+    if rc == 0:
+        logger.info(f"Connected to Thread MQTT broker at {THREAD_BROKER}")
+        client.subscribe(THREAD_TOPIC)
+        logger.info(f"Subscribed to {THREAD_TOPIC}")
+    else:
+        logger.error(f"Failed to connect to Thread broker, code {rc}")
+
+def on_tb_connect(client, userdata, flags, rc):
+    """Callback al conectar con ThingsBoard Edge"""
+    if rc == 0:
+        logger.info(f"Connected to ThingsBoard Edge at {TB_BROKER}")
+    else:
+        logger.error(f"Failed to connect to TB Edge, code {rc}")
+
+def transform_telemetry(thread_data):
+    """
+    Transforma datos de Thread a formato ThingsBoard.
+    
+    Thread input format:
+    {
+      "device_id": "esp32c6_001",
+      "timestamp": 1730000000,
+      "temperature_c": 25.3,
+      "humidity_pct": 65.8,
+      "energy_kwh": 12.456,
+      "power_w": 1250,
+      "voltage_v": 230.5
+    }
+    
+    ThingsBoard output format:
+    {
+      "ts": 1730000000000,  # Milliseconds
+      "values": {
+        "temperature": 25.3,
+        "humidity": 65.8,
+        "energy": 12.456,
+        "power": 1250,
+        "voltage": 230.5
+      }
+    }
+    """
+    try:
+        # Convertir timestamp a milisegundos
+        ts_ms = int(thread_data.get('timestamp', time.time())) * 1000
+        
+        # Mapear campos a formato TB
+        telemetry = {
+            "ts": ts_ms,
+            "values": {}
+        }
+        
+        # Mapeo de campos comunes
+        field_mapping = {
+            'temperature_c': 'temperature',
+            'humidity_pct': 'humidity',
+            'energy_kwh': 'energy',
+            'power_w': 'power',
+            'voltage_v': 'voltage',
+            'current_a': 'current',
+            'frequency_hz': 'frequency',
+            'pf': 'powerFactor'
+        }
+        
+        for thread_key, tb_key in field_mapping.items():
+            if thread_key in thread_data:
+                telemetry['values'][tb_key] = thread_data[thread_key]
+        
+        return telemetry
+    
+    except Exception as e:
+        logger.error(f"Error transforming telemetry: {e}")
+        return None
+
+def on_thread_message(client, userdata, msg):
+    """
+    Callback al recibir mensaje de dispositivos Thread.
+    Transforma y publica a ThingsBoard Edge.
+    """
+    global message_count, last_log_time
+    
+    try:
+        # Decodificar payload
+        payload_str = msg.payload.decode('utf-8')
+        thread_data = json.loads(payload_str)
+        
+        logger.debug(f"Received from Thread: {thread_data}")
+        
+        # Extraer device_id del mensaje o del topic
+        device_id = thread_data.get('device_id')
+        if not device_id:
+            # Extraer de topic: thread/telemetry/device123 -> device123
+            topic_parts = msg.topic.split('/')
+            if len(topic_parts) >= 3:
+                device_id = topic_parts[2]
+            else:
+                logger.warning("No device_id found in message or topic")
+                return
+        
+        # Transformar datos
+        tb_telemetry = transform_telemetry(thread_data)
+        if not tb_telemetry:
+            return
+        
+        # Publicar a ThingsBoard Edge
+        tb_topic = f"v1/devices/{device_id}/telemetry"
+        tb_payload = json.dumps(tb_telemetry)
+        
+        result = tb_client.publish(tb_topic, tb_payload, qos=1)
+        
+        if result.rc == mqtt.MQTT_ERR_SUCCESS:
+            message_count += 1
+            
+            # Log estadísticas cada 100 mensajes
+            if message_count % 100 == 0:
+                elapsed = time.time() - last_log_time
+                rate = 100 / elapsed if elapsed > 0 else 0
+                logger.info(f"Processed {message_count} messages "
+                            f"({rate:.1f} msg/s)")
+                last_log_time = time.time()
+        else:
+            logger.error(f"Failed to publish to TB: {result.rc}")
+    
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON from Thread: {e}")
+    except Exception as e:
+        logger.error(f"Error processing Thread message: {e}")
+
+def main():
+    """Función principal del bridge"""
+    logger.info("Starting Thread-ThingsBoard Bridge...")
+    
+    # Configurar callbacks Thread
+    thread_client.on_connect = on_thread_connect
+    thread_client.on_message = on_thread_message
+    
+    # Configurar callbacks ThingsBoard
+    tb_client.on_connect = on_tb_connect
+    tb_client.username_pw_set(TB_ACCESS_TOKEN)
+    
+    # Conectar a ambos brokers
+    try:
+        logger.info(f"Connecting to Thread broker {THREAD_BROKER}:{THREAD_PORT}")
+        thread_client.connect(THREAD_BROKER, THREAD_PORT, keepalive=60)
+        
+        logger.info(f"Connecting to TB Edge {TB_BROKER}:{TB_PORT}")
+        tb_client.connect(TB_BROKER, TB_PORT, keepalive=60)
+        
+        # Iniciar loops en threads separados
+        thread_client.loop_start()
+        tb_client.loop_start()
+        
+        logger.info("Bridge is running. Press Ctrl+C to stop.")
+        
+        # Mantener vivo
+        while True:
+            time.sleep(1)
+    
+    except KeyboardInterrupt:
+        logger.info("Shutting down bridge...")
+    except Exception as e:
+        logger.error(f"Fatal error: {e}")
+    finally:
+        thread_client.loop_stop()
+        tb_client.loop_stop()
+        thread_client.disconnect()
+        tb_client.disconnect()
+        logger.info("Bridge stopped.")
+
+if __name__ == '__main__':
+    main()
+\end{verbatim}
+
+\subsection{Dockerfile del Bridge}
+
+\begin{verbatim}
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Dependencias Python
+COPY requirements_bridge.txt requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Script bridge
+COPY bridge.py .
+
+# Usuario no privilegiado
+RUN useradd -m -u 1000 bridgeuser && \
+    chown -R bridgeuser:bridgeuser /app
+USER bridgeuser
+
+CMD ["python", "bridge.py"]
+\end{verbatim}
+
+\subsection{requirements\_bridge.txt}
+
+\begin{verbatim}
+paho-mqtt==1.6.1
+\end{verbatim}
+
+\section{Integración con Apache Kafka}
+
+\subsection{Productor Kafka}
+
+Versión mejorada del bridge que publica telemetría a Kafka para procesamiento distribuido.
+
+\subsubsection{kafka\_producer.py}
+
+\begin{verbatim}
+from kafka import KafkaProducer
+import paho.mqtt.client as mqtt
+import json
+import time
+import logging
+import os
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Configuración Kafka
+KAFKA_BOOTSTRAP = os.getenv('KAFKA_BOOTSTRAP', 'localhost:9092')
+KAFKA_TOPIC = os.getenv('KAFKA_TOPIC', 'telemetry')
+KAFKA_COMPRESSION = os.getenv('KAFKA_COMPRESSION', 'lz4')
+
+# Configuración MQTT Thread
+THREAD_BROKER = os.getenv('THREAD_BROKER', 'localhost')
+THREAD_PORT = int(os.getenv('THREAD_PORT', '1883'))
+THREAD_TOPIC = os.getenv('THREAD_TOPIC', 'thread/telemetry/#')
+
+# Inicializar productor Kafka
+producer = KafkaProducer(
+    bootstrap_servers=KAFKA_BOOTSTRAP.split(','),
+    value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+    compression_type=KAFKA_COMPRESSION,
+    acks='all',  # Confirmación de todas las réplicas
+    retries=3,
+    max_in_flight_requests_per_connection=5,
+    linger_ms=100,  # Batching: esperar 100ms para agrupar mensajes
+    batch_size=16384  # 16 KB batch size
+)
+
+# Cliente MQTT
+mqtt_client = mqtt.Client(client_id='kafka_producer')
+
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        logger.info(f"Connected to Thread MQTT at {THREAD_BROKER}")
+        client.subscribe(THREAD_TOPIC)
+    else:
+        logger.error(f"MQTT connection failed: {rc}")
+
+def on_message(client, userdata, msg):
+    """Recibir de Thread, publicar a Kafka"""
+    try:
+        payload = json.loads(msg.payload.decode('utf-8'))
+        
+        # Enriquecer con metadata
+        kafka_message = {
+            'device_id': payload.get('device_id', 'unknown'),
+            'timestamp': int(time.time() * 1000),  # ms
+            'source_topic': msg.topic,
+            'data': payload
+        }
+        
+        # Publicar a Kafka
+        future = producer.send(KAFKA_TOPIC, kafka_message)
+        
+        # Callback opcional para confirmar
+        future.add_callback(lambda metadata: 
+            logger.debug(f"Sent to {metadata.topic}:{metadata.partition} "
+                         f"offset {metadata.offset}"))
+        future.add_errback(lambda e: 
+            logger.error(f"Kafka send failed: {e}"))
+    
+    except Exception as e:
+        logger.error(f"Error processing message: {e}")
+
+def main():
+    logger.info(f"Kafka Producer starting...")
+    logger.info(f"Kafka: {KAFKA_BOOTSTRAP} | Topic: {KAFKA_TOPIC}")
+    logger.info(f"MQTT: {THREAD_BROKER}:{THREAD_PORT} | Topic: {THREAD_TOPIC}")
+    
+    mqtt_client.on_connect = on_connect
+    mqtt_client.on_message = on_message
+    
+    try:
+        mqtt_client.connect(THREAD_BROKER, THREAD_PORT, keepalive=60)
+        mqtt_client.loop_start()
+        
+        logger.info("Producer running. Press Ctrl+C to stop.")
+        while True:
+            time.sleep(1)
+    
+    except KeyboardInterrupt:
+        logger.info("Shutting down...")
+    finally:
+        producer.flush()
+        producer.close()
+        mqtt_client.loop_stop()
+        mqtt_client.disconnect()
+
+if __name__ == '__main__':
+    main()
+\end{verbatim}
+
+\subsection{Consumidor Kafka}
+
+Consumidor que lee de Kafka y publica a ThingsBoard Edge.
+
+\subsubsection{kafka\_consumer.py}
+
+\begin{verbatim}
+from kafka import KafkaConsumer
+import paho.mqtt.client as mqtt
+import json
+import logging
+import os
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Configuración Kafka
+KAFKA_BOOTSTRAP = os.getenv('KAFKA_BOOTSTRAP', 'localhost:9092')
+KAFKA_TOPIC = os.getenv('KAFKA_TOPIC', 'telemetry')
+KAFKA_GROUP_ID = os.getenv('KAFKA_GROUP_ID', 'tb-edge-consumer')
+
+# Configuración ThingsBoard
+TB_BROKER = os.getenv('TB_BROKER', 'localhost')
+TB_PORT = int(os.getenv('TB_PORT', '1883'))
+TB_ACCESS_TOKEN = os.getenv('TB_ACCESS_TOKEN', '')
+
+# Consumer Kafka
+consumer = KafkaConsumer(
+    KAFKA_TOPIC,
+    bootstrap_servers=KAFKA_BOOTSTRAP.split(','),
+    group_id=KAFKA_GROUP_ID,
+    value_deserializer=lambda m: json.loads(m.decode('utf-8')),
+    auto_offset_reset='earliest',  # Procesar desde el inicio si es nuevo
+    enable_auto_commit=True,
+    auto_commit_interval_ms=5000
+)
+
+# Cliente MQTT ThingsBoard
+tb_client = mqtt.Client(client_id='kafka_consumer')
+tb_client.username_pw_set(TB_ACCESS_TOKEN)
+
+def on_tb_connect(client, userdata, flags, rc):
+    if rc == 0:
+        logger.info(f"Connected to ThingsBoard Edge at {TB_BROKER}")
+    else:
+        logger.error(f"TB connection failed: {rc}")
+
+def main():
+    logger.info(f"Kafka Consumer starting...")
+    logger.info(f"Kafka: {KAFKA_BOOTSTRAP} | Topic: {KAFKA_TOPIC} | "
+                f"Group: {KAFKA_GROUP_ID}")
+    logger.info(f"ThingsBoard: {TB_BROKER}:{TB_PORT}")
+    
+    tb_client.on_connect = on_tb_connect
+    tb_client.connect(TB_BROKER, TB_PORT, keepalive=60)
+    tb_client.loop_start()
+    
+    try:
+        logger.info("Consuming messages from Kafka...")
+        for message in consumer:
+            try:
+                kafka_data = message.value
+                device_id = kafka_data.get('device_id', 'unknown')
+                payload = kafka_data.get('data', {})
+                
+                # Transformar a formato TB
+                tb_telemetry = {
+                    'ts': kafka_data.get('timestamp'),
+                    'values': payload
+                }
+                
+                # Publicar a TB Edge
+                tb_topic = f"v1/devices/{device_id}/telemetry"
+                tb_client.publish(tb_topic, json.dumps(tb_telemetry), qos=1)
+                
+                logger.debug(f"Forwarded device {device_id} to TB Edge")
+            
+            except Exception as e:
+                logger.error(f"Error processing Kafka message: {e}")
+    
+    except KeyboardInterrupt:
+        logger.info("Shutting down...")
+    finally:
+        consumer.close()
+        tb_client.loop_stop()
+        tb_client.disconnect()
+
+if __name__ == '__main__':
+    main()
+\end{verbatim}
+
+\subsection{requirements\_kafka.txt}
+
+\begin{verbatim}
+kafka-python==2.0.2
+paho-mqtt==1.6.1
+\end{verbatim}
+
+\section{Scripts de Gestión}
+
+\subsection{Comandos de Verificación}
+
+\subsubsection{verify\_services.sh}
+
+\begin{verbatim}
+#!/bin/bash
+# Script para verificar estado de servicios del gateway
+
+echo "=== Gateway Services Status ==="
+
+# Docker containers
+echo -e "\n[Docker Containers]"
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+# OpenThread Border Router
+echo -e "\n[OpenThread RCP]"
+docker exec -it otbr ot-ctl state 2>/dev/null || echo "OTBR not running"
+
+# ThingsBoard Edge
+echo -e "\n[ThingsBoard Edge]"
+curl -s http://localhost:8080/api/auth/token -o /dev/null && \
+  echo "TB Edge: Running" || echo "TB Edge: Not accessible"
+
+# IEEE 2030.5 Server
+echo -e "\n[IEEE 2030.5 Server]"
+curl -k -s https://localhost:8883/dcap -o /dev/null && \
+  echo "SEP 2.0 Server: Running" || echo "SEP 2.0 Server: Not accessible"
+
+# Kafka
+echo -e "\n[Kafka Topics]"
+docker exec -it kafka kafka-topics --list \
+  --bootstrap-server localhost:9092 2>/dev/null || \
+  echo "Kafka not running"
+
+# Network interfaces
+echo -e "\n[Network Interfaces]"
+ip -br addr show | grep -E 'wlan|wpan|wwan|eth'
+
+echo -e "\n=== End of Status Check ==="
+\end{verbatim}
+
+\subsection{Backup de Configuraciones}
+
+\subsubsection{backup\_config.sh}
+
+\begin{verbatim}
+#!/bin/bash
+# Backup de configuraciones del gateway
+
+BACKUP_DIR="/mnt/ssd/backups"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+BACKUP_FILE="$BACKUP_DIR/gateway_backup_$TIMESTAMP.tar.gz"
+
+mkdir -p "$BACKUP_DIR"
+
+echo "Creating gateway configuration backup..."
+
+tar -czf "$BACKUP_FILE" \
+  /etc/config \
+  /mnt/ssd/docker/*/docker-compose.yml \
+  /mnt/ssd/docker/*/*.py \
+  /mnt/ssd/docker/*/certs \
+  2>/dev/null
+
+if [ $? -eq 0 ]; then
+  echo "Backup created: $BACKUP_FILE"
+  ls -lh "$BACKUP_FILE"
+  
+  # Mantener solo últimos 7 backups
+  ls -t "$BACKUP_DIR"/gateway_backup_*.tar.gz | tail -n +8 | xargs rm -f
+else
+  echo "Backup failed"
+  exit 1
+fi
+\end{verbatim}

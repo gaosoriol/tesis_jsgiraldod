@@ -1,0 +1,717 @@
+\chapter{Anexo D: Especificaciones IEEE 2030.5 y Configuraciones}
+\label{anexo:configs}
+
+Este anexo documenta las especificaciones completas de configuración para los componentes del gateway, incluyendo ejemplos XML IEEE 2030.5, comandos UCI para HaLow, y optimizaciones para TimescaleDB.
+
+\section{Ejemplos XML IEEE 2030.5}
+
+\subsection{Device Capability (DCAP)}
+
+Documento XML completo del endpoint de descubrimiento de capacidades:
+
+\begin{verbatim}
+<?xml version="1.0" encoding="UTF-8"?>
+<DeviceCapability xmlns="urn:ieee:std:2030.5:ns">
+  <href>/dcap</href>
+  <pollRate>900</pollRate>
+  <TimeLink href="/tm"/>
+  <MirrorUsagePointListLink href="/mup" all="0"/>
+  <MessagingProgramListLink href="/msg" all="0"/>
+  <EndDeviceListLink href="/edev" all="0"/>
+  <DERProgramListLink href="/derp" all="0"/>
+  <SelfDeviceLink href="/sdev"/>
+</DeviceCapability>
+\end{verbatim}
+
+\subsection{Time Synchronization (TM)}
+
+Respuesta de sincronización horaria con calidad máxima:
+
+\begin{verbatim}
+<?xml version="1.0" encoding="UTF-8"?>
+<Time xmlns="urn:ieee:std:2030.5:ns">
+  <currentTime>1730000000</currentTime>
+  <dstEndTime>1698627600</dstEndTime>
+  <dstOffset>3600</dstOffset>
+  <dstStartTime>1710046800</dstStartTime>
+  <localTime>1730000000</localTime>
+  <quality>7</quality>
+  <tzOffset>-18000</tzOffset>
+</Time>
+\end{verbatim}
+
+\textbf{Campos importantes:}
+\begin{itemize}
+    \item \texttt{currentTime}: Tiempo UNIX en segundos (UTC).
+    \item \texttt{quality}: 0-7, donde 7 indica sincronización NTP con precisión < 100 ms.
+    \item \texttt{tzOffset}: Offset en segundos desde UTC (Colombia: -18000 = UTC-5).
+    \item \texttt{dstOffset}: Offset adicional durante horario de verano (si aplica).
+\end{itemize}
+
+\subsection{Mirror Usage Point (MUP)}
+
+Ejemplo de telemetría de medición reflejada:
+
+\begin{verbatim}
+<?xml version="1.0" encoding="UTF-8"?>
+<MirrorUsagePoint xmlns="urn:ieee:std:2030.5:ns">
+  <mRID>0123456789ABCDEF0123456789ABCDEF</mRID>
+  <deviceLFDI>0123456789ABCDEF</deviceLFDI>
+  <MirrorMeterReading>
+    <mRID>mr_energy_001</mRID>
+    <description>Active Energy Delivered</description>
+    <Reading>
+      <consumptionBlock>0</consumptionBlock>
+      <qualityFlags>0</qualityFlags>
+      <timePeriod>
+        <duration>900</duration>
+        <start>1730000000</start>
+      </timePeriod>
+      <touTier>0</touTier>
+      <value>123456789</value>
+      <localID>1</localID>
+    </Reading>
+    <ReadingType>
+      <accumulationBehaviour>4</accumulationBehaviour>
+      <commodity>1</commodity>
+      <dataQualifier>0</dataQualifier>
+      <flowDirection>1</flowDirection>
+      <intervalLength>900</intervalLength>
+      <kind>12</kind>
+      <phase>0</phase>
+      <powerOfTenMultiplier>0</powerOfTenMultiplier>
+      <timeAttribute>0</timeAttribute>
+      <uom>72</uom>
+    </ReadingType>
+  </MirrorMeterReading>
+  <MirrorMeterReading>
+    <mRID>mr_power_001</mRID>
+    <description>Instantaneous Active Power</description>
+    <Reading>
+      <qualityFlags>0</qualityFlags>
+      <timePeriod>
+        <duration>900</duration>
+        <start>1730000000</start>
+      </timePeriod>
+      <value>1250</value>
+      <localID>2</localID>
+    </Reading>
+    <ReadingType>
+      <accumulationBehaviour>0</accumulationBehaviour>
+      <commodity>1</commodity>
+      <dataQualifier>0</dataQualifier>
+      <flowDirection>1</flowDirection>
+      <intervalLength>0</intervalLength>
+      <kind>12</kind>
+      <phase>0</phase>
+      <powerOfTenMultiplier>0</powerOfTenMultiplier>
+      <timeAttribute>0</timeAttribute>
+      <uom>38</uom>
+    </ReadingType>
+  </MirrorMeterReading>
+  <MirrorMeterReading>
+    <mRID>mr_voltage_001</mRID>
+    <description>RMS Voltage</description>
+    <Reading>
+      <qualityFlags>0</qualityFlags>
+      <timePeriod>
+        <duration>900</duration>
+        <start>1730000000</start>
+      </timePeriod>
+      <value>2305</value>
+      <localID>3</localID>
+    </Reading>
+    <ReadingType>
+      <accumulationBehaviour>0</accumulationBehaviour>
+      <commodity>1</commodity>
+      <dataQualifier>0</dataQualifier>
+      <flowDirection>1</flowDirection>
+      <intervalLength>0</intervalLength>
+      <kind>12</kind>
+      <phase>0</phase>
+      <powerOfTenMultiplier>-1</powerOfTenMultiplier>
+      <timeAttribute>0</timeAttribute>
+      <uom>29</uom>
+    </ReadingType>
+  </MirrorMeterReading>
+</MirrorUsagePoint>
+\end{verbatim}
+
+\textbf{ReadingType - Unidades de Medida (uom):}
+\begin{itemize}
+    \item \texttt{38}: Watts (W) - Potencia activa
+    \item \texttt{72}: Watt-hours (Wh) - Energía activa
+    \item \texttt{29}: Voltage (V) - Voltaje RMS
+    \item \texttt{5}: Current (A) - Corriente RMS
+    \item \texttt{63}: Volt-Ampere Reactive (VAr) - Potencia reactiva
+\end{itemize}
+
+\subsection{End Device List}
+
+Lista de dispositivos registrados con identificadores LFDI/SFDI:
+
+\begin{verbatim}
+<?xml version="1.0" encoding="UTF-8"?>
+<EndDeviceList xmlns="urn:ieee:std:2030.5:ns" all="3">
+  <EndDevice href="/edev/001">
+    <changedTime>1730000000</changedTime>
+    <enabled>true</enabled>
+    <lFDI>0123456789ABCDEF</lFDI>
+    <sFDI>01234567</sFDI>
+    <FunctionSetAssignmentsListLink href="/edev/001/fsa" all="4"/>
+    <RegistrationLink href="/edev/001/rg"/>
+  </EndDevice>
+  <EndDevice href="/edev/002">
+    <changedTime>1730001000</changedTime>
+    <enabled>true</enabled>
+    <lFDI>FEDCBA9876543210</lFDI>
+    <sFDI>FEDCBA98</sFDI>
+    <FunctionSetAssignmentsListLink href="/edev/002/fsa" all="4"/>
+    <RegistrationLink href="/edev/002/rg"/>
+  </EndDevice>
+  <EndDevice href="/edev/003">
+    <changedTime>1730002000</changedTime>
+    <enabled>true</enabled>
+    <lFDI>1234567890ABCDEF</lFDI>
+    <sFDI>12345678</sFDI>
+    <FunctionSetAssignmentsListLink href="/edev/003/fsa" all="4"/>
+    <RegistrationLink href="/edev/003/rg"/>
+  </EndDevice>
+</EndDeviceList>
+\end{verbatim}
+
+\section{Configuraciones UCI para HaLow 802.11ah}
+
+\subsection{Modo Access Point (AP)}
+
+Configuración completa del gateway como AP HaLow:
+
+\begin{verbatim}
+# Interfaz inalámbrica HaLow (wlan2)
+uci set wireless.halow=wifi-device
+uci set wireless.halow.type='mac80211'
+uci set wireless.halow.path='platform/soc/1e140000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0'
+uci set wireless.halow.channel='7'        # 917 MHz (S1G)
+uci set wireless.halow.bandwidth='8'      # 8 MHz (opciones: 1, 2, 4, 8, 16)
+uci set wireless.halow.hwmode='11ah'
+uci set wireless.halow.country='US'
+uci set wireless.halow.txpower='20'       # 20 dBm = 100 mW
+uci set wireless.halow.legacy_rates='0'
+uci set wireless.halow.mu_beamformer='0'
+uci set wireless.halow.mu_beamformee='0'
+
+# Interfaz virtual AP
+uci set wireless.halow_ap=wifi-iface
+uci set wireless.halow_ap.device='halow'
+uci set wireless.halow_ap.mode='ap'
+uci set wireless.halow_ap.network='halow_lan'
+uci set wireless.halow_ap.ssid='SmartGrid-HaLow-AP'
+uci set wireless.halow_ap.encryption='sae'
+uci set wireless.halow_ap.key='<WPA3-PSK-SECURE-KEY>'
+uci set wireless.halow_ap.ieee80211w='2'  # PMF obligatorio
+uci set wireless.halow_ap.sae_pwe='2'     # Hash-to-Element (H2E)
+uci set wireless.halow_ap.wpa_disable_eapol_key_retries='1'
+uci set wireless.halow_ap.max_inactivity='600'  # 10 min timeout
+uci set wireless.halow_ap.disassoc_low_ack='0'
+uci set wireless.halow_ap.skip_inactivity_poll='0'
+
+# Red virtual para HaLow
+uci set network.halow_lan=interface
+uci set network.halow_lan.proto='static'
+uci set network.halow_lan.ipaddr='192.168.100.1'
+uci set network.halow_lan.netmask='255.255.255.0'
+uci set network.halow_lan.ip6assign='64'
+uci set network.halow_lan.ip6hint='100'
+
+# DHCP server para clientes HaLow
+uci set dhcp.halow=dhcp
+uci set dhcp.halow.interface='halow_lan'
+uci set dhcp.halow.start='100'
+uci set dhcp.halow.limit='150'
+uci set dhcp.halow.leasetime='12h'
+uci set dhcp.halow.dhcpv6='server'
+uci set dhcp.halow.ra='server'
+uci set dhcp.halow.ra_management='1'
+
+# Firewall zone
+uci set firewall.halow_zone=zone
+uci set firewall.halow_zone.name='halow'
+uci set firewall.halow_zone.input='ACCEPT'
+uci set firewall.halow_zone.output='ACCEPT'
+uci set firewall.halow_zone.forward='ACCEPT'
+uci set firewall.halow_zone.network='halow_lan'
+
+uci set firewall.halow_lan_forwarding=forwarding
+uci set firewall.halow_lan_forwarding.src='halow'
+uci set firewall.halow_lan_forwarding.dest='lan'
+
+uci set firewall.halow_wan_forwarding=forwarding
+uci set firewall.halow_wan_forwarding.src='halow'
+uci set firewall.halow_wan_forwarding.dest='wan'
+
+# Aplicar configuración
+uci commit wireless
+uci commit network
+uci commit dhcp
+uci commit firewall
+
+# Reiniciar servicios
+wifi reload
+/etc/init.d/network restart
+/etc/init.d/firewall restart
+\end{verbatim}
+
+\subsection{Modo Station (STA)}
+
+Configuración del gateway para conectarse a AP HaLow remoto:
+
+\begin{verbatim}
+# Interfaz HaLow como Station
+uci set wireless.halow=wifi-device
+uci set wireless.halow.type='mac80211'
+uci set wireless.halow.channel='auto'    # Auto-scan
+uci set wireless.halow.bandwidth='8'
+uci set wireless.halow.hwmode='11ah'
+uci set wireless.halow.country='US'
+uci set wireless.halow.disabled='0'
+
+uci set wireless.halow_sta=wifi-iface
+uci set wireless.halow_sta.device='halow'
+uci set wireless.halow_sta.mode='sta'
+uci set wireless.halow_sta.network='wan_halow'
+uci set wireless.halow_sta.ssid='SmartGrid-HaLow-Backhaul'
+uci set wireless.halow_sta.encryption='sae'
+uci set wireless.halow_sta.key='<WPA3-PSK-BACKHAUL>'
+uci set wireless.halow_sta.ieee80211w='2'
+
+# Red WAN via HaLow
+uci set network.wan_halow=interface
+uci set network.wan_halow.proto='dhcp'
+uci set network.wan_halow.metric='20'  # Métrica menor = mayor prioridad
+
+# Agregar a mwan3 para failover
+uci set mwan3.wan_halow=interface
+uci set mwan3.wan_halow.enabled='1'
+uci set mwan3.wan_halow.family='ipv4'
+uci set mwan3.wan_halow.track_ip='8.8.8.8'
+uci set mwan3.wan_halow.track_ip='1.1.1.1'
+uci set mwan3.wan_halow.track_method='ping'
+uci set mwan3.wan_halow.reliability='1'
+uci set mwan3.wan_halow.count='1'
+uci set mwan3.wan_halow.size='56'
+uci set mwan3.wan_halow.max_ttl='60'
+uci set mwan3.wan_halow.timeout='2'
+uci set mwan3.wan_halow.interval='5'
+uci set mwan3.wan_halow.down='3'
+uci set mwan3.wan_halow.up='3'
+
+uci commit wireless
+uci commit network
+uci commit mwan3
+
+wifi reload
+/etc/init.d/network restart
+/etc/init.d/mwan3 restart
+\end{verbatim}
+
+\subsection{Modo Mesh 802.11s}
+
+Configuración para red mesh sin controlador centralizado:
+
+\begin{verbatim}
+# Interfaz HaLow Mesh
+uci set wireless.halow=wifi-device
+uci set wireless.halow.type='mac80211'
+uci set wireless.halow.channel='7'
+uci set wireless.halow.bandwidth='8'
+uci set wireless.halow.hwmode='11ah'
+uci set wireless.halow.country='US'
+uci set wireless.halow.txpower='20'
+
+uci set wireless.halow_mesh=wifi-iface
+uci set wireless.halow_mesh.device='halow'
+uci set wireless.halow_mesh.mode='mesh'
+uci set wireless.halow_mesh.mesh_id='smartgrid-mesh'
+uci set wireless.halow_mesh.mesh_fwding='1'
+uci set wireless.halow_mesh.mesh_ttl='31'
+uci set wireless.halow_mesh.mesh_rssi_threshold='-80'
+uci set wireless.halow_mesh.encryption='sae'
+uci set wireless.halow_mesh.key='<MESH-KEY>'
+uci set wireless.halow_mesh.network='mesh_lan'
+
+# Red mesh
+uci set network.mesh_lan=interface
+uci set network.mesh_lan.proto='batadv_hardif'
+uci set network.mesh_lan.master='bat0'
+uci set network.mesh_lan.mtu='1532'
+
+uci set network.bat0=interface
+uci set network.bat0.proto='static'
+uci set network.bat0.ipaddr='10.100.0.1'
+uci set network.bat0.netmask='255.255.0.0'
+uci set network.bat0.ip6assign='64'
+
+# Batman-adv
+uci set batman-adv.bat0=mesh
+uci set batman-adv.bat0.aggregated_ogms='1'
+uci set batman-adv.bat0.ap_isolation='0'
+uci set batman-adv.bat0.bonding='0'
+uci set batman-adv.bat0.fragmentation='1'
+uci set batman-adv.bat0.gw_mode='server'
+uci set batman-adv.bat0.log_level='0'
+uci set batman-adv.bat0.orig_interval='5000'
+uci set batman-adv.bat0.bridge_loop_avoidance='1'
+uci set batman-adv.bat0.distributed_arp_table='1'
+uci set batman-adv.bat0.multicast_mode='1'
+
+uci commit wireless
+uci commit network
+uci commit batman-adv
+
+# Cargar módulo kernel
+modprobe batman-adv
+
+wifi reload
+/etc/init.d/network restart
+\end{verbatim}
+
+\subsection{Modo EasyMesh (IEEE 1905.1)}
+
+Configuración para mesh gestionado con controlador y agentes:
+
+\begin{verbatim}
+# Controlador EasyMesh (Gateway principal)
+uci set easymesh.config=easymesh
+uci set easymesh.config.enabled='1'
+uci set easymesh.config.role='controller'
+
+# Interfaz backhaul HaLow
+uci set wireless.halow_backhaul=wifi-iface
+uci set wireless.halow_backhaul.device='halow'
+uci set wireless.halow_backhaul.mode='ap'
+uci set wireless.halow_backhaul.network='backhaul'
+uci set wireless.halow_backhaul.ssid='mesh-backhaul-5g'
+uci set wireless.halow_backhaul.encryption='sae'
+uci set wireless.halow_backhaul.key='<BACKHAUL-KEY>'
+uci set wireless.halow_backhaul.multi_ap='2'  # Backhaul BSS
+uci set wireless.halow_backhaul.ieee80211w='2'
+uci set wireless.halow_backhaul.hidden='1'
+
+# Interfaz frontal para clientes
+uci set wireless.halow_front=wifi-iface
+uci set wireless.halow_front.device='halow'
+uci set wireless.halow_front.mode='ap'
+uci set wireless.halow_front.network='lan'
+uci set wireless.halow_front.ssid='SmartGrid-HaLow'
+uci set wireless.halow_front.encryption='sae'
+uci set wireless.halow_front.key='<CLIENT-KEY>'
+uci set wireless.halow_front.multi_ap='1'  # Fronthaul BSS
+uci set wireless.halow_front.ieee80211w='2'
+
+# Red backhaul
+uci set network.backhaul=interface
+uci set network.backhaul.proto='static'
+uci set network.backhaul.ipaddr='192.168.200.1'
+uci set network.backhaul.netmask='255.255.255.0'
+
+# Servicios EasyMesh
+uci set ieee1905.ieee1905=ieee1905
+uci set ieee1905.ieee1905.enabled='1'
+uci set ieee1905.ieee1905.al_interface='eth0'
+uci set ieee1905.ieee1905.management_interface='br-lan'
+
+uci commit easymesh
+uci commit wireless
+uci commit network
+uci commit ieee1905
+
+/etc/init.d/easymesh enable
+/etc/init.d/easymesh start
+wifi reload
+\end{verbatim}
+
+\section{Optimización TimescaleDB}
+
+\subsection{Configuración PostgreSQL + TimescaleDB}
+
+Optimizaciones para almacenamiento de series temporales de alta frecuencia:
+
+\begin{verbatim}
+# postgresql.conf (dentro del contenedor)
+# Ubicación: /var/lib/postgresql/data/postgresql.conf
+
+# --- Memoria ---
+shared_buffers = 2GB              # 25% de RAM (para RPi4 8GB)
+effective_cache_size = 6GB        # 75% de RAM
+work_mem = 16MB                   # Por operación de sort/hash
+maintenance_work_mem = 512MB      # Para VACUUM, CREATE INDEX
+
+# --- Escritura ---
+wal_buffers = 16MB
+checkpoint_completion_target = 0.9
+max_wal_size = 4GB
+min_wal_size = 1GB
+wal_compression = on
+
+# --- Checkpoints (reducir I/O en SSD) ---
+checkpoint_timeout = 30min
+checkpoint_warning = 5min
+
+# --- Queries ---
+random_page_cost = 1.1            # SSD, no HDD
+effective_io_concurrency = 200    # Para NVMe
+max_worker_processes = 4          # CPUs disponibles
+max_parallel_workers_per_gather = 2
+max_parallel_workers = 4
+
+# --- Logging ---
+logging_collector = on
+log_destination = 'csvlog'
+log_directory = 'log'
+log_filename = 'postgresql-%Y-%m-%d.log'
+log_rotation_age = 1d
+log_rotation_size = 100MB
+log_min_duration_statement = 1000  # Log queries > 1s
+
+# --- TimescaleDB ---
+shared_preload_libraries = 'timescaledb'
+timescaledb.max_background_workers = 4
+\end{verbatim}
+
+\subsection{Schema y Hypertables}
+
+Creación de tablas optimizadas para telemetría:
+
+\begin{verbatim}
+-- Crear extensión TimescaleDB
+CREATE EXTENSION IF NOT EXISTS timescaledb;
+
+-- Tabla principal de telemetría
+CREATE TABLE telemetry (
+  time        TIMESTAMPTZ NOT NULL,
+  device_id   TEXT NOT NULL,
+  metric      TEXT NOT NULL,
+  value       DOUBLE PRECISION,
+  unit        TEXT,
+  quality     SMALLINT DEFAULT 0
+);
+
+-- Convertir a hypertable (particionado automático por tiempo)
+SELECT create_hypertable('telemetry', 'time', 
+  chunk_time_interval => INTERVAL '1 day');
+
+-- Índices para queries frecuentes
+CREATE INDEX idx_telemetry_device_time ON telemetry (device_id, time DESC);
+CREATE INDEX idx_telemetry_metric_time ON telemetry (metric, time DESC);
+
+-- Compresión automática (chunks > 7 días)
+ALTER TABLE telemetry SET (
+  timescaledb.compress,
+  timescaledb.compress_segmentby = 'device_id,metric',
+  timescaledb.compress_orderby = 'time DESC'
+);
+
+SELECT add_compression_policy('telemetry', INTERVAL '7 days');
+
+-- Retención automática (eliminar datos > 1 año)
+SELECT add_retention_policy('telemetry', INTERVAL '365 days');
+
+-- Continuous Aggregates (vistas materializadas)
+CREATE MATERIALIZED VIEW telemetry_15min
+WITH (timescaledb.continuous) AS
+SELECT time_bucket('15 minutes', time) AS bucket,
+       device_id,
+       metric,
+       AVG(value) AS avg_value,
+       MAX(value) AS max_value,
+       MIN(value) AS min_value,
+       COUNT(*) AS sample_count
+FROM telemetry
+GROUP BY bucket, device_id, metric
+WITH NO DATA;
+
+-- Refrescar cada 5 minutos
+SELECT add_continuous_aggregate_policy('telemetry_15min',
+  start_offset => INTERVAL '1 hour',
+  end_offset => INTERVAL '5 minutes',
+  schedule_interval => INTERVAL '5 minutes');
+
+-- Vista agregada horaria
+CREATE MATERIALIZED VIEW telemetry_hourly
+WITH (timescaledb.continuous) AS
+SELECT time_bucket('1 hour', time) AS bucket,
+       device_id,
+       metric,
+       AVG(value) AS avg_value,
+       MAX(value) AS max_value,
+       MIN(value) AS min_value,
+       STDDEV(value) AS stddev_value,
+       COUNT(*) AS sample_count
+FROM telemetry
+GROUP BY bucket, device_id, metric
+WITH NO DATA;
+
+SELECT add_continuous_aggregate_policy('telemetry_hourly',
+  start_offset => INTERVAL '1 day',
+  end_offset => INTERVAL '1 hour',
+  schedule_interval => INTERVAL '1 hour');
+\end{verbatim}
+
+\subsection{Queries de Ejemplo}
+
+\begin{verbatim}
+-- Telemetría reciente de un dispositivo (últimos 15 min)
+SELECT time, metric, value, unit
+FROM telemetry
+WHERE device_id = 'meter_001' 
+  AND time > NOW() - INTERVAL '15 minutes'
+ORDER BY time DESC;
+
+-- Consumo energético diario agregado
+SELECT time_bucket('1 day', time) AS day,
+       device_id,
+       MAX(value) - MIN(value) AS daily_energy_kwh
+FROM telemetry
+WHERE metric = 'energy_kwh'
+  AND time > NOW() - INTERVAL '30 days'
+GROUP BY day, device_id
+ORDER BY day DESC;
+
+-- Potencia promedio por hora (usando continuous aggregate)
+SELECT bucket AS hour,
+       device_id,
+       avg_value AS avg_power_w,
+       max_value AS peak_power_w
+FROM telemetry_hourly
+WHERE metric = 'power_w'
+  AND bucket > NOW() - INTERVAL '7 days'
+ORDER BY bucket DESC, device_id;
+
+-- Alertas: voltaje fuera de rango (207-242V, RETIE Colombia)
+SELECT time, device_id, value AS voltage_v
+FROM telemetry
+WHERE metric = 'voltage_v'
+  AND time > NOW() - INTERVAL '1 hour'
+  AND (value < 207.0 OR value > 242.0)
+ORDER BY time DESC;
+
+-- Dispositivos con mayor consumo (últimas 24h)
+SELECT device_id,
+       MAX(value) - MIN(value) AS energy_consumed_kwh
+FROM telemetry
+WHERE metric = 'energy_kwh'
+  AND time > NOW() - INTERVAL '24 hours'
+GROUP BY device_id
+ORDER BY energy_consumed_kwh DESC
+LIMIT 10;
+\end{verbatim}
+
+\subsection{Mantenimiento}
+
+\begin{verbatim}
+-- Ver tamaño de hypertables y chunks
+SELECT hypertable_name, 
+       pg_size_pretty(hypertable_size(format('%I.%I', hypertable_schema, hypertable_name))) AS size
+FROM timescaledb_information.hypertables
+ORDER BY hypertable_size(format('%I.%I', hypertable_schema, hypertable_name)) DESC;
+
+-- Ver chunks comprimidos
+SELECT chunk_schema, chunk_name, 
+       pg_size_pretty(before_compression_total_bytes) AS before,
+       pg_size_pretty(after_compression_total_bytes) AS after,
+       round((1 - after_compression_total_bytes::numeric / before_compression_total_bytes::numeric) * 100, 2) AS compression_ratio
+FROM timescaledb_information.compressed_chunk_stats
+ORDER BY before_compression_total_bytes DESC;
+
+-- Forzar compresión manual de chunks antiguos
+SELECT compress_chunk(i) 
+FROM show_chunks('telemetry', older_than => INTERVAL '7 days') i;
+
+-- Actualizar estadísticas para optimizador de queries
+ANALYZE telemetry;
+ANALYZE telemetry_15min;
+ANALYZE telemetry_hourly;
+
+-- Vacuuming manual (liberar espacio)
+VACUUM ANALYZE telemetry;
+\end{verbatim}
+
+\section{Generación de Certificados X.509 para mTLS}
+
+\subsection{Autoridad Certificadora (CA)}
+
+\begin{verbatim}
+#!/bin/bash
+# Crear CA para IEEE 2030.5 mTLS
+
+# CA privada
+openssl ecparam -name prime256v1 -genkey -noout -out ca.key
+chmod 600 ca.key
+
+# Certificado CA (válido 10 años)
+openssl req -new -x509 -sha256 -key ca.key -out ca.crt -days 3650 \
+  -subj "/C=CO/ST=Antioquia/L=Medellin/O=SmartGrid CA/CN=SmartGrid Root CA"
+
+# Verificar CA
+openssl x509 -in ca.crt -text -noout
+\end{verbatim}
+
+\subsection{Certificado Servidor IEEE 2030.5}
+
+\begin{verbatim}
+# Key privada servidor
+openssl ecparam -name prime256v1 -genkey -noout -out server.key
+
+# CSR (Certificate Signing Request)
+openssl req -new -sha256 -key server.key -out server.csr \
+  -subj "/C=CO/ST=Antioquia/L=Medellin/O=SmartGrid/CN=gateway.local"
+
+# Extensiones SAN (Subject Alternative Name)
+cat > server_ext.cnf <<EOF
+subjectAltName = DNS:gateway.local,DNS:*.gateway.local,IP:192.168.1.1
+extendedKeyUsage = serverAuth
+EOF
+
+# Firmar con CA (válido 2 años)
+openssl x509 -req -sha256 -in server.csr -CA ca.crt -CAkey ca.key \
+  -CAcreateserial -out server.crt -days 730 -extfile server_ext.cnf
+
+# Verificar cadena
+openssl verify -CAfile ca.crt server.crt
+\end{verbatim}
+
+\subsection{Certificado Cliente SEP 2.0}
+
+\begin{verbatim}
+# Key privada cliente
+openssl ecparam -name prime256v1 -genkey -noout -out client.key
+
+# CSR cliente
+openssl req -new -sha256 -key client.key -out client.csr \
+  -subj "/C=CO/ST=Antioquia/L=Medellin/O=SmartGrid/CN=meter001"
+
+# Extensiones cliente
+cat > client_ext.cnf <<EOF
+extendedKeyUsage = clientAuth
+EOF
+
+# Firmar con CA
+openssl x509 -req -sha256 -in client.csr -CA ca.crt -CAkey ca.key \
+  -CAcreateserial -out client.crt -days 730 -extfile client_ext.cnf
+
+# LFDI (Long Form Device Identifier) = SHA256 del certificado
+openssl x509 -in client.crt -outform DER | openssl dgst -sha256 -binary | xxd -p -c 32
+\end{verbatim}
+
+\subsection{Prueba mTLS}
+
+\begin{verbatim}
+# Curl con autenticación mutua
+curl -v --cacert ca.crt --cert client.crt --key client.key \
+  https://gateway.local:8883/dcap
+
+# OpenSSL s_client test
+openssl s_client -connect gateway.local:8883 \
+  -CAfile ca.crt -cert client.crt -key client.key \
+  -showcerts
+\end{verbatim}
