@@ -60,7 +60,7 @@ El gateway soporta los siguientes \textit{Function Sets} de IEEE 2030.5:
 
 \subsubsection{Arquitectura RESTful}
 
-El gateway expone una API REST HTTP/TLS compatible con IEEE 2030.5:
+El gateway expone una API REST HTTP/TLS compatible con IEEE 2030.5. El siguiente ejemplo ilustra una consulta típica de telemetría:
 
 \begin{verbatim}
 # Ejemplo: Consultar telemetría de medidor
@@ -81,6 +81,8 @@ Authorization: Bearer <JWT-TOKEN>
   </MirrorMeterReading>
 </MirrorUsagePoint>
 \end{verbatim}
+
+\textit{Nota}: Los ejemplos completos de respuestas XML IEEE 2030.5 para todos los Function Sets (DCAP, Time, Mirror Usage Point, End Device List, Messaging) se presentan en el Anexo D.
 
 \subsubsection{Seguridad IEEE 2030.5}
 
@@ -1097,130 +1099,38 @@ docker info | grep "Docker Root Dir"
 
 \subsection{Configuración de Conectividad}
 
-\subsubsection{Thread Border Router con nRF52840}
+\subsection{Configuración de Conectividad}
 
-\textbf{Paso 1: Flash firmware OpenThread RCP en nRF52840}:
+El gateway integra múltiples interfaces de red mediante configuraciones UCI (Unified Configuration Interface) de OpenWRT:
+
+\begin{itemize}
+    \item \textbf{Thread 802.15.4}: OpenThread Border Router (OTBR) con nRF52840 RCP via USB (\texttt{/dev/ttyACM0}), forma red \texttt{SmartGrid-Thread} en canal 15
+    \item \textbf{HaLow 802.11ah}: Tarjeta MM6108 via SPI, soporta 4 modos (AP Router, STA Client, Mesh 802.11s, EasyMesh 1905.1)
+    \item \textbf{LTE Cat-M1/NB-IoT}: Quectel BG95-M3 via USB, gestionado por ModemManager, interfaz \texttt{wwan0} con failover vía mwan3
+    \item \textbf{Ethernet Gigabit}: \texttt{eth0} como WAN primaria, enlace 1000BASE-T a ISP o red corporativa
+\end{itemize}
+
+Las configuraciones UCI completas para HaLow en sus cuatro modos de operación (AP Router con NAT, STA Client, Mesh 802.11s, EasyMesh 1905.1 Controller/Agent) se presentan en el Anexo D. Los comandos de inicialización de OTBR y LTE modem se documentan en el Anexo B con los docker-compose correspondientes.
+
+Ejemplo de verificación de interfaces activas:
+
 \begin{verbatim}
-# Desde PC de desarrollo (no en Raspberry Pi)
-# Descargar nRF Command Line Tools y J-Link
-wget https://www.nordicsemi.com/-/media/Software-and-other-downloads/\
-Desktop-software/nRF-command-line-tools/sw/Versions-10-x-x/\
-10-21-0/nrf-command-line-tools_10.21.0_Linux-amd64.tar.gz
+# Thread Border Router
+docker exec otbr ot-ctl state
+# Esperado: "leader" o "router" (red Thread activa)
 
-# Descargar firmware RCP pre-compilado
-wget https://github.com/openthread/ot-nrf528xx/releases/download/\
-thread-reference-20230706/ot-rcp-ot-nrf52840-dongle.hex
+# HaLow 802.11ah
+iw dev wlan2 info
+# Esperado: Interface wlan2, type AP, channel 7 (917 MHz)
 
-# Flash via nrfjprog (dongle en modo bootloader DFU)
-nrfjprog --program ot-rcp-ot-nrf52840-dongle.hex --chiperase --reset
+# LTE modem
+mmcli -m 0 --simple-status
+# Esperado: state: connected, signal-quality: 75%
+
+# Ethernet WAN
+cat /sys/class/net/eth0/operstate
+# Esperado: up (enlace 1000BASE-T activo)
 \end{verbatim}
-
-\textbf{Paso 2: Configuración OTBR en Raspberry Pi}:
-\begin{verbatim}
-# Instalar OpenThread Border Router
-opkg install ot-br-posix wpantund
-
-# Configurar wpantund para /dev/ttyACM0
-cat > /etc/wpantund.conf <<EOF
-Config:NCP:SocketPath "/dev/ttyACM0"
-Config:NCP:SocketBaud 115200
-Config:TUN:InterfaceName wpan0
-Config:IPv6:Prefix fd00::/64
-EOF
-
-# Habilitar IP forwarding
-echo "net.ipv6.conf.all.forwarding=1" >> /etc/sysctl.conf
-sysctl -p
-
-# Iniciar servicio
-/etc/init.d/wpantund enable
-/etc/init.d/wpantund start
-
-# Verificar interfaz Thread
-ifconfig wpan0
-# Esperado: wpan0 Link encap:UNSPEC HWaddr ...
-#           inet6 addr: fd00::1/64 Scope:Global
-
-# Formar red Thread
-wpanctl form "SmartGrid-Thread" -c 15 -p fd00::
-# Network Name: SmartGrid-Thread
-# Channel: 15
-# PAN ID: auto-generated
-# Extended PAN ID: auto-generated
-\end{verbatim}
-
-\subsubsection{HaLow 802.11ah via SPI}
-
-\textbf{Configuración driver ath11k SPI}:
-\begin{verbatim}
-# Habilitar SPI en boot config
-echo "dtparam=spi=on" >> /boot/config.txt
-echo "dtoverlay=spi0-1cs" >> /boot/config.txt
-reboot
-
-# Cargar módulo kernel
-modprobe ath11k_ahb
-
-# Verificar detección
-iw dev
-# Esperado: phy#2 Interface wlan2 type managed
-
-# Configurar interfaz HaLow AP (ver secciones anteriores para UCI completo)
-# Canal 7 (917 MHz), BW 8 MHz, WPA3-SAE
-\end{verbatim}
-
-\subsubsection{LTE Modem Quectel BG95}
-
-\textbf{Configuración ModemManager}:
-\begin{verbatim}
-# Cargar módulos USB serial
-modprobe option
-modprobe qmi_wwan
-echo "2c7c 0296" > /sys/bus/usb-serial/drivers/option1/new_id
-
-# Iniciar ModemManager
-/etc/init.d/modemmanager enable
-/etc/init.d/modemmanager start
-
-# Detectar modem
-mmcli -L
-# Esperado: /org/freedesktop/ModemManager1/Modem/0 [Quectel] BG95
-
-# Configurar APN y conectar
-mmcli -m 0 --simple-connect="apn=internet.comcel.com.co"
-# Reemplazar con APN de operador local
-
-# Verificar interfaz wwan0
-ifconfig wwan0
-# Esperado: inet addr:10.x.x.x (IP privada del operador)
-
-# Configurar como WAN secundaria con mwan3 (ver sección failover)
-\end{verbatim}
-
-Las siguientes subsecciones detallan cada modo de operación.
-
-\paragraph{Modo AP (Access Point)}
-
-\textbf{Función}: Gateway actúa como punto de acceso central al cual se conectan DCUs y medidores HaLow.
-
-\textbf{Configuración Router Mode (NAT)}:
-\begin{verbatim}
-# Interfaz HaLow (wlan2)
-uci set wireless.halow=wifi-device
-uci set wireless.halow.type='mac80211'
-uci set wireless.halow.channel='7'  # 917 MHz
-uci set wireless.halow.bandwidth='8'
-uci set wireless.halow.hwmode='11ah'
-uci set wireless.halow.country='US'
-uci set wireless.halow.txpower='20'  # 20 dBm (100 mW)
-
-uci set wireless.halow_ap=wifi-iface
-uci set wireless.halow_ap.device='halow'
-uci set wireless.halow_ap.mode='ap'
-uci set wireless.halow_ap.network='halow_lan'
-uci set wireless.halow_ap.ssid='SmartGrid-HaLow-AP'
-uci set wireless.halow_ap.encryption='sae'
-uci set wireless.halow_ap.key='<WPA3-KEY>'
 uci set wireless.halow_ap.ieee80211w='2'  # PMF required
 uci set wireless.halow_ap.max_inactivity='600'  # 10 min timeout
 uci set wireless.halow_ap.max_listen_interval='10'
@@ -1563,157 +1473,30 @@ services:
     privileged: true
     volumes:
       - /dev/ttyUSB0:/dev/ttyUSB0
-      - ./otbr-config:/etc/openthread
-    environment:
-      - OTBR_LOG_LEVEL=info
-      - INFRA_IF_NAME=br-lan
-      - RADIO_URL=spinel+hdlc+uart:///dev/ttyUSB0?uart-baudrate=115200
-    restart: unless-stopped
-\end{verbatim}
+\subsection{Despliegue de Servicios en Docker}
 
-Despliegue:
-\begin{verbatim}
-cd /mnt/docker/otbr
-docker-compose up -d
-docker logs -f otbr  # Verificar inicio correcto
-\end{verbatim}
-
-\subsubsection{Radio Co-Processor (RCP)}
-
-Se requiere un dispositivo 802.15.4 como RCP:
-\begin{itemize}
-    \item \textbf{Opción 1}: Nordic nRF52840 Dongle con firmware OpenThread RCP.
-    \item \textbf{Opción 2}: ESP32-H2 con ot-rcp (soporte Thread 1.3).
-    \item \textbf{Conexión}: USB (\texttt{/dev/ttyUSB0}) mapeado al contenedor.
-\end{itemize}
-
-Verificar RCP:
-\begin{verbatim}
-docker exec -it otbr ot-ctl state
-# Esperado: "disabled" o "detached" (listo para configurar)
-\end{verbatim}
-
-\subsection{Despliegue de ThingsBoard Edge}
-
-\subsubsection{Función de TB Edge}
-
-ThingsBoard Edge permite:
-\begin{itemize}
-    \item \textbf{Edge computing}: Procesamiento local de datos antes de enviar a cloud.
-    \item \textbf{Sincronización bidireccional}: Con servidor ThingsBoard Cloud/PE.
-    \item \textbf{Operación offline}: Caché local de dashboards y reglas durante desconexión.
-    \item \textbf{Reducción de ancho de banda}: Envío agregado y comprimido al cloud.
-\end{itemize}
-
-\subsubsection{Docker Compose para TB Edge}
-
-Archivo \texttt{/mnt/docker/tb-edge/docker-compose.yml}:
-\begin{verbatim}
-version: '3.8'
-services:
-  tb-edge:
-    image: thingsboard/tb-edge:latest
-    container_name: tb-edge
-    ports:
-      - "8080:8080"   # HTTP UI
-      - "1883:1883"   # MQTT
-      - "5683:5683/udp"  # CoAP
-    environment:
-      - CLOUD_ROUTING_KEY=YOUR_EDGE_KEY
-      - CLOUD_ROUTING_SECRET=YOUR_EDGE_SECRET
-      - CLOUD_RPC_HOST=cloud.thingsboard.io
-      - CLOUD_RPC_PORT=7070
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/tb_edge
-      - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=postgres123
-    volumes:
-      - ./tb-edge-data:/data
-      - ./tb-edge-logs:/var/log/thingsboard
-    depends_on:
-      - postgres
-    restart: unless-stopped
-
-  postgres:
-    image: postgres:15-alpine
-    container_name: tb-edge-postgres
-    environment:
-      - POSTGRES_DB=tb_edge
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres123
-    volumes:
-      - ./postgres-data:/var/lib/postgresql/data
-    restart: unless-stopped
-\end{verbatim}
-
-Despliegue:
-\begin{verbatim}
-cd /mnt/docker/tb-edge
-docker-compose up -d
-docker logs -f tb-edge  # Esperar inicio completo (~2 min)
-\end{verbatim}
-
-Acceso web: \texttt{http://<gateway-ip>:8080} (credenciales por defecto: \texttt{tenant@thingsboard.org / tenant})
-
-\subsection{Despliegue de IEEE 2030.5 Server (SEP 2.0)}
-
-\subsubsection{Función del SEP 2.0 Server}
-
-Servidor IEEE 2030.5 para interoperabilidad con utilidades y sistemas DER:
+La plataforma del gateway se despliega mediante contenedores Docker orquestados con docker-compose. Los servicios principales son:
 
 \begin{itemize}
-    \item \textbf{API REST estándar}: Endpoints IEEE 2030.5 (DCAP, TM, MM, MSG, ED).
-    \item \textbf{Formato XML}: Respuestas según XSD schema IEEE 2030.5.
-    \item \textbf{Autenticación TLS mTLS}: Certificados ECC P-256.
-    \item \textbf{Interoperabilidad}: Compatible con clientes SEP 2.0 (utilidades, HEMS, EVSE).
+    \item \textbf{OpenThread Border Router (OTBR)}: Enrutamiento Thread/IPv6 (\texttt{/dev/ttyUSB0} → nRF52840 RCP)
+    \item \textbf{ThingsBoard Edge}: Plataforma IoT local con sincronización Cloud
+    \item \textbf{PostgreSQL + TimescaleDB}: Base de datos de series temporales
+    \item \textbf{IEEE 2030.5 Server (SEP 2.0)}: API REST estándar para utilidades
+    \item \textbf{Bridge Thread↔TB}: Traductor MQTT entre redes Thread y ThingsBoard
+    \item \textbf{Apache Kafka}: Bus de mensajes para integración empresarial
 \end{itemize}
 
-\subsubsection{Docker Compose para SEP 2.0 Server}
+Los archivos \texttt{docker-compose.yml} completos para OTBR, ThingsBoard Edge, PostgreSQL y servicios auxiliares se presentan en el Anexo B. Los scripts Python de implementación para el IEEE 2030.5 Server, el Bridge Thread↔ThingsBoard, y los productores/consumidores Kafka se documentan en el Anexo C.
 
-Archivo \texttt{/mnt/docker/sep20-server/docker-compose.yml}:
+El despliegue típico sigue esta secuencia:
+
 \begin{verbatim}
-version: '3.8'
-services:
-  sep20-server:
-    build:
-      context: ./sep20-server
-      dockerfile: Dockerfile
-    container_name: sep20-server
-    ports:
-      - "8883:8883"   # HTTPS/TLS
-    environment:
-      - TLS_CERT=/certs/server.crt
-      - TLS_KEY=/certs/server.key
-      - CA_CERT=/certs/ca.crt
-      - TB_EDGE_URL=http://tb-edge:8080
-      - TB_EDGE_TOKEN=YOUR_TB_TOKEN
-    volumes:
-      - ./certs:/certs:ro
-      - ./sep20-data:/data
-    restart: unless-stopped
+cd /mnt/docker/otbr && docker-compose up -d
+cd /mnt/docker/tb-edge && docker-compose up -d
+cd /mnt/docker/sep20-server && docker-compose up -d
+cd /mnt/docker/thread-bridge && docker-compose up -d
+docker ps  # Verificar todos los servicios activos
 \end{verbatim}
-
-\subsubsection{Implementación del SEP 2.0 Server (Python/Flask)}
-
-Archivo \texttt{/mnt/docker/sep20-server/app.py}:
-\begin{verbatim}
-from flask import Flask, Response
-import requests
-import xml.etree.ElementTree as ET
-
-app = Flask(__name__)
-TB_EDGE_URL = "http://tb-edge:8080"
-
-@app.route('/dcap', methods=['GET'])
-def device_capability():
-    """IEEE 2030.5 Device Capability"""
-    xml = '''<?xml version="1.0" encoding="UTF-8"?>
-    <DeviceCapability xmlns="urn:ieee:std:2030.5:ns">
-      <href>/dcap</href>
-      <TimeLink href="/tm"/>
-      <MirrorUsagePointListLink href="/mup"/>
-      <MessagingProgramListLink href="/msg"/>
-      <EndDeviceListLink href="/edev"/>
-    </DeviceCapability>'''
     return Response(xml, mimetype='application/sep+xml')
 
 @app.route('/tm', methods=['GET'])
@@ -2015,69 +1798,19 @@ PostgreSQL almacena:
 
 \subsubsection{Optimización para Series Temporales (TimescaleDB)}
 
-TimescaleDB es una extensión de PostgreSQL optimizada para series temporales:
+TimescaleDB es una extensión de PostgreSQL optimizada para series temporales, que ofrece:
 
-Docker Compose:
-\begin{verbatim}
-  timescaledb:
-    image: timescale/timescaledb:latest-pg15
-    container_name: timescaledb
-    environment:
-      POSTGRES_DB: tb_edge
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres123
-    ports:
-      - "5432:5432"
-    volumes:
-      - ./timescaledb-data:/var/lib/postgresql/data
-    command: ["postgres", "-c", "shared_preload_libraries=timescaledb"]
-    restart: unless-stopped
-\end{verbatim}
-
-Crear hypertable para telemetría:
-\begin{verbatim}
--- Conectar a PostgreSQL
-psql -h localhost -U postgres -d tb_edge
-
--- Habilitar TimescaleDB
-CREATE EXTENSION IF NOT EXISTS timescaledb;
-
--- Crear tabla de telemetría
-CREATE TABLE telemetry (
-    time TIMESTAMPTZ NOT NULL,
-    device_id TEXT NOT NULL,
-    energy_kwh DOUBLE PRECISION,
-    power_w DOUBLE PRECISION,
-    voltage_v DOUBLE PRECISION
-);
-
--- Convertir a hypertable (particionamiento automático)
-SELECT create_hypertable('telemetry', 'time');
-
--- Crear índices
-CREATE INDEX idx_device_time ON telemetry (device_id, time DESC);
-
--- Política de retención: 90 días
-SELECT add_retention_policy('telemetry', INTERVAL '90 days');
-
--- Compresión automática después de 7 días
-ALTER TABLE telemetry SET (
-  timescaledb.compress,
-  timescaledb.compress_segmentby = 'device_id'
-);
-
-SELECT add_compression_policy('telemetry', INTERVAL '7 days');
-\end{verbatim}
-
-\textbf{Ventajas TimescaleDB}:
 \begin{itemize}
-    \item \textbf{Compresión}: 10-20× reducción en espacio disco.
-    \item \textbf{Queries rápidas}: Particionamiento automático por tiempo.
-    \item \textbf{Agregaciones}: \texttt{time\_bucket} para promedios 15-min/1-hora.
-    \item \textbf{Retención automática}: Elimina datos antiguos sin intervención manual.
+    \item \textbf{Compresión}: 10-20× reducción en espacio disco mediante algoritmos adaptativos
+    \item \textbf{Queries rápidas}: Particionamiento automático por tiempo (chunks de 7 días por defecto)
+    \item \textbf{Agregaciones}: Función \texttt{time\_bucket} para promedios 15-min/1-hora con vistas materializadas
+    \item \textbf{Retención automática}: Elimina datos antiguos sin intervención manual
 \end{itemize}
 
-Query de ejemplo (consumo promedio por hora):
+El esquema completo de TimescaleDB, incluyendo la definición de hypertables, políticas de compresión, continuous aggregates (vistas materializadas para agregaciones de 15-min, 1-hora y 1-día), políticas de retención (90 días), y cinco consultas SQL de ejemplo (telemetría reciente, consumo diario, alertas de voltaje, promedios semanales y agregados de facturación mensual), se presenta en el Anexo D. El docker-compose de TimescaleDB se documenta en el Anexo B.
+
+Ejemplo de consulta para consumo promedio por hora:
+
 \begin{verbatim}
 SELECT 
   device_id,
@@ -2262,74 +1995,35 @@ POST http://gateway/cgi-bin/luci/admin/network/wireless
 \subsubsection{Características LwM2M}
 
 \begin{itemize}
-    \item \textbf{Gestión de dispositivos}: Bootstrap, configuración, firmware OTA.
-    \item \textbf{Modelo de objetos}: Jerarquía Object/Instance/Resource (ej. Device/0/Manufacturer).
-    \item \textbf{Operaciones}: Read, Write, Execute, Observe, Discover.
-    \item \textbf{Transporte}: CoAP sobre UDP (binding U) o SMS/NB-IoT (binding S).
+    \item \textbf{Gestión de dispositivos}: Bootstrap, configuración remota, firmware OTA
+    \item \textbf{Modelo de objetos}: Jerarquía Object/Instance/Resource (ej. Device/0/Manufacturer)
+    \item \textbf{Operaciones}: Read, Write, Execute, Observe, Discover
+    \item \textbf{Transporte}: CoAP sobre UDP (binding U) o SMS/NB-IoT (binding S)
 \end{itemize}
 
 \subsubsection{Objetos LwM2M Estándar (OMA SpecWorks)}
 
-\begin{table}[h]
-\centering
-\small
-\begin{tabular}{|l|l|p{5cm}|}
-\hline
-\textbf{Object ID} & \textbf{Nombre} & \textbf{Recursos Clave} \\
-\hline
-0 & Security & Server URI, PSK, Bootstrap \\
-1 & Server & Lifetime, Binding, Registration \\
-3 & Device & Manufacturer, Model, Serial, Battery \\
-4 & Connectivity Monitoring & Network Bearer, IP Address, Signal Strength \\
-5 & Firmware Update & Package URI, Update, State \\
-3303 & Temperature Sensor & Sensor Value, Units, Min/Max \\
-3305 & Power Measurement & Instantaneous Power, Energy, Voltage \\
-\hline
-\end{tabular}
-\caption{Objetos LwM2M estándar para Smart Metering}
-\end{table}
-
-\subsubsection{Integración LwM2M en Gateway}
-
-Desplegar servidor LwM2M (Leshan) en gateway:
-\begin{verbatim}
-# Docker Compose para Leshan LwM2M Server
-services:
-  leshan:
-    image: eclipse/leshan:latest
-    container_name: leshan-server
-    ports:
-      - "8080:8080"   # Web UI
-      - "5683:5683/udp"  # CoAP LwM2M
-      - "5684:5684/udp"  # CoAPS (DTLS)
-    volumes:
-      - ./leshan-data:/data
-    restart: unless-stopped
-\end{verbatim}
-
-\textbf{Cliente LwM2M en DCU/Medidor}:
-\begin{verbatim}
-// Wakaama LwM2M client (C)
-lwm2m_context_t *context = lwm2m_init(NULL);
-
-// Object 3305: Power Measurement
-power_obj = create_power_object();
-lwm2m_add_object(context, power_obj);
-
-// Register to server
-lwm2m_configure(context, "gateway", 5683, "meter-001", 300);
-
-// Update resources periodically
-lwm2m_resource_value_set(power_obj, 5800, &energy_kwh);  // Instantaneous active energy
-lwm2m_resource_value_set(power_obj, 5805, &voltage_v);   // Voltage
-\end{verbatim}
-
-\textbf{Ventajas LwM2M para Smart Metering}:
+Los objetos LwM2M utilizados incluyen:
 \begin{itemize}
-    \item \textbf{Estandarización}: Objetos interoperables (OMA SpecWorks).
-    \item \textbf{Gestión centralizada}: Bootstrap, firmware OTA desde gateway.
-    \item \textbf{Eficiencia}: DTLS+PSK consume menos que TLS+X.509 (clave de 16 bytes vs certificado 2 KB).
-    \item \textbf{Observe}: Notificaciones automáticas sin polling (ahorro energético).
+    \item \textbf{Objeto 0 (Security)}: Server URI, PSK, Bootstrap
+    \item \textbf{Objeto 1 (Server)}: Lifetime, Binding, Registration
+    \item \textbf{Objeto 3 (Device)}: Manufacturer, Model, Serial Number, Battery, Memory, Reboot
+    \item \textbf{Objeto 4 (Connectivity)}: Network Bearer, IP Address, Signal Strength
+    \item \textbf{Objeto 5 (Firmware Update)}: Package URI, Update State, Execute Update
+    \item \textbf{Objeto 6 (Location)}: Latitude, Longitude, Timestamp
+    \item \textbf{Objeto 3303 (Temperature)}: Sensor Value, Units, Min/Max, Reset
+    \item \textbf{Objeto 3304 (Humidity)}: Sensor Value, Units, Min/Max
+    \item \textbf{Objeto 3312 (On/Off)}: Digital Output State (boolean)
+\end{itemize}
+
+La implementación completa de referencia de un nodo IoT ESP32-C6 con cliente LwM2M AVSystems Anjay, incluyendo todos los archivos de código fuente (\texttt{main.c}, \texttt{lwm2m\_client.c}, \texttt{temp\_object.c}, \texttt{humidity\_object.c}, \texttt{device\_object.c}, \texttt{connectivity\_object.c}, \texttt{location\_object.c}, \texttt{onoff\_object.c}, \texttt{thread\_prov.c}), el \texttt{CMakeLists.txt}, instrucciones de compilación con ESP-IDF, y comandos de comisionamiento Thread/LwM2M, se documenta en el Anexo E.
+
+\subsubsection{Ventajas LwM2M para Smart Metering}
+\begin{itemize}
+    \item \textbf{Estandarización}: Objetos interoperables (OMA SpecWorks)
+    \item \textbf{Gestión centralizada}: Bootstrap, firmware OTA desde gateway
+    \item \textbf{Eficiencia}: DTLS+PSK consume menos que TLS+X.509 (clave de 16 bytes vs certificado 2 KB)
+    \item \textbf{Observe}: Notificaciones automáticas sin polling (ahorro energético)
 \end{itemize}
 
 \subsection{Selección de Protocolo por Caso de Uso}
