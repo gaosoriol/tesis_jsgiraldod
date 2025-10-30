@@ -1,0 +1,594 @@
+\chapter{Archivos Docker Compose del Gateway}
+\label{anexo:docker-compose}
+
+Este anexo presenta los archivos Docker Compose completos para el despliegue de los servicios del gateway IoT. Cada servicio se despliega en un contenedor independiente, permitiendo gestión, escalabilidad y actualizaciones OTA aisladas.
+
+\section{Estructura de Directorios Docker}
+
+Los archivos Docker Compose se organizan en \texttt{/mnt/ssd/docker/} con la siguiente estructura:
+
+\begin{verbatim}
+/mnt/ssd/docker/
+|-- otbr/
+|   |-- docker-compose.yml
+|   +-- otbr-config/
+|-- tb-edge/
+|   |-- docker-compose.yml
+|   |-- tb-edge-data/
+|   |-- tb-edge-logs/
+|   +-- postgres-data/
+|-- sep20-server/
+|   |-- docker-compose.yml
+|   |-- Dockerfile
+|   |-- app.py
+|   +-- certs/
+|-- kafka/
+|   |-- docker-compose.yml
+|   |-- kafka-data/
+|   +-- zookeeper-data/
++-- bridge/
+    |-- docker-compose.yml
+    |-- Dockerfile
+    +-- bridge.py
+\end{verbatim}
+
+\section{OpenThread Border Router (OTBR)}
+
+\subsection{Función del OTBR}
+
+El OpenThread Border Router actúa como puente entre la red Thread (802.15.4) y la red IP backbone (Ethernet/WiFi), proporcionando:
+
+\begin{itemize}
+    \item \textbf{Routing IPv6}: Traducción y enrutamiento entre Thread mesh y red IP externa
+    \item \textbf{Commissioning}: Permite unir nuevos dispositivos Thread a la red de forma segura
+    \item \textbf{mDNS/DNS-SD}: Descubrimiento de servicios entre Thread e IP
+    \item \textbf{Web UI}: Interfaz web de gestión en puerto 80
+    \item \textbf{REST API}: API para administración programática de la red Thread
+\end{itemize}
+
+\subsection{Docker Compose: OTBR}
+
+Archivo \texttt{/mnt/ssd/docker/otbr/docker-compose.yml}:
+
+\begin{verbatim}
+version: '3.8'
+
+services:
+  otbr:
+    image: openthread/otbr:latest
+    container_name: otbr
+    network_mode: host
+    privileged: true
+    devices:
+      - /dev/ttyACM0:/dev/ttyACM0
+    volumes:
+      - ./otbr-config:/etc/openthread
+      - /var/run/dbus:/var/run/dbus
+    environment:
+      - OTBR_LOG_LEVEL=info
+      - INFRA_IF_NAME=br-lan
+      - RADIO_URL=spinel+hdlc+uart:///dev/ttyACM0?uart-baudrate=115200
+      - BACKBONE_ROUTER=1
+      - NAT64=0
+      - DNS64=0
+      - NETWORK_NAME=SmartGrid-Thread
+      - PANID=0xABCD
+      - EXTPANID=1234567812345678
+      - CHANNEL=15
+      - NETWORK_KEY=00112233445566778899aabbccddeeff
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+\end{verbatim}
+
+\subsection{Comandos de Gestión OTBR}
+
+\begin{verbatim}
+# Despliegue inicial
+cd /mnt/ssd/docker/otbr
+docker-compose up -d
+
+# Ver logs en tiempo real
+docker logs -f otbr
+
+# Acceder a CLI de OpenThread
+docker exec -it otbr ot-ctl
+
+# Comandos útiles en ot-ctl:
+state          # Ver estado (leader, router, child)
+ipaddr         # Listar direcciones IPv6
+neighbor table # Ver vecinos Thread
+networkname    # Nombre de red Thread
+panid          # PAN ID de la red
+channel        # Canal RF (11-26)
+routerselectionjitter  # Configuración de router selection
+
+# Formar nueva red Thread
+docker exec -it otbr ot-ctl dataset init new
+docker exec -it otbr ot-ctl dataset commit active
+docker exec -it otbr ot-ctl ifconfig up
+docker exec -it otbr ot-ctl thread start
+
+# Acceder a Web UI
+# http://<gateway-ip>:80
+\end{verbatim}
+
+\section{ThingsBoard Edge + PostgreSQL}
+
+\subsection{Función de ThingsBoard Edge}
+
+ThingsBoard Edge proporciona capacidades de edge computing y sincronización con cloud:
+
+\begin{itemize}
+    \item \textbf{Procesamiento local}: Reglas, alarmas y dashboards ejecutados en el gateway
+    \item \textbf{Sincronización bidireccional}: Con ThingsBoard Cloud/PE
+    \item \textbf{Operación offline}: Continúa funcionando sin conexión a cloud
+    \item \textbf{Reducción de bandwidth}: Solo sincroniza datos agregados/filtrados
+    \item \textbf{Baja latencia}: Comandos RPC procesados localmente (<100ms)
+\end{itemize}
+
+\subsection{Docker Compose: ThingsBoard Edge}
+
+Archivo \texttt{/mnt/ssd/docker/tb-edge/docker-compose.yml}:
+
+\begin{verbatim}
+version: '3.8'
+
+services:
+  tb-edge:
+    image: thingsboard/tb-edge:3.6.0
+    container_name: tb-edge
+    ports:
+      - "8080:8080"     # HTTP UI
+      - "1883:1883"     # MQTT
+      - "5683:5683/udp" # CoAP
+      - "5684:5684/udp" # CoAP/DTLS
+    environment:
+      # Conexión con ThingsBoard Cloud
+      - CLOUD_ROUTING_KEY=${TB_EDGE_KEY}
+      - CLOUD_ROUTING_SECRET=${TB_EDGE_SECRET}
+      - CLOUD_RPC_HOST=cloud.thingsboard.io
+      - CLOUD_RPC_PORT=7070
+      - CLOUD_RPC_SSL_ENABLED=true
+      
+      # Base de datos PostgreSQL
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/tb_edge
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      
+      # Configuración JVM
+      - JAVA_OPTS=-Xms512M -Xmx2048M -Xss512k
+      
+      # Logs
+      - TB_SERVICE_ID=tb-edge
+      - TB_LOG_LEVEL=info
+    volumes:
+      - /mnt/ssd/tb-edge-data:/data
+      - /mnt/ssd/tb-edge-logs:/var/log/thingsboard
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: tb-edge-postgres
+    environment:
+      - POSTGRES_DB=tb_edge
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF8
+    volumes:
+      - /mnt/ssd/postgres/data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    shm_size: 256mb
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+\end{verbatim}
+
+\subsection{Archivo .env para Variables de Entorno}
+
+Crear archivo \texttt{/mnt/ssd/docker/tb-edge/.env}:
+
+\begin{verbatim}
+# ThingsBoard Edge credentials (obtener de ThingsBoard Cloud)
+TB_EDGE_KEY=your-edge-routing-key-here
+TB_EDGE_SECRET=your-edge-secret-here
+
+# PostgreSQL password (cambiar en producción)
+POSTGRES_PASSWORD=postgres_secure_password_123
+\end{verbatim}
+
+\subsection{Comandos de Gestión ThingsBoard Edge}
+
+\begin{verbatim}
+# Despliegue inicial
+cd /mnt/ssd/docker/tb-edge
+docker-compose up -d
+
+# Ver logs de TB Edge
+docker logs -f tb-edge
+
+# Ver logs de PostgreSQL
+docker logs -f tb-edge-postgres
+
+# Reiniciar servicios
+docker-compose restart tb-edge
+
+# Backup de base de datos
+docker exec tb-edge-postgres pg_dump -U postgres tb_edge > \
+  /mnt/ssd/backups/tb_edge_$(date +%Y%m%d).sql
+
+# Restore de base de datos
+cat /mnt/ssd/backups/tb_edge_20251030.sql | \
+  docker exec -i tb-edge-postgres psql -U postgres -d tb_edge
+
+# Acceder a Web UI
+# http://<gateway-ip>:8080
+# Usuario: tenant@thingsboard.org
+# Password: tenant (cambiar en primer login)
+\end{verbatim}
+
+\section{IEEE 2030.5 Server (SEP 2.0)}
+
+\subsection{Función del IEEE 2030.5 Server}
+
+Servidor IEEE 2030.5 (Smart Energy Profile 2.0) para interoperabilidad con:
+
+\begin{itemize}
+    \item \textbf{Utilidades eléctricas}: APIs estándar para DR (Demand Response), DER Control
+    \item \textbf{Sistemas HEMS}: Home Energy Management Systems
+    \item \textbf{EVSE}: Electric Vehicle Supply Equipment
+    \item \textbf{Medidores inteligentes}: Smart meters con cliente IEEE 2030.5
+\end{itemize}
+
+\subsection{Docker Compose: IEEE 2030.5 Server}
+
+Archivo \texttt{/mnt/ssd/docker/sep20-server/docker-compose.yml}:
+
+\begin{verbatim}
+version: '3.8'
+
+services:
+  sep20-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sep20-server
+    ports:
+      - "8883:8883"   # HTTPS/TLS (mTLS)
+      - "8884:8884"   # HTTP (solo desarrollo/testing)
+    environment:
+      - TLS_ENABLED=true
+      - TLS_CERT=/certs/server.crt
+      - TLS_KEY=/certs/server.key
+      - CA_CERT=/certs/ca.crt
+      - CLIENT_CERT_REQUIRED=true
+      - TB_EDGE_URL=http://tb-edge:8080
+      - TB_EDGE_TOKEN=${TB_ADMIN_TOKEN}
+      - LOG_LEVEL=info
+    volumes:
+      - /mnt/ssd/ieee2030_5_certs:/certs:ro
+      - ./sep20-data:/data
+      - ./logs:/var/log/sep20
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+\end{verbatim}
+
+\subsection{Dockerfile para IEEE 2030.5 Server}
+
+Archivo \texttt{/mnt/ssd/docker/sep20-server/Dockerfile}:
+
+\begin{verbatim}
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Instalar dependencias
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copiar aplicación
+COPY app.py .
+COPY sep20/ ./sep20/
+
+# Usuario no privilegiado
+RUN useradd -m -u 1000 sep20user && \
+    chown -R sep20user:sep20user /app
+USER sep20user
+
+EXPOSE 8883 8884
+
+CMD ["python", "app.py"]
+\end{verbatim}
+
+\subsection{requirements.txt}
+
+\begin{verbatim}
+Flask==3.0.0
+pyOpenSSL==23.3.0
+requests==2.31.0
+xmltodict==0.13.0
+python-dateutil==2.8.2
+\end{verbatim}
+
+\section{Apache Kafka + Zookeeper}
+
+\subsection{Función de Kafka}
+
+Apache Kafka proporciona una capa de mensajería distribuida de alto rendimiento:
+
+\begin{itemize}
+    \item \textbf{Message broker}: Desacopla productores (bridge) de consumidores (TB Edge, analytics)
+    \item \textbf{Buffer distribuido}: Almacena mensajes en tópicos persistentes
+    \item \textbf{Escalabilidad}: Soporta >100k mensajes/segundo
+    \item \textbf{Durabilidad}: Retención configurable para replay histórico
+    \item \textbf{Stream processing}: Permite procesamiento en tiempo real con Kafka Streams
+\end{itemize}
+
+\subsection{Docker Compose: Kafka}
+
+Archivo \texttt{/mnt/ssd/docker/kafka/docker-compose.yml}:
+
+\begin{verbatim}
+version: '3.8'
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    hostname: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_SYNC_LIMIT: 5
+      ZOOKEEPER_INIT_LIMIT: 10
+    volumes:
+      - /mnt/ssd/zookeeper/data:/var/lib/zookeeper/data
+      - /mnt/ssd/zookeeper/logs:/var/lib/zookeeper/log
+    restart: unless-stopped
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    hostname: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      
+      # Listeners
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      
+      # Configuración de logs
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_MIN_INSYNC_REPLICAS: 1
+      
+      # Retención de mensajes
+      KAFKA_LOG_RETENTION_HOURS: 168  # 7 días
+      KAFKA_LOG_RETENTION_BYTES: 10737418240  # 10 GB
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824  # 1 GB
+      
+      # Compresión
+      KAFKA_COMPRESSION_TYPE: lz4
+      
+      # Offsets
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      
+      # JVM
+      KAFKA_HEAP_OPTS: "-Xms512M -Xmx1024M"
+    volumes:
+      - /mnt/ssd/kafka/data:/var/lib/kafka/data
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+\end{verbatim}
+
+\subsection{Comandos de Gestión Kafka}
+
+\begin{verbatim}
+# Despliegue
+cd /mnt/ssd/docker/kafka
+docker-compose up -d
+
+# Crear tópico para telemetría
+docker exec kafka kafka-topics --create \
+  --bootstrap-server localhost:9092 \
+  --topic smartgrid.telemetry \
+  --partitions 3 \
+  --replication-factor 1
+
+# Listar tópicos
+docker exec kafka kafka-topics --list \
+  --bootstrap-server localhost:9092
+
+# Describir tópico
+docker exec kafka kafka-topics --describe \
+  --bootstrap-server localhost:9092 \
+  --topic smartgrid.telemetry
+
+# Producir mensaje de prueba
+echo "test-message" | docker exec -i kafka kafka-console-producer \
+  --bootstrap-server localhost:9092 \
+  --topic smartgrid.telemetry
+
+# Consumir mensajes (desde inicio)
+docker exec kafka kafka-console-consumer \
+  --bootstrap-server localhost:9092 \
+  --topic smartgrid.telemetry \
+  --from-beginning
+
+# Ver grupos de consumidores
+docker exec kafka kafka-consumer-groups --list \
+  --bootstrap-server localhost:9092
+
+# Ver offsets de grupo
+docker exec kafka kafka-consumer-groups --describe \
+  --bootstrap-server localhost:9092 \
+  --group tb-edge-consumer-group
+\end{verbatim}
+
+\section{Bridge Thread-ThingsBoard}
+
+\subsection{Función del Bridge}
+
+El bridge conecta la red Thread (vía OTBR) con ThingsBoard Edge, realizando:
+
+\begin{itemize}
+    \item \textbf{Protocol translation}: CoAP/MQTT Thread → MQTT ThingsBoard
+    \item \textbf{Data transformation}: Conversión de formatos propietarios a Telemetry API TB
+    \item \textbf{Device provisioning}: Auto-registro de dispositivos Thread en TB Edge
+    \item \textbf{Command forwarding}: Envío de RPCs de TB Edge a dispositivos Thread
+\end{itemize}
+
+\subsection{Docker Compose: Bridge}
+
+Archivo \texttt{/mnt/ssd/docker/bridge/docker-compose.yml}:
+
+\begin{verbatim}
+version: '3.8'
+
+services:
+  bridge:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: thread-tb-bridge
+    network_mode: host
+    environment:
+      - OTBR_HOST=localhost
+      - OTBR_PORT=8081
+      - TB_EDGE_HOST=localhost
+      - TB_EDGE_PORT=1883
+      - TB_EDGE_TOKEN=${TB_BRIDGE_TOKEN}
+      - KAFKA_ENABLED=true
+      - KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+      - LOG_LEVEL=info
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+\end{verbatim}
+
+\subsection{Dockerfile para Bridge}
+
+\begin{verbatim}
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY bridge.py .
+COPY config/ ./config/
+
+RUN useradd -m -u 1000 bridge && \
+    chown -R bridge:bridge /app
+USER bridge
+
+CMD ["python", "-u", "bridge.py"]
+\end{verbatim}
+
+\section{Orquestación Completa con docker-compose}
+
+Para desplegar todos los servicios simultáneamente, crear archivo maestro:
+
+Archivo \texttt{/mnt/ssd/docker/docker-compose-full.yml}:
+
+\begin{verbatim}
+version: '3.8'
+
+networks:
+  smartgrid:
+    driver: bridge
+
+services:
+  # Incluir todos los servicios de los archivos anteriores
+  # con configuración de red compartida
+  
+  # ... (referencia a servicios anteriores)
+\end{verbatim}
+
+\subsection{Comandos de Gestión Global}
+
+\begin{verbatim}
+# Despliegue completo
+cd /mnt/ssd/docker
+docker-compose -f docker-compose-full.yml up -d
+
+# Ver estado de todos los contenedores
+docker ps -a
+
+# Ver consumo de recursos
+docker stats
+
+# Logs agregados de todos los servicios
+docker-compose -f docker-compose-full.yml logs -f
+
+# Actualización OTA de todos los servicios
+docker-compose -f docker-compose-full.yml pull
+docker-compose -f docker-compose-full.yml up -d
+
+# Detener todos los servicios
+docker-compose -f docker-compose-full.yml down
+\end{verbatim}
+
+\section{Resumen}
+
+Este anexo ha presentado los archivos Docker Compose completos para:
+
+\begin{itemize}
+    \item OpenThread Border Router (OTBR)
+    \item ThingsBoard Edge + PostgreSQL
+    \item IEEE 2030.5 Server (SEP 2.0)
+    \item Apache Kafka + Zookeeper
+    \item Bridge Thread-ThingsBoard
+\end{itemize}
+
+Todos los servicios están configurados para:
+\begin{itemize}
+    \item Reinicio automático (\texttt{restart: unless-stopped})
+    \item Logs rotados (max 10 MB, 3-5 archivos)
+    \item Volúmenes persistentes en NVMe SSD
+    \item Variables de entorno configurables via \texttt{.env}
+\end{itemize}
+
+Las implementaciones de código Python (IEEE 2030.5 Server, Bridge) se detallan en el Anexo C.
