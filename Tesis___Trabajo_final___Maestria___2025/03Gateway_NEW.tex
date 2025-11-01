@@ -64,11 +64,639 @@ Ventajas: (1) Escalabilidad - un gateway gestiona 100-200 nodos directamente, es
 
 \section{Arquitectura de Software del Gateway}
 
-\subsection{Stack de Contenedores}
+\subsection{Visión General: ThingsBoard Edge como Núcleo del Procesamiento}
 
-El gateway implementa una arquitectura basada en contenedores Docker con servicios desacoplados: (1) OpenThread Border Router para gestión de red Thread y ruteo IPv6; (2) ThingsBoard Edge como plataforma IoT local; (3) PostgreSQL con extensión TimescaleDB; (4) Bridge Thread-TB para integración OTBR ↔ TB Edge; (5) MQTT Broker Mosquitto; (6) IEEE 2030.5 Server; (7) Apache Kafka como bus de mensajes.
+El gateway implementa una arquitectura centrada en **ThingsBoard Edge**, que actúa como plataforma de procesamiento edge completa, proporcionando capacidades de ingesta, transformación, almacenamiento, procesamiento de reglas (rule engine) y sincronización bidireccional con ThingsBoard Server en la nube. Esta arquitectura edge-first permite operación autónoma durante desconexiones WAN prolongadas (>72 horas) mientras mantiene funcionalidad completa de dashboards locales, alarmas y análisis en tiempo real.
 
-Los archivos \texttt{docker-compose.yml} completos para todos los servicios se presentan en el \textbf{Anexo B}.
+\textbf{Flujo de Datos Multi-Protocolo:}
+
+\begin{verbatim}
+Nodos IoT                Gateway Edge                      Cloud/WAN
+  (802.15.4)              (Raspberry Pi 4)                 (ThingsBoard Server)
+     |                           |                                |
+     | 6LoWPAN/CoAP              |                                |
+     | (compressed IPv6)         |                                |
+     +-------------------------->| OpenThread Border Router       |
+                                 | (nRF52840 RCP)                 |
+                                 |   ↓                            |
+                                 | IPv6 routing (fd00::/64)       |
+                                 |   ↓                            |
+                                 | Bridge CoAP→MQTT               |
+                                 | (descompresión 6LoWPAN)        |
+                                 |   ↓                            |
+                                 | ThingsBoard Edge               |
+                                 | - Rule Engine (CEP)            |
+                                 | - TimescaleDB (storage)        |
+                                 | - Dashboards locales           |
+                                 | - Alarmas en tiempo real       |
+                                 |   ↓                            |
+                                 | MQTT Publisher                 |
+                                 | (payload comprimido CBOR)      |
+                                 |   ↓                            |
+                                 | HaLow 802.11ah                 |
+                                 | (2/4/8 MHz bandwidth)          |
+                                 +-------------------------------->| MQTT Broker
+                                                                  | ThingsBoard Server
+                                                                  | (sincronización gRPC)
+\end{verbatim}
+
+\subsection{Stack de Contenedores Docker}
+
+El gateway despliega 7 servicios containerizados orquestados mediante Docker Compose, cada uno con responsabilidades específicas y aislamiento de recursos:
+
+\subsubsection{1. OpenThread Border Router (OTBR)}
+
+\textbf{Función:} Border router entre red Thread 802.15.4 (mesh IPv6) y red Ethernet del gateway, implementando traducción de direcciones IPv6, routing entre prefijos Thread (fd00::/64 mesh-local) y prefijos globales, y commissioning de nuevos dispositivos Thread.
+
+\textbf{Implementación:}
+\begin{itemize}
+\item \textbf{Imagen}: \texttt{openthread/otbr:latest} (ARM64)
+\item \textbf{Hardware}: nRF52840 USB Dongle como RCP (Radio Co-Processor) conectado vía \texttt{/dev/ttyACM0}
+\item \textbf{Interfaces de red}: \texttt{wpan0} (Thread mesh), \texttt{eth0} (bridge a Ethernet)
+\item \textbf{Servicios expuestos}: Web UI (puerto 80), mDNS/Avahi (auto-discovery), REST API Thread
+\end{itemize}
+
+\textbf{Configuración de Red Thread:}
+\begin{verbatim}
+Network Name: SmartGrid-Thread
+PAN ID: 0xABCD
+Channel: 15 (2.4 GHz, evita interferencia WiFi canales 1/6/11)
+Network Key: [128-bit pre-shared key]
+On-Mesh Prefix: fd00:db8:a0b:12f0::/64
+\end{verbatim}
+
+\textbf{Procesamiento 6LoWPAN:}
+
+OTBR implementa descompresión automática de headers 6LoWPAN (IPHC/NHC) en la interfaz Thread, reconstruyendo paquetes IPv6 completos antes de rutearlos hacia la red Ethernet del gateway. Este proceso es transparente para aplicaciones, que ven tráfico IPv6 estándar:
+
+\begin{enumerate}
+\item Nodo Thread transmite paquete con headers comprimidos (3-9 bytes IPHC+NHC)
+\item OTBR recibe en interfaz \texttt{wpan0}, descomprime headers a IPv6+UDP completos (48 bytes)
+\item OTBR rutea paquete IPv6 a interfaz \texttt{eth0} (bridge Docker) hacia servicios locales
+\item Bridge CoAP→MQTT (servicio 4) recibe paquete UDP/CoAP en puerto 5683
+\end{enumerate}
+
+\subsubsection{2. ThingsBoard Edge}
+
+\textbf{Función:} Plataforma IoT edge completa que proporciona ingesta de telemetría, motor de reglas Complex Event Processing (CEP), almacenamiento de series temporales, dashboards interactivos locales, y sincronización bidireccional con ThingsBoard Server cloud.
+
+\textbf{Implementación:}
+\begin{itemize}
+\item \textbf{Imagen}: \texttt{thingsboard/tb-edge:3.6.4} (Java/Spring Boot)
+\item \textbf{Puertos}: 8080 (HTTP/WebSocket), 1883 (MQTT), 5683 (CoAP), 7070 (gRPC sync con cloud)
+\item \textbf{Base de datos}: PostgreSQL + TimescaleDB (hypertables para telemetría)
+\item \textbf{RAM asignada}: 4 GB (límite Docker), CPU: 3 cores (pinning para determinismo)
+\end{itemize}
+
+\textbf{Componentes Internos de ThingsBoard Edge:}
+
+\begin{enumerate}
+\item \textbf{Transport Layer}: Múltiples servidores de protocolo (MQTT, CoAP, HTTP, LwM2M) que reciben telemetría de dispositivos y publican comandos downlink.
+
+\item \textbf{Rule Engine (Motor de Reglas CEP)}:
+   \begin{itemize}
+   \item \textbf{Rule Chains}: Grafos de nodos de procesamiento (filter, transformation, enrichment, action) que implementan lógica de negocio compleja.
+   \item \textbf{Throughput}: >10,000 mensajes/seg con latencia <10 ms P99
+   \item \textbf{Nodos disponibles}: Script (JS/Python), REST API Call, MQTT Publish, Alarm Create, Email, SMS, Webhook
+   \item \textbf{Ejemplo Rule Chain Smart Energy}:
+   \begin{verbatim}
+   [MQTT Input] → [Script: Parse DLMS] → [Filter: consumption > 5kW]
+                ↓                              ↓
+   [TimescaleDB Save]              [Create Alarm: High Consumption]
+                                              ↓
+                                   [Email Notification to Customer]
+   \end{verbatim}
+   \end{itemize}
+
+\item \textbf{Device Management}:
+   \begin{itemize}
+   \item Registro de dispositivos con atributos (ubicación, tipo, propietario)
+   \item Gestión de credenciales (access tokens, X.509 certs)
+   \item Grupos y relaciones (medidor → transformador → subestación)
+   \item Firmware OTA via LwM2M Object 5
+   \end{itemize}
+
+\item \textbf{Data Storage - TimescaleDB Integration}:
+   \begin{itemize}
+   \item \textbf{Telemetría}: Hypertables con particionamiento automático por tiempo (chunks de 7 días)
+   \item \textbf{Compresión columnar}: Reduce storage 10-20× para datos antiguos (>7 días)
+   \item \textbf{Continuous Aggregates}: Vistas materializadas para agregaciones de 15-min, 1-hora, 1-día (actualizaciones incrementales)
+   \item \textbf{Retención}: 90 días telemetría detallada, agregaciones 1-hora por 1 año, agregaciones 1-día indefinido
+   \end{itemize}
+
+\item \textbf{Dashboards Locales}:
+   \begin{itemize}
+   \item Widgets interactivos (gráficos de línea, gauges, mapas, tablas)
+   \item Acceso local vía \texttt{http://<gateway-ip>:8080} durante offline
+   \item Tiempo real con WebSocket (latencia <500 ms desde ingesta a visualización)
+   \item Exportación de datos (CSV, JSON, Excel) para análisis offline
+   \end{itemize}
+
+\item \textbf{Alarm Engine}:
+   \begin{itemize}
+   \item Alarmas con severidades (Critical, Major, Minor, Warning, Indeterminate)
+   \item Estados de alarma (Active, Acknowledged, Cleared)
+   \item Propagación de alarmas (ej. falla de transformador propaga a todos medidores downstream)
+   \item Notificaciones multi-canal (email, SMS, webhook, MQTT external)
+   \end{itemize}
+\end{enumerate}
+
+\textbf{Sincronización Edge ↔ Cloud:}
+
+ThingsBoard Edge implementa sincronización bidireccional sobre protocolo gRPC (puerto 7070/TLS):
+
+\begin{itemize}
+\item \textbf{Edge → Cloud (Uplink)}:
+  \begin{itemize}
+  \item Telemetría: Batches de 1,000 mensajes cada 5 min (modo online), batches de 5,000 con compresión gzip durante catch-up post-offline
+  \item Alarmas: Inmediatas con prioridad alta (no se batchean)
+  \item Atributos de dispositivos: Sincronización incremental cuando cambian
+  \item Logs de auditoría: Eventos críticos (login, cambios de configuración)
+  \end{itemize}
+
+\item \textbf{Cloud → Edge (Downlink)}:
+  \begin{itemize}
+  \item Comandos RPC: Ejecución remota de acciones en dispositivos (corte/reconexión, actualización parámetros)
+  \item Definiciones de dispositivos/assets: Sincronización automática de nuevos dispositivos registrados en cloud
+  \item Actualizaciones de rule chains: Deploy remoto de nueva lógica de negocio
+  \item Configuración de dashboards: Sincronización de cambios en visualizaciones
+  \end{itemize}
+\end{itemize}
+
+\textbf{Modo Offline (Operación Autónoma):}
+
+Durante desconexión WAN (detección: timeout gRPC >30s + ping fallido a 8.8.8.8):
+\begin{enumerate}
+\item ThingsBoard Edge continúa operación normal local (ingesta, rule engine, dashboards)
+\item Mensajes se acumulan en queue persistente PostgreSQL + filesystem (\texttt{/var/lib/tb-edge/queue})
+\item Capacidad de queue: 100,000 mensajes (~500 MB con compresión CBOR)
+\item Política FIFO con priorización: Alarmas Critical > Alarmas Major > Telemetría > Logs
+\item Dashboards locales permanecen accesibles vía LAN (\texttt{http://192.168.1.100:8080})
+\item Alarmas se ejecutan localmente (notificaciones email solo si SMTP local configurado)
+\end{enumerate}
+
+Al recuperar conectividad WAN:
+\begin{enumerate}
+\item ThingsBoard Edge detecta reconexión (gRPC handshake exitoso)
+\item Inicia catch-up sync acelerado: batch size 5,000 mensajes (vs 1,000 normal)
+\item Prioriza alarmas pendientes (envío inmediato)
+\item Comprime telemetría histórica con gzip (reducción 40-60\%)
+\item Sincroniza backlog completo de 100k mensajes en ~10-15 minutos
+\item Retorna a modo normal (batch 1,000, intervalo 5 min)
+\end{enumerate}
+
+\subsubsection{3. PostgreSQL + TimescaleDB}
+
+\textbf{Función:} Base de datos relacional con extensión TimescaleDB para series temporales optimizadas, almacenando telemetría, configuración de dispositivos, alarmas, y usuarios de ThingsBoard Edge.
+
+\textbf{Implementación:}
+\begin{itemize}
+\item \textbf{Imagen}: \texttt{timescale/timescaledb:2.13.0-pg15}
+\item \textbf{Storage}: Volumen persistente en NVMe SSD (\texttt{/mnt/ssd/postgres-data})
+\item \textbf{Configuración optimizada para IoT}:
+  \begin{verbatim}
+  shared_buffers = 1GB
+  effective_cache_size = 3GB
+  maintenance_work_mem = 256MB
+  checkpoint_completion_target = 0.9
+  wal_buffers = 16MB
+  default_statistics_target = 100
+  random_page_cost = 1.1 (SSD optimizado)
+  effective_io_concurrency = 200
+  work_mem = 16MB
+  \end{verbatim}
+\end{itemize}
+
+\textbf{Hypertables para Telemetría:}
+\begin{verbatim}
+CREATE TABLE ts_kv (
+  entity_id UUID NOT NULL,
+  key VARCHAR(255) NOT NULL,
+  ts BIGINT NOT NULL,
+  bool_v BOOLEAN,
+  str_v VARCHAR(10000),
+  long_v BIGINT,
+  dbl_v DOUBLE PRECISION,
+  json_v JSON
+);
+
+SELECT create_hypertable('ts_kv', 'ts', chunk_time_interval => 604800000);
+-- chunk_time_interval = 7 días en milisegundos
+\end{verbatim}
+
+\textbf{Políticas de Compresión y Retención:}
+\begin{verbatim}
+ALTER TABLE ts_kv SET (
+  timescaledb.compress,
+  timescaledb.compress_segmentby = 'entity_id,key',
+  timescaledb.compress_orderby = 'ts'
+);
+
+SELECT add_compression_policy('ts_kv', INTERVAL '7 days');
+SELECT add_retention_policy('ts_kv', INTERVAL '90 days');
+\end{verbatim}
+
+\subsubsection{4. Bridge CoAP→MQTT (Thread-ThingsBoard Integration)}
+
+\textbf{Función:} Servicio custom Python que recibe mensajes CoAP/LwM2M desde nodos Thread (via OTBR), descomprime payloads, transforma a formato ThingsBoard JSON/CBOR, y publica vía MQTT local a ThingsBoard Edge.
+
+\textbf{Implementación:}
+\begin{verbatim}
+# Dockerfile
+FROM python:3.11-slim
+RUN pip install aiocoap paho-mqtt cbor2
+COPY bridge.py /app/
+CMD ["python", "/app/bridge.py"]
+\end{verbatim}
+
+\textbf{Flujo de Procesamiento:}
+\begin{enumerate}
+\item \textbf{Recepción CoAP}: Servidor CoAP escucha puerto 5683/UDP, recibe mensajes de nodos Thread con IPs fd00::/64
+\item \textbf{Descompresión 6LoWPAN}: Automática en OTBR (transparente para bridge)
+\item \textbf{Parsing LwM2M}: Extrae Object/Instance/Resource IDs (ej. /3303/0/5700 = temperatura)
+\item \textbf{Transformación a ThingsBoard}:
+\begin{verbatim}
+# Payload CoAP (LwM2M TLV binario):
+[0xC8, 0x00, 0x14, 0x4C, 0x41, 0x37, 0x00, 0x00]  # Object 3303, Resource 5700, valor 23.5
+
+# Transformación a ThingsBoard JSON:
+{
+  "ts": 1730409600000,
+  "values": {
+    "temperature": 23.5,
+    "sensorId": "METER-001",
+    "batteryLevel": 87
+  }
+}
+\end{verbatim}
+\item \textbf{Publicación MQTT}: Publica a topic \texttt{v1/devices/me/telemetry} con access token del dispositivo
+\item \textbf{Manejo de errores}: Retry exponencial (1s, 2s, 4s, 8s) ante fallos MQTT, logging de mensajes perdidos
+\end{enumerate}
+
+\textbf{Código Simplificado del Bridge:}
+\begin{verbatim}
+import asyncio
+import aiocoap
+import paho.mqtt.client as mqtt
+import cbor2
+import json
+
+class CoAPToMQTTBridge:
+    def __init__(self):
+        self.mqtt_client = mqtt.Client()
+        self.mqtt_client.connect("localhost", 1883)
+        
+    async def coap_server(self):
+        root = aiocoap.resource.Site()
+        root.add_resource(['telemetry'], TelemetryResource(self))
+        await aiocoap.Context.create_server_context(root, bind=('0.0.0.0', 5683))
+        
+    class TelemetryResource(aiocoap.resource.Resource):
+        async def render_post(self, request):
+            # Parse LwM2M TLV payload
+            lwm2m_data = cbor2.loads(request.payload)
+            device_id = request.remote.hostinfo  # IPv6 address
+            
+            # Transform to ThingsBoard format
+            tb_payload = {
+                "ts": int(time.time() * 1000),
+                "values": {
+                    "temperature": lwm2m_data['/3303/0/5700'],
+                    "voltage": lwm2m_data['/3331/0/5700'],
+                    "power": lwm2m_data['/3305/0/5800']
+                }
+            }
+            
+            # Publish to ThingsBoard Edge via MQTT
+            topic = f"v1/devices/{device_id}/telemetry"
+            self.bridge.mqtt_client.publish(topic, json.dumps(tb_payload))
+            
+            return aiocoap.Message(code=aiocoap.CHANGED)
+\end{verbatim}
+
+El código completo del bridge con manejo de errores, logging y métricas se documenta en el \textbf{Anexo C}.
+
+\subsubsection{5. MQTT Publisher para HaLow}
+
+\textbf{Función:} Cliente MQTT que consume mensajes procesados por ThingsBoard Edge (post rule-engine) y los transmite hacia ThingsBoard Cloud Server vía enlace HaLow 802.11ah, implementando compresión de payload, agregación de batches, y manejo de reconexiones ante inestabilidad del enlace.
+
+\textbf{Implementación:}
+\begin{itemize}
+\item \textbf{Imagen}: Custom Python 3.11 con \texttt{paho-mqtt}, \texttt{cbor2}, \texttt{msgpack}
+\item \textbf{Interfaz de salida}: \texttt{wlan2} (HaLow 802.11ah, rango IP 10.20.0.0/24)
+\item \textbf{Servidor destino}: ThingsBoard Cloud Server (broker MQTT en \texttt{mqtt.thingsboard.cloud:1883}, puerto TLS 8883)
+\item \textbf{QoS}: MQTT QoS 1 (at-least-once delivery) para garantizar entrega de telemetría crítica
+\item \textbf{Persistencia}: Mensajes pendientes en SQLite local (\texttt{/mnt/docker/mqtt-publisher/queue.db})
+\end{itemize}
+
+\textbf{Proceso de Transmisión WAN:}
+
+\begin{enumerate}
+\item \textbf{Suscripción a TB Edge}:
+   \begin{itemize}
+   \item Se suscribe a topics internos de ThingsBoard Edge: \texttt{tb-edge/telemetry/\#}, \texttt{tb-edge/alarms/\#}
+   \item Recibe mensajes post-procesamiento (con atributos enriquecidos, alarmas generadas)
+   \end{itemize}
+
+\item \textbf{Agregación y Compresión}:
+   \begin{itemize}
+   \item \textbf{Batching}: Agrupa hasta 100 mensajes de telemetría (ventana 30 segundos) en un solo payload
+   \item \textbf{Compresión CBOR}: Convierte JSON a CBOR (reducción 30-40\% tamaño)
+   \begin{verbatim}
+   # Antes (JSON, 450 bytes):
+   [{"ts":1730409600,"deviceId":"M001","temp":23.5,"voltage":230.1},
+    {"ts":1730409605,"deviceId":"M002","temp":24.1,"voltage":229.8}, ...]
+   
+   # Después (CBOR, 280 bytes):
+   [0x82, 0xA4, 0x62, 0x74, 0x73, 0x1B, ...]  # Array CBOR binario
+   \end{verbatim}
+   \item \textbf{Compresión gzip} (opcional, para batches >1 KB): Reducción adicional 40-60\%
+   \item \textbf{Alarmas}: No se batchean, transmisión inmediata con QoS 2 (exactly-once)
+   \end{itemize}
+
+\item \textbf{Transmisión MQTT sobre HaLow}:
+   \begin{itemize}
+   \item Publica a topic cloud \texttt{v1/gateway/telemetry} con access token del gateway
+   \item Configuración MQTT:
+   \begin{verbatim}
+   protocol: MQTTv5
+   keepalive: 120 segundos (2 min, balanceado para HaLow)
+   clean_session: False (sesión persistente ante desconexiones)
+   max_inflight_messages: 20 (limita ventana TCP para BW limitado)
+   reconnect_delay: 5-60 segundos (exponential backoff)
+   \end{verbatim}
+   \item \textbf{Binding a interfaz HaLow}: Fuerza uso de \texttt{wlan2} mediante socket option:
+   \begin{verbatim}
+   import socket
+   sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+   sock.setsockopt(socket.SOL_SOCKET, socket.SO_BINDTODEVICE, b'wlan2')
+   client.sock = sock
+   \end{verbatim}
+   \end{itemize}
+
+\item \textbf{Manejo de Fallos HaLow}:
+   \begin{itemize}
+   \item \textbf{Detección de desconexión}: Timeout de keepalive MQTT (>2 min sin PINGRESP)
+   \item \textbf{Queue persistente}: Mensajes no enviados se almacenan en SQLite (capacidad 10,000 mensajes)
+   \item \textbf{Política de retry}:
+     \begin{enumerate}
+     \item Intento inmediato de reconexión (delay 5s)
+     \item Si falla, espera 15s y reintenta
+     \item Backoff exponencial: 30s, 60s, 120s (máx 2 min)
+     \item Después de 10 intentos fallidos (20 min), activa notificación de alarma local
+     \end{enumerate}
+   \item \textbf{Failover a LTE}: Si HaLow no recupera en 30 min, switch automático a interfaz \texttt{wwan0} (LTE)
+   \end{itemize}
+
+\item \textbf{Monitoring de Throughput}:
+   \begin{itemize}
+   \item Métricas expuestas vía endpoint HTTP \texttt{/metrics} (formato Prometheus):
+   \begin{verbatim}
+   mqtt_messages_sent_total{interface="wlan2"} 45231
+   mqtt_bytes_sent_total{interface="wlan2"} 12458672
+   mqtt_publish_latency_seconds{quantile="0.99"} 0.85
+   mqtt_reconnections_total{interface="wlan2"} 3
+   mqtt_queue_depth_messages 0
+   \end{verbatim}
+   \item Alertas automáticas si:
+     \begin{itemize}
+     \item Latencia P99 > 2 segundos (congestión HaLow)
+     \item Queue depth > 5,000 mensajes (desconexión prolongada)
+     \item Reconnections > 10/hora (inestabilidad enlace)
+     \end{itemize}
+   \end{itemize}
+\end{enumerate}
+
+\textbf{Optimizaciones para Enlace HaLow (Limitado en Bandwidth):}
+
+\begin{itemize}
+\item \textbf{Downsampling adaptativo}: Si bandwidth HaLow cae <100 kbps (detección via throughput monitorizado), reduce frecuencia de telemetría:
+  \begin{itemize}
+  \item Normal: 1 mensaje/dispositivo/5 min → 300 msgs/hora para 100 dispositivos
+  \item Modo degradado: 1 mensaje/dispositivo/15 min → 100 msgs/hora
+  \item Priorización: Alarmas (100\% tasa) > Telemetría crítica (voltaje/corriente, 50\% tasa) > Telemetría periódica (temperatura, 10\% tasa)
+  \end{itemize}
+
+\item \textbf{Delta encoding}: Para variables que cambian lentamente (temperatura ambiente), transmite solo deltas:
+\begin{verbatim}
+# Mensaje inicial (completo):
+{"ts":1730409600,"temp":23.5,"voltage":230.1,"current":4.5}  # 58 bytes JSON
+
+# Mensajes subsecuentes (solo deltas):
+{"ts":1730409900,"Δtemp":+0.3}  # 28 bytes JSON (50% reducción)
+{"ts":1730410200,"Δtemp":-0.1}
+{"ts":1730410500,"voltage":231.0,"Δcurrent":+0.2}  # Reset completo si delta acumulado > umbral
+\end{verbatim}
+
+\item \textbf{Compresión por diccionario}: Para campos repetitivos (deviceId, sensorType), usa diccionario compartido:
+\begin{verbatim}
+# Diccionario (enviado 1 vez al inicio de sesión MQTT):
+{1: "deviceId", 2: "temperature", 3: "voltage", 4: "current", 5: "timestamp"}
+
+# Mensaje comprimido:
+{5:1730409600, 1:"M001", 2:23.5, 3:230.1}  # 30% menos bytes que claves string
+\end{verbatim}
+
+\item \textbf{Configuración TCP optimizada para HaLow}:
+\begin{verbatim}
+# Sysctl settings en contenedor MQTT Publisher
+net.ipv4.tcp_window_scaling = 1
+net.ipv4.tcp_congestion_control = bbr  # Better Bandwidth & RTT
+net.ipv4.tcp_notsent_lowat = 16384     # Limita buffer no enviado
+net.core.rmem_max = 8388608
+net.core.wmem_max = 4194304
+net.ipv4.tcp_rmem = 4096 87380 4194304
+net.ipv4.tcp_wmem = 4096 16384 2097152
+\end{verbatim}
+\end{itemize}
+
+\textbf{Selección Adaptativa de Bandwidth HaLow:}
+
+El sistema implementa cambio dinámico de bandwidth 802.11ah (2/4/8 MHz) basado en condiciones del enlace:
+
+\begin{enumerate}
+\item \textbf{Monitoring continuo}:
+   \begin{itemize}
+   \item Ejecuta cada 60 segundos: \texttt{iw dev wlan2 station dump}
+   \item Extrae métricas: signal (RSSI), tx bitrate, tx failed, tx retries
+   \end{itemize}
+
+\item \textbf{Decisión de bandwidth}:
+\begin{verbatim}
+if RSSI < -85 dBm or tx_retry_rate > 30%:
+    switch_to_2MHz()  # Mayor robustez, menor throughput
+elif RSSI > -70 dBm and tx_retry_rate < 5%:
+    switch_to_8MHz()  # Máximo throughput (hasta 40 Mbps)
+else:
+    switch_to_4MHz()  # Balanceado (hasta 10 Mbps)
+\end{verbatim}
+
+\item \textbf{Comando de cambio} (requiere desasociación/reasociación):
+\begin{verbatim}
+# Cambio a 2 MHz (mayor alcance):
+uci set wireless.@wifi-iface[0].htmode='NOHT'     # Deshabilita HT (802.11n)
+uci set wireless.@wifi-iface[0].bandwidth='2'
+uci commit wireless
+wifi reload
+
+# Verificación:
+iw dev wlan2 info | grep width  # Esperado: channel width: 2 MHz
+\end{verbatim}
+
+\item \textbf{Hysteresis}: Evita cambios frecuentes (flapping) manteniendo bandwidth al menos 5 minutos antes de permitir cambio.
+\end{enumerate}
+
+La arquitectura completa de sincronización HaLow con balanceo automático entre 2/4/8 MHz, incluyendo scripts de monitoring y cambio dinámico, se documenta en el \textbf{Anexo C}.
+
+\subsubsection{6. Apache Kafka (Bus de Mensajes)}
+
+\textbf{Función:} Bus de mensajes distribuido que desacopla productores (OTBR, TB Edge, sensores externos) de consumidores (reglas de ThingsBoard, LLM Ollama, servicios de análisis), proporcionando persistencia de mensajes, particionamiento para escalabilidad horizontal, y replicación para alta disponibilidad.
+
+\textbf{Implementación:}
+\begin{itemize}
+\item \textbf{Imagen}: \texttt{confluentinc/cp-kafka:7.5.0} (versión Apache Kafka 3.5.1)
+\item \textbf{Topics principales}:
+  \begin{itemize}
+  \item \texttt{telemetry.raw}: Datos crudos desde nodos (pre-procesamiento), 3 particiones
+  \item \texttt{telemetry.processed}: Post rule-engine, listos para almacenamiento, 3 particiones
+  \item \texttt{alarms.critical}: Alarmas prioritarias, 1 partición (ordenamiento garantizado)
+  \item \texttt{commands.downlink}: Comandos hacia dispositivos, 2 particiones
+  \end{itemize}
+\item \textbf{Retención}: 7 días para telemetría (168h), 30 días para alarmas críticas
+\item \textbf{Compresión}: snappy (balance velocidad/ratio, 30-40\% reducción)
+\end{itemize}
+
+\textbf{Integración con ThingsBoard Edge:}
+
+ThingsBoard Edge 3.6 soporta Kafka como transport layer alternativo a MQTT interno:
+
+\begin{verbatim}
+# Configuración TB Edge para usar Kafka (tb-edge.yml):
+queue:
+  type: kafka
+  kafka:
+    bootstrap.servers: localhost:9092
+    topic-properties:
+      rule-engine: "tb-rule-engine"
+      core: "tb-core"
+      transport-api: "tb-transport-api"
+      notifications: "tb-notifications"
+    consumer-properties:
+      group.id: tb-edge-consumer-group
+      auto.offset.reset: earliest
+      max.poll.records: 1000
+\end{verbatim}
+
+\textbf{Ventajas de Kafka en el Gateway:}
+
+\begin{itemize}
+\item \textbf{Desacoplamiento}: Rule engine puede procesar offline sin perder mensajes
+\item \textbf{Replay}: Reprocesar mensajes históricos (últimos 7 días) para debugging o ajuste de reglas
+\item \textbf{Múltiples consumidores}: Ollama LLM, exportadores Prometheus, scripts de análisis Python pueden consumir simultáneamente sin duplicar almacenamiento
+\item \textbf{Backpressure}: Productores ralentizan automáticamente si consumidores no procesan (evita saturación RAM)
+\item \textbf{Ordenamiento garantizado}: Mensajes de mismo \texttt{device\_id} en misma partición (ordenamiento por timestamp)
+\end{itemize}
+
+\subsubsection{7. Ollama LLM (Procesamiento de IA en Edge)}
+
+\textbf{Función:} Motor de inferencia LLM local que ejecuta modelos Llama 2, Mistral o CodeLlama para análisis en tiempo real de patrones de consumo energético, detección de anomalías sin necesidad de conectividad cloud, y generación de respuestas a consultas en lenguaje natural sobre dashboards.
+
+\textbf{Implementación:}
+\begin{itemize}
+\item \textbf{Imagen}: \texttt{ollama/ollama:0.1.38} (soporte ARM64/GPU)
+\item \textbf{Modelo desplegado}: Mistral 7B quantized (Q4\_K\_M, ~4 GB RAM)
+\item \textbf{Aceleración}: GPU VideoCore VI (Raspberry Pi 4, limitada) o CPU Cortex-A72 (4 threads)
+\item \textbf{Latencia de inferencia}: 300-800 ms para prompts <500 tokens (dependiendo de carga CPU)
+\item \textbf{RAM dedicada}: 4 GB límite Docker (suficiente para modelo 7B quantized + context)
+\end{itemize}
+
+\textbf{Casos de Uso de IA en Edge:}
+
+\begin{enumerate}
+\item \textbf{Detección de Anomalías en Consumo}:
+   \begin{itemize}
+   \item Input: Serie temporal de consumo últimos 7 días (agregaciones 15-min desde TimescaleDB)
+   \item Prompt: "Analiza esta serie temporal de consumo energético e identifica patrones anómalos: [datos]"
+   \item Output: JSON con anomalías detectadas, severidad, explicación
+   \item Acción: Si anomalía Critical detectada, generar alarma automática en TB Edge
+   \end{itemize}
+
+\item \textbf{Predicción de Demanda (Próximas 24h)}:
+   \begin{itemize}
+   \item Input: Histórico consumo 30 días + metadatos (temperatura, día semana, feriados)
+   \item Prompt: "Predice consumo energético próximas 24 horas basado en patrones históricos"
+   \item Output: Array de 96 valores (intervalos 15-min) con bandas de confianza
+   \item Acción: Enviar predicciones a dashboard "Forecast" para visualización
+   \end{itemize}
+
+\item \textbf{Chatbot Dashboard (Consultas NL)}:
+   \begin{itemize}
+   \item Input: Pregunta usuario en lenguaje natural ("¿Cuál fue el consumo máximo ayer?")
+   \item Contexto: Acceso a API TimescaleDB para consultar datos reales
+   \item Output: Respuesta textual + visualización sugerida (gráfico, tabla)
+   \item Ejemplo:
+   \begin{verbatim}
+   Usuario: "Muéstrame medidores con consumo >5 kW en última hora"
+   Ollama: [consulta SQL a TimescaleDB]
+   Respuesta: "Se detectaron 12 medidores con consumo >5 kW:
+              - METER-045: 6.2 kW (18:34)
+              - METER-128: 5.8 kW (18:41)
+              [...]
+              ¿Deseas crear una alarma para monitorear estos medidores?"
+   \end{verbatim}
+   \end{itemize}
+\end{enumerate}
+
+\textbf{Integración Ollama ↔ ThingsBoard Edge:}
+
+Se implementa mediante widget custom JavaScript en dashboard TB Edge que realiza llamadas HTTP a API Ollama:
+
+\begin{verbatim}
+// Widget JavaScript en TB Edge
+async function queryOllama(prompt) {
+  const response = await fetch('http://localhost:11434/api/generate', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      model: 'mistral:7b-q4',
+      prompt: prompt,
+      stream: false
+    })
+  });
+  const data = await response.json();
+  return data.response;
+}
+
+// Ejemplo de uso en Rule Chain:
+// Nodo "Script Transformation" ejecuta consulta Ollama para cada mensaje
+var telemetry = msg.power;  // 6.5 kW
+if (telemetry > 5.0) {
+  var aiResponse = queryOllama(
+    "Explica por qué este consumo de " + telemetry + " kW es anómalo " +
+    "comparado con histórico del medidor METER-045"
+  );
+  msg.alarmDetails = aiResponse;  // Adjunta explicación a alarma
+}
+return {msg: msg, metadata: metadata, msgType: msgType};
+\end{verbatim}
+
+Las configuraciones completas de Ollama, incluyendo ajuste de modelos, limitación de RAM, y ejemplos de prompts para casos de uso energéticos, se documentan en el \textbf{Anexo C}.
+
+\subsection{Resumen del Stack Docker}
+
+El gateway despliega 7 contenedores especializados:
+
+\begin{enumerate}
+\item \textbf{OTBR}: Border router Thread/802.15.4 → IPv6, descompresión 6LoWPAN automática
+\item \textbf{ThingsBoard Edge}: Plataforma IoT completa (ingesta, rule engine, storage, dashboards, sync cloud)
+\item \textbf{PostgreSQL + TimescaleDB}: Base de datos series temporales con compresión columnar y retención automática
+\item \textbf{Bridge CoAP→MQTT}: Integrador Thread/LwM2M → ThingsBoard (transformación protocolos)
+\item \textbf{MQTT Publisher HaLow}: Cliente MQTT con compresión CBOR, agregación batches, failover LTE, adaptación bandwidth 2/4/8 MHz
+\item \textbf{Apache Kafka}: Bus de mensajes para desacoplamiento, replay, múltiples consumidores
+\item \textbf{Ollama LLM}: Inferencia local Mistral 7B para detección anomalías, predicción demanda, chatbot NL
+\end{enumerate}
+
+Orquestación completa mediante Docker Compose con healthchecks, restart policies, y resource limits. Archivo \texttt{docker-compose.yml} completo en \textbf{Anexo B}.
 
 \subsection{Stack de Comunicación}
 

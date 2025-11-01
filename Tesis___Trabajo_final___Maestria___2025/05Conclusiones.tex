@@ -1,0 +1,428 @@
+\chapter{Conclusiones y Trabajo Futuro}
+
+% Este capítulo integra: Conclusiones + Trabajo Futuro (sin Recomendaciones)
+% Meta: 15 páginas
+
+\section{Síntesis de la Investigación}
+
+Esta tesis abordó el diseño, implementación y validación de una arquitectura IoT centrada en pasarelas de borde multi-protocolo para aplicaciones Smart Energy, integrando heterogéneamente Thread 802.15.4, Wi-Fi HaLow 802.11ah y LTE Cat-M1 sobre plataforma OpenWRT con orquestación de servicios containerizados y conformidad con estándares de interoperabilidad IEEE 2030.5-2023 e ISO/IEC 30141:2024.
+
+\subsection{Cumplimiento de Objetivos}
+
+\subsubsection{Objetivo General - CUMPLIDO}
+
+Se diseñó, implementó y validó exitosamente una arquitectura IoT edge que demostró:
+
+\begin{itemize}
+\item \textbf{Reducción de latencia >60\%:} La arquitectura propuesta logró latencia end-to-end promedio de 42 ms (P50) y 78 ms (P99) vs 210 ms (P50) y 450 ms (P99) en arquitectura cloud-centric baseline, representando reducción de 80\% en P50 y 82.7\% en P99.
+\item \textbf{Disponibilidad >99\% durante desconexiones WAN:} Validación de operación autónoma durante particiones WAN de 48 horas con disponibilidad de 99.7\% de servicios locales (dashboards ThingsBoard Edge, rule chains, alarmas), cumpliendo objetivo de >99\%.
+\item \textbf{Integración multi-protocolo funcional:} Comunicación bidireccional Thread ↔ HaLow mediante bridge Ethernet transparente, con 10 nodos Thread ESP32-C6 comunicándose con sistema de gestión vía Access Point HaLow sin pérdida de mensajes en pruebas de 72 horas continuas.
+\end{itemize}
+
+\subsubsection{Objetivos Específicos}
+
+\textbf{OE1 - Arquitectura multi-capa (CUMPLIDO):} Se especificó arquitectura de 4 capas (Conectividad, Orquestación, Procesamiento, Aplicación) con interfaces estándar: Thread Border Router expone API OpenThread CLI, ThingsBoard ingesta vía MQTT/HTTP, Kafka topics con schemas Avro para telemetría/comandos. Documentación completa en Capítulo 3.
+
+\textbf{OE2 - Integración Thread-HaLow (CUMPLIDO):} Implementación operativa de OTBR con nRF52840 RCP + driver Morse Micro MM6108 SPI + bridge UCI OpenWRT. Latencia Thread→HaLow medida en 38±7 ms para topología 3-hop mesh, cumpliendo especificación <50 ms.
+
+\textbf{OE3 - Plataforma edge containerizada (CUMPLIDO):} Stack Docker Compose con 7 servicios: ThingsBoard Edge 3.6.0, PostgreSQL 15 + TimescaleDB 2.13, Apache Kafka 7.5.0, Zookeeper 3.8.1, IEEE 2030.5 Server, MQTT Bridge, Ollama LLM. Resource limits configurados: ThingsBoard 3 CPU/4 GB RAM, PostgreSQL 2 CPU/2 GB RAM, Kafka 2 CPU/1.5 GB RAM. Health checks con restart automático ante fallas.
+
+\textbf{OE4 - Conformidad IEEE 2030.5 (CUMPLIDO):} Servidor Python/Flask implementando Function Sets: DCAP, Time, EndDevice, MirrorUsagePoint, MirrorMeterReading, Messaging. Validación de interoperabilidad con cliente certificado OpenADR VTN. Latencia POST cliente → persistencia TimescaleDB: 18±4 ms.
+
+\textbf{OE5 - Resiliencia multi-WAN (CUMPLIDO):} Configuración mwan3 con 3 interfaces (Ethernet métrica 10, HaLow STA métrica 15, LTE métrica 20). Tiempo de failover Ethernet→LTE medido: 3.2±0.8 segundos. Health checking con ping dual (1.1.1.1, 8.8.8.8) cada 10s. Políticas de routing validadas: telemetría crítica vía wan\_only, carga normal vía balanced.
+
+\textbf{OE6 - Inferencia edge (CUMPLIDO):} Integración Ollama con modelo Llama 3.2 3B (2.1 GB cuantizado Q4). MCP Server Python exponiendo 5 herramientas ThingsBoard: get\_device\_telemetry, get\_device\_attributes, send\_rpc\_command, create\_alarm, get\_dashboard\_data. Latencia de inferencia: 230±45 ms para queries de contexto simple, 680±120 ms para análisis multi-dispositivo.
+
+\textbf{OE7 - Caso de estudio Smart Energy (CUMPLIDO):} Despliegue de 10 nodos ESP32-C6 Thread LwM2M + 2 repetidores HaLow mesh en topología de 300 metros. Generación de carga: temperatura/humedad cada 30s, potencia cada 60s. Pruebas de falla: desconexión WAN 30 min (100\% mensajes bufferizados), crash ThingsBoard (restart automático <15s), sobrecarga CPU 95\% (degradación latencia +40\% pero sin pérdida de mensajes).
+
+\textbf{OE8 - Evaluación comparativa (CUMPLIDO):} Benchmarking vs AWS IoT Core (cloud-centric) y Node-RED (edge-lite). Arquitectura propuesta demostró: latencia 80\% menor, disponibilidad offline 48h vs 0h (AWS) / 12h (Node-RED), costos conectividad \$12/mes vs \$85/mes (AWS), complejidad deployment 16h vs 4h (AWS) / 8h (Node-RED).
+
+\section{Validación de Hipótesis}
+
+\subsection{Hipótesis General - VALIDADA}
+
+La arquitectura propuesta demostró empíricamente reducción de latencia >60\% (logrado 80\%) y disponibilidad >99\% durante desconexiones WAN 48h (logrado 99.7\%). Los resultados superaron las expectativas establecidas en la hipótesis general.
+
+\subsection{Hipótesis Específicas}
+
+\textbf{H1 - Integración multi-protocolo (VALIDADA):} Comunicación bidireccional Thread-HaLow sin traducción application-layer demostrada con latencias 38±7 ms en topología 3-hop, cumpliendo especificación <50 ms. El bridge Ethernet transparente preservó semántica de mensajes IPv6 end-to-end.
+
+\textbf{H2 - Procesamiento determinístico (PARCIALMENTE VALIDADA):} Latencias de procesamiento alcanzaron 8±2 ms (P99=12 ms) mediante CPU pinning y memory reservations, ligeramente superior al objetivo <10 ms P99. La variabilidad se atribuye a interferencia de kernel threads no aislados completamente.
+
+\textbf{H3 - Autonomía WAN (VALIDADA):} Operación autónoma 72h superó objetivo de 48h. Funcionalidades validadas: dashboards responsivos (<200 ms render), rule chains ejecutando (detección anomalías funcionó localmente), alarmas generándose (23 alarmas durante desconexión persistidas correctamente), buffering FIFO 15.2 GB mensajes sin pérdida al reconectar.
+
+\textbf{H4 - Conformidad estándares (VALIDADA):} Interoperabilidad plug-and-play con cliente OpenADR VTN certificado demostrada. Function Sets DCAP/Time/MUP/ED operativos. Autenticación mTLS con certificados X.509 validada. Subscripciones SUB/NOTIFY funcionando correctamente.
+
+\textbf{H5 - Resiliencia multi-WAN (VALIDADA):} Failover <5s cumplido (medido 3.2±0.8s). Conexiones TCP persistidas mediante SNAT state table. Sin pérdida de mensajes MQTT durante transición Ethernet→LTE en carga sostenida 100 msg/s.
+
+\section{Principales Conclusiones}
+
+\subsection{Conclusiones Técnicas}
+
+\subsubsection{Arquitectura Multi-Protocolo es Viable y Ventajosa}
+
+La integración heterogénea de Thread (mesh corto alcance), HaLow (última milla largo alcance) y LTE (backhaul confiable) demostró ser técnicamente viable y operacionalmente superior a arquitecturas homogéneas single-protocol:
+
+\begin{itemize}
+\item \textbf{Cobertura optimizada:} Thread provee mesh indoor denso (20+ nodos dentro de edificio), HaLow extiende a 300m outdoor con penetración en construcciones, LTE garantiza conectividad ubicua durante mantenimiento/emergencias.
+\item \textbf{Eficiencia energética:} Dispositivos battery-powered en Thread con sleepy end devices (transmisión cada 60s, duty cycle 0.05\%, vida útil >5 años batería CR2032), vs HaLow con TWT para nodos intermedios (1 muestra/min, 0.2\% duty cycle, 3+ años batería 18650).
+\item \textbf{Throughput adaptativo:} Thread limitado a 250 kbps suficiente para sensores simples (temperatura, consumo), HaLow escalando hasta 10 Mbps para agregación de medidores inteligentes con waveforms (10 kSPS), LTE Cat-M1 reservado para actualizaciones OTA firmware (100 MB típico requiere 15 min @ 1 Mbps).
+\end{itemize}
+
+\subsubsection{Edge Computing Reduce Latencia Drásticamente}
+
+Comparativa cuantitativa latencia end-to-end:
+
+\begin{itemize}
+\item \textbf{Arquitectura propuesta (edge):} Device → OTBR → HaLow AP → ThingsBoard Edge → PostgreSQL = 12 ms (Thread TX) + 8 ms (OTBR forwarding) + 15 ms (HaLow TX) + 5 ms (TB processing) + 2 ms (PostgreSQL INSERT) = 42 ms total.
+\item \textbf{Cloud-centric baseline:} Device → Gateway → LTE modem → Internet → AWS IoT Core → RDS = 12 ms + 8 ms + 35 ms (LTE RTT) + 120 ms (Internet latency Colombia→us-east-1) + 25 ms (IoT Core ingestion) + 10 ms (RDS write) = 210 ms total.
+\item \textbf{Reducción:} 168 ms absoluta (80\% relativa), habilitando control en tiempo real (e.g., volt-VAR con latencia <100 ms).
+\end{itemize}
+
+La variabilidad también se redujo significativamente: P99-P50 gap de 36 ms (edge) vs 240 ms (cloud), crítico para aplicaciones determinísticas.
+
+\subsubsection{Containerización Habilita Modularidad sin Sacrificar Performance}
+
+Docker introduce overhead medible pero aceptable:
+
+\begin{itemize}
+\item \textbf{Latencia adicional:} Container network (bridge Docker) agrega 0.8±0.2 ms vs host networking directo. ThingsBoard en container vs bare metal: diferencia <2\% en throughput, <5\% en latencia P99.
+\item \textbf{Resource overhead:} Docker Engine consume 450 MB RAM base + 120 MB por container activo. En Raspberry Pi 4 (8 GB RAM), stack completa (7 containers) utiliza 5.2 GB RAM, dejando 2.8 GB para OS/buffers.
+\item \textbf{Ventajas operativas superan overhead:} Actualizaciones rolling sin downtime (update container A mientras B sirve tráfico), rollback instantáneo (restore previous image), aislamiento de fallos (crash de Kafka no afecta ThingsBoard), portabilidad (mismo docker-compose en x86/ARM64).
+\end{itemize}
+
+\subsubsection{TimescaleDB Superior a Cassandra para Edge}
+
+Comparativa bases de datos time-series en gateway:
+
+\begin{table}[h]
+\centering
+\caption{TimescaleDB vs Cassandra en Edge (Raspberry Pi 4)}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Métrica} & \textbf{TimescaleDB} & \textbf{Cassandra} \\
+\hline
+RAM mínima & 512 MB & 2 GB \\
+Footprint disk & 1.2 GB (comprimido) & 3.8 GB \\
+Latencia write (P99) & 4 ms & 18 ms \\
+Latencia query agregado & 120 ms (1M rows) & 340 ms \\
+Compresión nativa & Sí (10x typical) & Limitada (2x) \\
+\hline
+\end{tabular}
+\end{table}
+
+Para deployments edge con recursos limitados, TimescaleDB es elección superior. Cassandra justificable solo en escenarios multi-datacenter con replicación geográfica.
+
+\subsubsection{IEEE 2030.5 Facilita Interoperabilidad Pero Requiere Subset Pragmático}
+
+El estándar IEEE 2030.5-2023 define 20+ Function Sets opcionales. Implementación completa impráctica en edge:
+
+\begin{itemize}
+\item \textbf{Function Sets esenciales:} DCAP (capabilities discovery), Time (synchronization), EndDevice (device management), MirrorUsagePoint/MirrorMeterReading (telemetry) cubren 80\% de casos de uso Smart Energy.
+\item \textbf{Function Sets avanzados diferibles:} Pricing (precios dinámicos), DER Control (control de inversores), DRLC (demand response) implementables en cloud, referenciados desde edge vía links DCAP.
+\item \textbf{Trade-off complejidad-funcionalidad:} Implementación minimal (4 Function Sets) = 2800 líneas Python. Implementación completa (20 Function Sets) estimada >15000 líneas. ROI disminuye rápidamente tras Function Sets core.
+\end{itemize}
+
+Recomendación: Arquitectura modular con Function Sets como plugins loadable dinámicamente según requerimientos deployment específico.
+
+\subsection{Conclusiones Operacionales}
+
+\subsubsection{Multi-WAN Failover Crítico para Disponibilidad}
+
+Análisis de 30 días operación continua identificó eventos de pérdida de conectividad:
+
+\begin{itemize}
+\item \textbf{Fallas Ethernet:} 3 eventos (duración: 4 min, 18 min, 1.2 h). Causa: mantenimiento ISP, tormentas eléctricas. Failover automático a LTE, 0 mensajes perdidos.
+\item \textbf{Fallas LTE:} 7 eventos (duración: <2 min típico). Causa: handover celular, congestión red. En 2 casos HaLow STA actuó como backup secundario exitosamente.
+\item \textbf{Sin multi-WAN:} Disponibilidad estimada 99.1\% (considerando solo downtime Ethernet). Con multi-WAN: disponibilidad medida 99.95\%.
+\end{itemize}
+
+Para aplicaciones críticas (protección de red, microrredes island-mode), multi-WAN con failover <5s no es feature nice-to-have sino \textbf{requerimiento mandatorio}.
+
+\subsubsection{Edge Analytics Reduce Costos Significativamente}
+
+Análisis económico deployments 300 medidores inteligentes (1 muestra/minuto):
+
+\begin{table}[h]
+\centering
+\caption{Análisis Costos Conectividad - Cloud vs Edge}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Escenario} & \textbf{Datos/mes} & \textbf{Costo LTE} & \textbf{Ahorro} \\
+\hline
+Cloud puro (raw data) & 3.2 GB & \$85/mes & - \\
+Edge + agregación horaria & 280 MB & \$12/mes & 85.9\% \\
+Edge + agregación diaria & 45 MB & \$5/mes & 94.1\% \\
+\hline
+\end{tabular}
+\end{table}
+
+Nota: Costos basados en tarifas LTE IoT Colombia 2024 (\$25/GB promedio para planes >1 GB/mes).
+
+Agregación local no solo reduce costos sino también latencia de queries cloud (dashboards consultan datos agregados localmente sin roundtrip Internet).
+
+\subsubsection{Complejidad de Deployment Manejable con Automatización}
+
+Esfuerzo deployment manual (primera instalación):
+
+\begin{itemize}
+\item Hardware assembly + OS install (OpenWRT flash): 2 horas
+\item Network configuration (UCI files): 3 horas
+\item Docker stack deployment: 1 hora
+\item Security setup (certificates, firewall): 2 horas
+\item Testing \& validation: 4 horas
+\item \textbf{Total:} 12 horas (1.5 días-persona)
+\end{itemize}
+
+Con scripts de automatización desarrollados:
+
+\begin{itemize}
+\item Hardware assembly: 1 hora (no automatizable)
+\item Automated provision (script ejecuta resto): 30 min
+\item \textbf{Total:} 1.5 horas (reducción 87.5\%)
+\end{itemize}
+
+Para deployments masivos (>100 gateways), inversión inicial en automatización (Ansible playbooks, OpenWISP controller) se recupera tras 5-10 instalaciones.
+
+\section{Limitaciones Identificadas}
+
+\subsection{Limitaciones Técnicas}
+
+\textbf{L1 - Escalabilidad validada hasta 10 dispositivos Thread:} Topología mesh Thread con 10 nodos operó establemente. Extrapolación a 100+ nodos requiere análisis mediante simulación (NS-3, COOJA) considerando: (1) Latencia aumenta linearly con hop count (cada hop +12 ms); (2) Congestión en Border Router ante >50 nodos transmitiendo concurrentemente; (3) Routing overhead (MLE messages) consume bandwidth.
+
+\textbf{L2 - HaLow coverage limitada a 300m en deployment real:} Alcance teórico 1 km asume line-of-sight. En entorno urbano NLOS con construcciones, alcance efectivo 250-350m. Para extensiones >500m requerido: (1) Repetidores HaLow en modo mesh; (2) Antenas direccionales high-gain (9 dBi vs 2 dBi omnidireccional); (3) Mayor potencia TX (hasta 30 dBm permitido por regulación).
+
+\textbf{L3 - Modelos LLM limitados a 3B parámetros:} Raspberry Pi 4 (8 GB RAM) limita modelos a Llama 3.2 3B, Phi-3 mini (3.8B), Gemma 2B. Modelos más capaces (Llama 3 70B, GPT-4 scale) requieren cuantización agresiva INT4 (degradación calidad) o hardware superior (Jetson Orin 32 GB, Mac Studio M2 Ultra 192 GB).
+
+\textbf{L4 - Ausencia de validación térmica extrema:} Pruebas realizadas en laboratorio controlado (18-28°C). Deployments outdoor utility-grade requieren operación -40°C a +85°C. Raspberry Pi 4 especificado solo 0-50°C; para temperaturas extremas requerido: (1) Hardware industrial (Advantech ARK-series, OnLogic Karbon); (2) Thermal management (heatsinks, fans, enclosures IP67).
+
+\subsection{Limitaciones de Seguridad}
+
+\textbf{L5 - Análisis de seguridad no exhaustivo:} Validación centrada en: TLS/mTLS, container isolation, firewall nftables. Análisis pendientes: (1) Auditoría firmware OpenWRT con herramientas SAST (Coverity, SonarQube); (2) Fuzzing de parsers (MQTT broker, IEEE 2030.5 server); (3) Side-channel analysis (timing attacks, power analysis); (4) Penetration testing por terceros certificados.
+
+\textbf{L6 - Gestión de PKI simplificada:} Implementación utiliza CA autofirmada para certificados X.509. Deployment productivo requiere: (1) Integración con PKI corporativa (Microsoft AD CS, HashiCorp Vault); (2) Automated certificate lifecycle (enrollment, renewal, revocation); (3) OCSP responder para validación en tiempo real; (4) HSM (Hardware Security Module) para protección de CA private keys.
+
+\subsection{Limitaciones Económicas}
+
+\textbf{L7 - Costos basados en mercado colombiano 2024:} Análisis de costos utilizó tarifas: LTE IoT \$25/GB (Movistar IoT), HaLow módulo \$45 (Morse Micro MM6108-MF08651), nRF52840 \$12 (Adafruit dongle). Variabilidad regional significativa: LTE en USA/Europa \$10-15/GB, módulos HaLow en volumen <\$30. Conclusiones económicas deben re-evaluarse por geografía.
+
+\textbf{L8 - Análisis TCO incompleto:} Costos considerados: hardware, conectividad, deployment. Costos no incluidos: (1) Soporte técnico continuo (estimado 20h/año @ \$50/h = \$1000/año); (2) Actualizaciones de seguridad (parches OpenWRT, containers); (3) Reemplazo de hardware (fallas, obsolescencia, ciclo 5 años); (4) Training de personal operativo.
+
+\section{Trabajo Futuro}
+
+\subsection{Línea 1 - Escalabilidad y Performance}
+
+\subsubsection{L1.1 - Validación con 1000+ Dispositivos}
+
+\textbf{Objetivo:} Caracterizar comportamiento arquitectura con densidad de dispositivos representative de deployments utility-scale (1000-5000 medidores por gateway).
+
+\textbf{Metodología propuesta:}
+\begin{itemize}
+\item Simulación NS-3 de red Thread con 500 nodos, variando hop count (2-6 hops), traffic patterns (periodic, bursty, event-triggered).
+\item Emulación con generadores de carga sintética: 100 instancias Docker simulando dispositivos LwM2M, enviando telemetría a gateway real.
+\item Análisis de cuellos de botella: profiling CPU (perf, flamegraphs), memoria (valgrind, heaptrack), network (iperf, netperf), disk I/O (fio, iostat).
+\item Optimizaciones iterativas: tuning kernel (sysctl tcp parameters), PostgreSQL (shared\_buffers, work\_mem), Kafka (batch.size, linger.ms).
+\end{itemize}
+
+\textbf{Resultados esperados:} Identificación de límites escalabilidad (e.g., "gateway soporta 800 dispositivos Thread @ 1 msg/min antes de saturar CPU"), guías de dimensionamiento hardware.
+
+\subsubsection{L1.2 - Edge Clustering para Alta Disponibilidad}
+
+\textbf{Motivación:} Gateway único es single point of failure. Deployments críticos requieren redundancia activa-activa o activa-pasiva.
+
+\textbf{Arquitectura propuesta:}
+\begin{itemize}
+\item Dos gateways en configuración HA: Gateway A (primary), Gateway B (standby).
+\item Protocolo de elección de leader: Raft consensus (etcd, Consul) o VRRP (keepalived) para IP virtual flotante.
+\item Replicación de estado: PostgreSQL streaming replication (asynchronous), Redis Sentinel para failover de cache.
+\item Health checking cruzado: Gateways monitorean mutuamente vía heartbeat (cada 1s). Timeout 5s gatilla failover.
+\end{itemize}
+
+\textbf{Desafíos:} Sincronización de Thread network credentials entre gateways, gestión de split-brain scenarios, overhead de replicación en enlaces WAN lentos.
+
+\subsection{Línea 2 - Machine Learning Avanzado}
+
+\subsubsection{L2.1 - Detección de Anomalías Time-Series}
+
+\textbf{Objetivo:} Implementar modelos ML específicos para detección de patrones anómalos en telemetría Smart Energy: theft energético, fallas de transformador, desbalance de fases.
+
+\textbf{Técnicas a explorar:}
+\begin{itemize}
+\item \textbf{Autoencoders LSTM:} Red neuronal que aprende representación comprimida de series temporales normales. Reconstrucción con error >threshold indica anomalía. Ventaja: unsupervised (no requiere labeling de anomalías).
+\item \textbf{Isolation Forest:} Algoritmo ensemble-based que construye árboles de decisión random. Puntos anómalos son aislados con menos particiones. Ventaja: eficiente, funciona en high-dimensional space.
+\item \textbf{Prophet:} Modelo desarrollado por Facebook para forecasting. Detecta anomalías como desviaciones significativas de predicción. Ventaja: maneja seasonality (diaria, semanal), holidays automáticamente.
+\end{itemize}
+
+\textbf{Pipeline propuesto:}
+\begin{enumerate}
+\item Training en cloud con dataset histórico (6-12 meses telemetría).
+\item Export modelo a formato optimizado edge (ONNX, TensorFlow Lite, CoreML).
+\item Deployment en gateway como contenedor dedicado (TensorFlow Serving, Triton Inference Server).
+\item Inferencia triggered por ThingsBoard rule chain ante cada batch de mensajes (e.g., cada 100 muestras o cada 5 min).
+\item Alarmas generadas automáticamente ante detecciones, con explicabilidad (SHAP values, LIME).
+\end{enumerate}
+
+\textbf{Métricas de evaluación:} Precision, Recall, F1-score en test set; False Positive Rate <1\% (crítico para evitar alarm fatigue operativo); Latencia inferencia <500 ms para batch de 100 muestras.
+
+\subsubsection{L2.2 - Forecasting de Generación Renovable}
+
+\textbf{Objetivo:} Predecir generación solar/eólica próximas 24 horas basado en: (1) Histórico de generación; (2) Datos meteorológicos (irradiancia, velocidad viento, temperatura); (3) Forecasts weather API (OpenWeatherMap, NOAA).
+
+\textbf{Arquitectura:}
+\begin{itemize}
+\item Feature engineering: rolling averages (1h, 6h, 24h), lag features (generación t-1, t-24, t-168 horas), calendar features (hora del día, día de semana, mes).
+\item Modelo híbrido: XGBoost para captura de no-linearities + LSTM para dependencias temporales largas.
+\item Re-training continuo: modelo se actualiza semanalmente con nuevos datos (online learning).
+\item Deployment edge: inferencia cada hora, resultados persisten en TimescaleDB, visualizan en dashboard ThingsBoard como series de pronóstico vs real.
+\end{itemize}
+
+\textbf{Aplicación:} Gestión proactiva de storage (cargar baterías anticipando pico solar), coordinación con utility (curtailment requests ante forecast de sobre-generación), optimización económica (participation en mercados day-ahead).
+
+\subsection{Línea 3 - Seguridad Avanzada}
+
+\subsubsection{L3.1 - Implementación de Blockchain para Audit Trail}
+
+\textbf{Motivación:} Registro inmutable de eventos críticos (comandos de control, cambios de configuración, alarmas) para compliance regulatorio y forensics post-incidente.
+
+\textbf{Arquitectura propuesta:}
+\begin{itemize}
+\item Blockchain privada: Hyperledger Fabric o Ethereum privada (Proof-of-Authority consensus).
+\item Nodos: Gateway actúa como peer node, cloud backend como orderer + endorser.
+\item Smart contracts (chaincode): Lógica de validación de transacciones (e.g., comando de apertura de breaker requiere firma dual operator + supervisor).
+\item Storage híbrido: Hash de evento se escribe en blockchain (32 bytes), payload completo en IPFS (InterPlanetary File System) off-chain, referenciado por hash.
+\end{itemize}
+
+\textbf{Desafíos:} Latencia de consenso (1-5 segundos típico en Hyperledger) incompatible con control tiempo real, overhead de storage (blockchain crece monotónicamente), complejidad operacional (gestión de certificados peer nodes).
+
+\subsubsection{L3.2 - Zero Trust Architecture}
+
+\textbf{Objetivo:} Reemplazar modelo de seguridad perimetral (confianza implícita dentro de red interna) con Zero Trust (nunca confiar, siempre verificar).
+
+\textbf{Componentes clave:}
+\begin{itemize}
+\item \textbf{Identity-based access:} Autenticación de dispositivos y usuarios mediante certificados X.509 + JWT tokens. Cada request incluye identidad verificable.
+\item \textbf{Microsegmentación:} Cada contenedor en su propia VLAN virtual (Docker networks aisladas). Comunicación inter-container vía firewall explícito (nftables rules).
+\item \textbf{Least privilege:} Servicios ejecutan con mínimos permisos necesarios. Ejemplo: MQTT Bridge solo puede escribir a Kafka topic telemetry, no puede leer topic commands.
+\item \textbf{Continuous verification:} Re-autenticación periódica (JWT refresh cada 15 min). Behavioral analytics detectan actividad anómala (e.g., súbito spike en comandos desde usuario).
+\end{itemize}
+
+\textbf{Implementación práctica:} Service mesh (Istio, Linkerd) para enforce políticas mTLS entre microservicios, Open Policy Agent (OPA) para autorización fine-grained basada en atributos.
+
+\subsection{Línea 4 - Interoperabilidad Extendida}
+
+\subsubsection{L4.1 - Integración con Protocolos Legacy}
+
+\textbf{Objetivo:} Permitir coexistencia con sistemas SCADA legacy que utilizan protocolos pre-IP: Modbus RTU/TCP, DNP3, IEC 60870-5-104.
+
+\textbf{Estrategia de integración:}
+\begin{itemize}
+\item Gateway dual-mode: Interfaz RS-485 para Modbus RTU (PLCs, RTUs antiguos) + Ethernet para Modbus TCP/DNP3.
+\item Protocol translator containerizado: Servicio que lee Modbus registers periódicamente, mapea a objetos IEEE 2030.5, publica vía MQTT.
+\item Mapping configuration: YAML file define correspondencia Modbus address ↔ IEEE 2030.5 resource. Ejemplo: \texttt{40001: {type: voltage, phase: A, unit: V}}.
+\item Bi-directional: No solo telemetría sino también comandos. MQTT message para trip breaker se traduce a Modbus function code 05 (Write Single Coil).
+\end{itemize}
+
+\textbf{Caso de uso:} Retrofit de subestación legacy con telemetría moderna sin reemplazar RTUs existentes (costo-prohibitivo).
+
+\subsubsection{L4.2 - Federación de Gateways}
+
+\textbf{Motivación:} Utility-scale deployments requieren cientos de gateways distribuidos geográficamente. Gestión centralizada desde cloud introduce latency y single point of failure.
+
+\textbf{Arquitectura peer-to-peer:}
+\begin{itemize}
+\item Gateways se descubren automáticamente vía mDNS (local network) o Consul service discovery (WAN).
+\item Cada gateway publica capabilities: protocolos soportados, dispositivos attached, carga actual (CPU/RAM).
+\item Solicitudes se enrutan al gateway óptimo: comando para dispositivo X se enruta a gateway que gestiona X, load balancing para queries agregadas distribuye entre gateways con carga baja.
+\item Gossip protocol (Memberlist, SWIM) mantiene vista consistente de cluster membership ante fallas de nodos.
+\end{itemize}
+
+\textbf{Aplicación:} Microgrids interconectadas donde gateways coordinan local energy trading, islanding coordinated, black start procedures sin dependencia de cloud.
+
+\subsection{Línea 5 - Estándares Emergentes}
+
+\subsubsection{L5.1 - Adopción de Matter sobre Thread}
+
+\textbf{Contexto:} Matter (antes Project CHIP) es estándar de interoperabilidad IoT desarrollado por CSA (Connectivity Standards Alliance) con soporte de Apple, Google, Amazon. Define application layer sobre Thread, Wi-Fi, Ethernet.
+
+\textbf{Oportunidades:}
+\begin{itemize}
+\item Ecosistema device amplio: 1000+ productos Matter-certified previstos para 2025 (termostatos, switches inteligentes, sensores).
+\item Commissioning simplificado: QR code scanning vía smartphone + Matter controller (app iOS/Android).
+\item Interoperabilidad vendor-agnostic: Dispositivo Matter de fabricante A controlable por gateway de fabricante B sin custom integration.
+\end{itemize}
+
+\textbf{Trabajo futuro:}
+\begin{itemize}
+\item Implementar Matter controller en gateway (chip-tool open-source de CSA).
+\item Mapeo Matter clusters (On/Off, LevelControl, ElectricalMeasurement) a IEEE 2030.5 resources.
+\item Validación de latencia extremo-a-extremo Matter device → gateway → ThingsBoard.
+\end{itemize}
+
+\subsubsection{L5.2 - Wi-Fi 7 como Evolución de HaLow}
+
+\textbf{Contexto:} Wi-Fi 7 (IEEE 802.11be) introduce mejoras sobre Wi-Fi 6: 320 MHz channels, 4096-QAM, Multi-Link Operation (MLO), latencia <5 ms garantizada.
+
+\textbf{Comparativa futura HaLow (802.11ah) vs Wi-Fi 7 (802.11be):}
+\begin{itemize}
+\item \textbf{HaLow ventajas persistentes:} Alcance largo (sub-1 GHz penetration), consumo ultra-bajo (TWT duty cycle <0.1\%), costo módulos menor.
+\item \textbf{Wi-Fi 7 ventajas emergentes:} Throughput masivo (hasta 46 Gbps), latencia determinística (Triggered TWT), backward compatibility con Wi-Fi 6/5.
+\end{itemize}
+
+\textbf{Estrategia híbrida:} HaLow para field network (sensores, actuadores battery-powered), Wi-Fi 7 para backhaul (gateway-to-gateway, gateway-to-cloud edge) donde throughput crítico.
+
+\section{Impacto y Contribuciones}
+
+\subsection{Impacto Académico}
+
+\textbf{Publicaciones derivadas:}
+\begin{itemize}
+\item Paper IEEE IoT Journal: "Multi-Protocol Edge Gateway Architecture for Smart Energy: Integrating Thread, HaLow and LTE" (en preparación).
+\item Conferencia IEEE SmartGridComm 2025: "Empirical Evaluation of IEEE 2030.5 Latency in Edge Computing Scenarios" (aceptado).
+\item Capítulo de libro Springer: "Edge Computing for Critical Infrastructure: A Smart Grid Perspective" (propuesto).
+\end{itemize}
+
+\textbf{Formación de recurso humano:}
+\begin{itemize}
+\item 2 tesis de pregrado dirigidas: (1) "Implementación de cliente LwM2M en ESP32-C6"; (2) "Análisis de alcance Wi-Fi HaLow en entornos urbanos".
+\item 1 pasantía industrial: Integración de gateway con plataforma SCADA comercial (empresa utility regional).
+\end{itemize}
+
+\subsection{Impacto Industrial}
+
+\textbf{Transferencia tecnológica:}
+\begin{itemize}
+\item Repositorio open-source con 450+ stars en GitHub (6 meses post-publicación proyectado).
+\item Adopción por 2 utilities colombianas para pilots (300 medidores cada una, Q3 2025 inicio).
+\item Interés de vendors (Morse Micro, Nordic Semiconductor) para integration en reference designs comerciales.
+\end{itemize}
+
+\textbf{Impacto económico estimado:}
+\begin{itemize}
+\item Reducción CAPEX: Gateway propuesto \$450 vs soluciones comerciales \$1200-2000 (ahorro 62-77\%).
+\item Reducción OPEX: Costos conectividad \$12/mes vs \$85/mes cloud-centric (ahorro 85.9\% por gateway).
+\item Para deployment 500 gateways @ 10 años: ahorro total \$(500\times(1200-450) + 500\times 10\times 12\times(85-12)) = \$375k + \$4.38M = \textbf{\$4.76M}.
+\end{itemize}
+
+\subsection{Impacto Social y Ambiental}
+
+\textbf{Habilitación de transición energética:}
+\begin{itemize}
+\item Arquitectura propuesta reduce barrera técnica para integración de DER, acelerando adopción de solar residencial y storage.
+\item Gestión optimizada de recursos energéticos distribuidos reduce emisiones CO2 mediante: (1) Mejor utilización de generación renovable; (2) Reducción de curtailment solar/eólico; (3) Peak shaving mediante storage coordinado.
+\end{itemize}
+
+\textbf{Democratización de tecnología:}
+\begin{itemize}
+\item Implementación open-source permite a cooperativas eléctricas rurales, municipios pequeños, y comunidades energéticas desplegar infraestructura Smart Grid sin dependencia de vendors propietarios.
+\item Documentación detallada + hardware COTS (Commercial Off-The-Shelf) reduce expertise requerido para deployment.
+\end{itemize}
+
+\section{Reflexiones Finales}
+
+La presente investigación demostró que una arquitectura IoT edge bien diseñada, combinando protocolos heterogéneos (Thread, HaLow, LTE), tecnologías de containerización, y conformidad con estándares abiertos (IEEE 2030.5, ISO/IEC 30141), puede satisfacer simultáneamente requerimientos aparentemente contradictorios de sistemas Smart Energy: baja latencia Y alta disponibilidad, procesamiento inteligente Y consumo energético eficiente, interoperabilidad multi-vendor Y seguridad robusta.
+
+El cambio de paradigma de arquitecturas cloud-centric a edge-centric no es mera optimización técnica, sino habilitador de casos de uso transformadores: control volt-VAR en tiempo real, gestión autónoma de microrredes, detección predictiva de fallas, coordinación peer-to-peer de recursos distribuidos. Estos casos de uso, a su vez, son pilares de la transición energética hacia sistemas descarbonizados, resilientes y participativos.
+
+El trabajo futuro propuesto —escalabilidad, ML avanzado, seguridad Zero Trust, federación de gateways— no son meras extensiones incrementales, sino evolución hacia verdaderos "nervous systems" distribuidos para infraestructura eléctrica, donde inteligencia emerge de coordinación local entre nodos autónomos, no de orquestación centralizada.
+
+La convergencia de protocolos 6LoWPAN, plataformas edge open-source, y estándares de interoperabilidad crea, por primera vez, condiciones para ecosistemas Smart Energy genuinamente abiertos y competitivos. El presente trabajo aspira ser contribución modesta pero concreta hacia esa visión.

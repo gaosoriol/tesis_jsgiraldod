@@ -1,4 +1,4 @@
-% Esta es la Plantilla UNAL en LaTeX
+﻿% Esta es la Plantilla UNAL en LaTeX
 \documentclass[10pt,spanish,fleqn,openany,twoside,letterpaper]{book}
 
 %Muestra los márgenes del documento para evitar Warnings
@@ -97,24 +97,24 @@
 %Información de la tesis
 %Diligenciar aquí los datos para su carga automática donde se requiera en el documento
 %En el caso de tesis o trabajos finales, verificar que el título coincida con el aprobado por la Facultad
-\renewcommand{\studentname}{Juan Sebastian Giraldo Duque}
-\renewcommand{\thesisname}{Arquitectura IoT Centrada en Pasarelas de Borde\\ \vspace{2mm}\large{Implementación de Protocolos basados en 6LowPAN para Smart Energy}}
+\renewcommand{\studentname}{Luis Antonio Giraldo}
+\renewcommand{\thesisname}{Arquitectura de Gateway de Telemetra Edge para Smart Energy con 6LoWPAN, IEEE 802.11ah HaLow Multi-Banda y Procesamiento Inteligente}
 \renewcommand{\thesisnameeng}{Nombre del trabajo o tesis en inglés}
 \renewcommand{\thesisnamelang}{Nombre del trabajo o tesis en un tercer idioma} %Usar solo si se requiere
 \renewcommand{\issuedate}{Año entrega}
-\renewcommand{\submissiondate}{Fecha entrega}
+\renewcommand{\submissiondate}{Noviembre 2025}
 \renewcommand{\director}{Prof. Dr. Director}
 \renewcommand{\directortitle}{Indicar si es Profesor Titular/Asociado}
 \renewcommand{\codirector}{Prof. Dr. Co director}
 \renewcommand{\codirectortitle}{Indicar si es Profesor Titular/Asociado}
-\renewcommand{\academictitle}{Magíster (M, MSc) o Doctor (PhD) - Modalidad }
+\renewcommand{\academictitle}{Magster en Ingeniera - Ingeniera Electrnica}
 \renewcommand{\resgroupone}{Grupo A (Sigla Grupo Investigación 01) }
 \renewcommand{\resgrouptwo}{Grupo B (Sigla Grupo Investigación 02) }
 \renewcommand{\researchtopic}{Línea}
-\renewcommand{\sede}{Sede de la Universidad} 
-\renewcommand{\department}{Departamento}
+\renewcommand{\sede}{Sede Medelln} 
+\renewcommand{\department}{Departamento de Ingeniera Elctrica y Electrnica}
 \renewcommand{\departmenttwo}{Departamento 2} %Usar solo si es necesario
-\renewcommand{\faculty}{Facultad}
+\renewcommand{\faculty}{Facultad de Minas}
 
 %Palabras clave del documento - Tener presente los Theasurus https://www.thesaurus.com/
 %Disponible en 3 idiomas aunque se puede extender a francés o otro idioma
@@ -127,7 +127,7 @@
 \usepackage{fancyhdr}
 \fancyhf{}%
 \pagestyle{fancyplain}
-\textheight22.5cm \topmargin0cm \textwidth16.5cm \headheight24pt
+\textheight22.5cm \topmargin0cm \textwidth16.5cm \headheight22pt
 \oddsidemargin0.5cm \evensidemargin-0.5cm%
 \fancypagestyle{plain}{
 \fancyhead[RO,LE]{}
@@ -161,7 +161,7 @@
 % Permite ver y configurar los parámetros de la página
 \setlength{\voffset}{-0.25in}
 \setlength{\headwidth}{467pt}
-\setlength{\headheight}{24pt}
+\setlength{\headheight}{22pt}
 \setlength{\oddsidemargin}{0pt}
 \setlength{\evensidemargin}{0pt}
 \setlength{\marginparwidth}{0pt}
@@ -266,7 +266,7 @@ myedge/.style={->, -{Latex[#1]}}
 \textbf{\Large \studentname} \\
 \vspace{5.0cm}
 \faculty \\ \department \\
-\sede, Colombia, sede Manizales\\
+\sede, Colombia (Nota: ciudad sede donde se gradúa [borrar esta nota])\\
 \issuedate
 \newpage 
 \thispagestyle{empty}
@@ -360,25 +360,19 @@ Albert Einstein
 %Incluir secciones del documento de aqui en adelante
 %Use \include para incluir desde una página nueva e \input para incluir sin salto de página
 %\include{00Intrucciones} % Anular esta linea con comentario de ser necesario
-\include{00HipotesisPlanteamiento}
-\include{00Objetivos}
-\include{01Seccion01} % Introducción (802.3, 802.11ah, 802.15.4, etc.)
-\include{02Seccion02} % Marco Teórico
-\include{03Gateway_NEW} % Gateway (Software) - COMPRIMIDO
-\include{04Arquitectura_NEW} % Arquitectura (Caso de Estudio) - COMPRIMIDO
-\include{05Seccion05} % Conclusiones y trabajo futuro
-\include{06Seccion06}
-\include{07Seccion07}
+%%\include{00HipotesisPlanteamiento}
+%%\include{00Objetivos}
+\include{01Introduccion} % Introducción (802.3, 802.11ah, 802.15.4, etc.)
+\include{02MarcoTeorico} % Marco Teórico
+\include{03Gateway_NEW} % Gateway (Software) - NUEVO
+\include{04Arquitectura_NEW} % Arquitectura (Caso de Estudio) - NUEVO
+\include{05Conclusiones} % Conclusiones y trabajo futuro
+%%\include{06Seccion06}
+%%\include{07Seccion07}
 
-//Inicio del apéndice o anexos
+%Inicio del apéndice o anexos
 \begin{appendix}
-\include{08Apendice01}%
-\include{09AnexoA_InstalacionOpenWRT}%
-\include{10AnexoB_DockerCompose}%
-\include{11AnexoC_ScriptsIntegracion}%
-\include{12AnexoD_EspecificacionesIEEE}%
-\include{13AnexoE_NodoIoT}%
-\include{14AnexoF_ConfiguracionesOpenWRT}%
+\include{09AnexoA_InstalacionOpenWRT}\n\include{10AnexoB_DockerCompose}\n\include{11AnexoC_ScriptsIntegracion}\n\include{12AnexoD_EspecificacionesIEEE}\n\include{13AnexoE_NodoIoT}\n\include{14AnexoF_ConfiguracionesOpenWRT}%
 \end{appendix}
 
 %Permite visualizar la bibliografía en la tabla de contenido
@@ -396,6 +390,6 @@ Albert Einstein
 %\cleardoublepage
 % Para NO insertar una página adicional al final usar \clearpage
 \clearpage
-}
+}}
 
 \end{document}

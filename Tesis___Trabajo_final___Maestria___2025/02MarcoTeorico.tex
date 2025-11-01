@@ -1,0 +1,1570 @@
+\chapter{Marco Teórico}
+
+\section{Fundamentos de Redes Smart Energy}
+
+\subsection{Evolución de las Infraestructuras Eléctricas}
+
+La transición de redes eléctricas tradicionales unidireccionales hacia Smart Grids bidireccionales representa un cambio paradigmático en la operación de sistemas energéticos. Las Smart Grids integran tecnologías de información y comunicación (TIC) para monitoreo, control y optimización en tiempo real del flujo eléctrico desde generación hasta consumo final. Este enfoque permite: integración masiva de energías renovables distribuidas (DER - Distributed Energy Resources), gestión activa de la demanda (DSM - Demand Side Management), detección y auto-recuperación de fallas (self-healing), y participación activa de prosumidores (consumidores que también generan energía).
+
+Según el National Institute of Standards and Technology (NIST), una Smart Grid implementa siete dominios interconectados: Bulk Generation, Transmission, Distribution, Customer, Operations, Markets, y Service Provider. La infraestructura de medición inteligente (AMI - Advanced Metering Infrastructure) constituye el dominio Customer, proporcionando visibilidad granular de patrones de consumo y habilitando servicios de respuesta a la demanda (DR).
+
+\subsection{Arquitectura de Referencia Smart Grid}
+
+El modelo de referencia NIST para Smart Grid (NIST Framework and Roadmap for Smart Grid Interoperability Standards) define tres capas principales:
+
+\begin{enumerate}
+\item \textbf{Power and Energy Layer}: Infraestructura física de generación, transmisión, distribución y almacenamiento.
+\item \textbf{Communication Layer}: Redes de datos multi-protocolo (HAN, NAN, WAN) que transportan información de telemetría y comandos de control.
+\item \textbf{Application Layer}: Sistemas de gestión de energía (EMS), gestión de distribución (DMS), gestión de demanda (DERMS), y analytics.
+\end{enumerate}
+
+La arquitectura AMI se compone típicamente de: medidores inteligentes (smart meters) instalados en puntos de consumo, concentradores/gateways que agregan datos de decenas o cientos de medidores, y head-end systems en centros de control que procesan millones de registros diarios.
+
+\section{Protocolos de Comunicación IoT}
+
+\subsection{Thread 802.15.4 - Redes Mesh de Baja Potencia}
+
+Thread es un protocolo de red IPv6 basado en IEEE 802.15.4, diseñado específicamente para aplicaciones IoT domésticas e industriales de baja potencia. Desarrollado por Thread Group (ahora parte de Connectivity Standards Alliance), estandariza la capa de red y transporte sobre la capa física/MAC 802.15.4, proporcionando routing mesh, auto-configuración y seguridad end-to-end.
+
+\subsubsection{Arquitectura del Protocolo Thread}
+
+Thread implementa un stack de protocolos completo sobre IEEE 802.15.4:
+
+\begin{itemize}
+\item \textbf{Physical Layer (PHY)}: IEEE 802.15.4-2015, banda 2.4 GHz, OQPSK modulation, 250 kbps data rate, 16 canales (11-26).
+\item \textbf{MAC Layer}: CSMA/CA con backoff exponencial, frame acknowledgments, retransmisiones automáticas.
+\item \textbf{Network Layer}: 6LoWPAN (IPv6 over Low-Power Wireless Personal Area Networks) - compresión de headers IPv6, fragmentación, mesh-under routing.
+\item \textbf{Transport Layer}: UDP (principalmente), TCP limitado por overhead.
+\item \textbf{Application Layer}: CoAP (Constrained Application Protocol), MQTT-SN, LwM2M.
+\end{itemize}
+
+El routing Thread utiliza Mesh Link Establishment (MLE) para descubrimiento de vecinos y mantenimiento de tabla de rutas. Cada dispositivo mantiene una tabla con métricas de link quality (LQI - Link Quality Indicator) y path cost hacia el líder de la red. El protocolo implementa route optimization continuo basado en Expected Transmission Count (ETX).
+
+\subsubsection{Thread Border Router (OTBR)}
+
+El Thread Border Router (OTBR) actúa como gateway entre la red Thread (802.15.4) y redes IP tradicionales (Ethernet, Wi-Fi), proporcionando:
+
+\begin{itemize}
+\item \textbf{Traducción IPv6}: Routing entre prefijos Thread (mesh-local) y prefijos globales.
+\item \textbf{NAT64/DNS64}: Interoperabilidad con servicios IPv4-only.
+\item \textbf{Multicast forwarding}: Propagación de mensajes multicast entre segmentos.
+\item \textbf{Commissioning}: Incorporación segura de nuevos dispositivos mediante out-of-band authentication.
+\end{itemize}
+
+La implementación de referencia OpenThread Border Router (OTBR) soporta dos arquitecturas: System-on-Chip (SoC) donde un único MCU ejecuta stack Thread y aplicación, o Radio Co-Processor (RCP) donde un MCU dedicado (ej. nRF52840) implementa PHY/MAC y un host Linux ejecuta capas superiores.
+
+\subsubsection{Arquitectura de Routing Thread - Análisis Profundo}
+
+Thread implementa un protocolo de routing mesh adaptativo basado en métricas de calidad de enlace y costo de path. La topología se organiza jerárquicamente en roles de dispositivo:
+
+\begin{itemize}
+\item \textbf{Leader}: Único nodo elegido que gestiona asignación de Router IDs y mantiene información de red (Network Data).
+\item \textbf{Router}: Nodos full-function que forwardean paquetes y mantienen tabla de rutas completa.
+\item \textbf{Router Eligible End Device (REED)}: Dispositivos que pueden promover a Router si la topología lo requiere.
+\item \textbf{End Device}: Nodos leaf sin capacidad de routing, se comunican únicamente con su Parent Router.
+\end{itemize}
+
+La tabla de routing Thread almacena para cada destino:
+
+\begin{table}[h]
+\centering
+\caption{Ejemplo de Tabla de Routing Thread}
+\label{tab:thread-routing}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\textbf{Destination} & \textbf{Next Hop} & \textbf{Path Cost} & \textbf{LQI} & \textbf{Age (s)} \\
+\hline
+Router 2 & Direct & 1 & 255 & 0 \\
+Router 5 & Router 2 & 2 & 220 & 5 \\
+End Device 12 & Router 2 & 2 & 200 & 3 \\
+Leader & Router 2 & 2 & 255 & 1 \\
+\hline
+\end{tabular}
+\end{table}
+
+El algoritmo de selección de ruta considera:
+
+\begin{equation}
+\text{Path Cost} = \sum_{i=1}^{n} \frac{100}{\text{LQI}_i}
+\end{equation}
+
+donde LQI (Link Quality Indicator) toma valores 0-255, con 255 representando calidad óptima. Thread actualiza rutas periódicamente mediante MLE Advertisement frames (intervalo típico 32 segundos).
+
+Comparativa con otros protocolos mesh 2.4 GHz:
+
+\begin{table}[h]
+\centering
+\caption{Comparación Protocolos Mesh 2.4 GHz}
+\label{tab:mesh-protocols-detailed}
+\begin{tabular}{|p{3.5cm}|p{3.5cm}|p{3.5cm}|p{3.5cm}|}
+\hline
+\textbf{Característica} & \textbf{Thread 1.3.1} & \textbf{Zigbee 3.0} & \textbf{Bluetooth Mesh} \\
+\hline
+\textbf{Stack routing} & IPv6 6LoWPAN & Propietario (AODV) & Managed Flooding \\
+\hline
+\textbf{Hop limit} & No limit (típico 3-5) & 30 máximo & 127 máximo \\
+\hline
+\textbf{Route repair} & Proactive (MLE) & Reactive (AODV RERR) & Flooding redundancy \\
+\hline
+\textbf{Commissioning} & Out-of-band (PSKd) & Install codes & Provisioning (ECDH) \\
+\hline
+\textbf{Border Router} & Estándar (OTBR) & Coordinador específico & Proxy nodes \\
+\hline
+\textbf{Matter compatibility} & Nativo & Requiere bridge & Requiere bridge \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{6LoWPAN - Compresión IPv6 para Redes Constrained}
+
+6LoWPAN (IPv6 over Low-Power Wireless Personal Area Networks), definido en RFC 6282 y RFC 4944, es una capa de adaptación que permite la transmisión de paquetes IPv6 sobre redes IEEE 802.15.4, superando la limitación del MTU de 127 bytes mediante compresión de headers y fragmentación.
+
+\subsubsection{Motivación de 6LoWPAN}
+
+El stack IPv6 tradicional presenta overhead prohibitivo para redes de sensores:
+\begin{itemize}
+\item \textbf{Header IPv6}: 40 bytes (31.5\% del MTU 802.15.4)
+\item \textbf{Header UDP}: 8 bytes (6.3\% del MTU)
+\item \textbf{Total headers sin compresión}: 48 bytes (37.8\% del MTU)
+\item \textbf{Payload disponible}: 79 bytes (62.2\% del MTU)
+\end{itemize}
+
+Esta ineficiencia se agrava en topologías mesh donde cada retransmisión consume energía preciosa en dispositivos battery-powered.
+
+\subsubsection{Compresión IPHC (IPv6 Header Compression)}
+
+6LoWPAN implementa compresión IPHC (RFC 6282) que reduce headers IPv6 de 40 bytes a 2-7 bytes explotando redundancias contextuales:
+
+\textbf{1. Compresión de Direcciones IPv6:}
+\begin{itemize}
+\item \textbf{Link-local addresses}: Derivadas de dirección MAC 802.15.4 (64 bits), se omiten completamente (compresión 16 bytes → 0 bytes).
+\item \textbf{Multicast addresses}: Prefijos conocidos (ff02::/16) se comprimen a 1-6 bytes.
+\item \textbf{Context-based compression}: Prefijos de red conocidos (ej. fd00::/64 de red Thread) se referencian por ID de contexto de 4 bits.
+\end{itemize}
+
+\textbf{2. Compresión de Campos IPv6:}
+\begin{itemize}
+\item \textbf{Version (4 bits)}: Siempre 6, se omite.
+\item \textbf{Traffic Class (8 bits)}: Típicamente 0, se omite si no usado.
+\item \textbf{Flow Label (20 bits)}: Se omite si 0.
+\item \textbf{Hop Limit (8 bits)}: Se comprime a 2 bits si valor ≤64.
+\end{itemize}
+
+\textbf{Ejemplo de compresión IPHC:}
+
+\begin{table}[h]
+\centering
+\caption{Compresión IPHC de Header IPv6}
+\label{tab:iphc-compression}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Campo} & \textbf{Original (bytes)} & \textbf{Comprimido (bytes)} & \textbf{Reducción (\%)} \\
+\hline
+Version + TC + FL & 4 & 0 & 100\% \\
+Payload Length & 2 & 0 (implícito en 802.15.4) & 100\% \\
+Next Header & 1 & 0 (si UDP, se usa NHC) & 100\% \\
+Hop Limit & 1 & 0-1 & 0-100\% \\
+Source Address & 16 & 0-2 (link-local) & 87.5-100\% \\
+Dest Address & 16 & 0-2 (link-local) & 87.5-100\% \\
+\hline
+\textbf{Total IPv6} & \textbf{40} & \textbf{2-7} & \textbf{82.5-95\%} \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Compresión NHC (Next Header Compression)}
+
+NHC extiende compresión a headers de capa de transporte (UDP) y aplicación (CoAP):
+
+\textbf{UDP Header Compression (RFC 6282):}
+\begin{itemize}
+\item \textbf{Ports}: Si puertos origen/destino en rango 61616-61631 (CoAP typical), se comprimen de 4 bytes a 1 byte.
+\item \textbf{Length}: Se omite (inferido de frame 802.15.4).
+\item \textbf{Checksum}: Se reemplaza por checksum 802.15.4 o se omite en enlaces confiables.
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\caption{Compresión NHC de Header UDP}
+\label{tab:nhc-udp}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Campo UDP} & \textbf{Original (bytes)} & \textbf{Comprimido (bytes)} & \textbf{Reducción (\%)} \\
+\hline
+Source Port & 2 & 0.5 (4 bits) & 75\% \\
+Dest Port & 2 & 0.5 (4 bits) & 75\% \\
+Length & 2 & 0 & 100\% \\
+Checksum & 2 & 0 & 100\% \\
+\hline
+\textbf{Total UDP} & \textbf{8} & \textbf{1-2} & \textbf{75-87.5\%} \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{Compresión Total IPv6+UDP:}
+\begin{equation}
+\text{Overhead comprimido} = 2\text{-}7 \text{ (IPHC)} + 1\text{-}2 \text{ (NHC-UDP)} = 3\text{-}9 \text{ bytes}
+\end{equation}
+
+\begin{equation}
+\text{Payload disponible} = 127 - 25 \text{ (MAC header)} - 3\text{-}9 \text{ (IPHC+NHC)} = 93\text{-}99 \text{ bytes (73-78\% del MTU)}
+\end{equation}
+
+vs 79 bytes (62\%) sin compresión → **Ganancia 14-16 bytes (18-20\% más payload)**.
+
+\subsubsection{Fragmentación y Reensamblado}
+
+Cuando payload IPv6 excede MTU 802.15.4 (incluso con compresión), 6LoWPAN fragmenta en múltiples frames:
+
+\begin{itemize}
+\item \textbf{First Fragment}: Contiene header de fragmentación (4 bytes: datagram\_size, datagram\_tag) + primeros N bytes de payload.
+\item \textbf{Subsequent Fragments}: Header de fragmentación (5 bytes: datagram\_size, datagram\_tag, datagram\_offset) + siguientes N bytes.
+\end{itemize}
+
+\textbf{Limitaciones de Fragmentación:}
+\begin{itemize}
+\item Aumenta latencia (espera de todos los fragmentos).
+\item Reduce confiabilidad (pérdida de 1 fragmento = descarte de datagrama completo).
+\item Consume buffers en receptor (reensamblado requiere RAM para almacenar fragmentos parciales).
+\end{itemize}
+
+\textbf{Best Practice:} Diseñar payloads de aplicación ≤70 bytes para evitar fragmentación en topologías mesh (headers Thread/6LoWPAN/UDP consumen ~25-30 bytes).
+
+\subsubsection{Impacto de 6LoWPAN en Latencia}
+
+Análisis empírico de latencia por hop con/sin compresión 6LoWPAN:
+
+\begin{table}[h]
+\centering
+\caption{Latencia por Hop con/sin Compresión 6LoWPAN}
+\label{tab:6lowpan-latency}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Escenario} & \textbf{Sin Compresión} & \textbf{Con IPHC+NHC} & \textbf{Reducción} \\
+\hline
+Tiempo TX @ 250 kbps (48B headers) & 1.54 ms & 0.29 ms (7B) & 81\% \\
+Tiempo procesamiento (compress/decompress) & 0 ms & 0.15 ms & — \\
+Tiempo total por hop & 1.54 ms & 0.44 ms & 71\% \\
+\hline
+\textbf{Latencia 5 hops mesh} & \textbf{7.7 ms} & \textbf{2.2 ms} & \textbf{71\%} \\
+\hline
+\end{tabular}
+\end{table}
+
+La compresión 6LoWPAN reduce latencia en topologías mesh multi-hop en >70\%, crítico para aplicaciones Smart Energy con requisitos de tiempo real (<100 ms).
+
+\subsection{CoAP - Protocolo de Aplicación para Dispositivos Constrained}
+
+CoAP (Constrained Application Protocol, RFC 7252) es un protocolo web RESTful optimizado para dispositivos IoT con recursos limitados, diseñado como alternativa ligera a HTTP.
+
+\subsubsection{Características Fundamentales de CoAP}
+
+\begin{itemize}
+\item \textbf{Arquitectura RESTful}: Métodos GET/POST/PUT/DELETE sobre recursos identificados por URIs (ej. \texttt{coap://sensor01/temp}).
+\item \textbf{Transporte UDP}: Overhead mínimo 8 bytes vs 20+ bytes TCP + handshake de 3 vías.
+\item \textbf{Header compacto}: 4 bytes fijos vs 100+ bytes HTTP.
+\item \textbf{Mensajes binarios}: Parsing eficiente vs texto HTTP (sin necesidad de string parsing).
+\item \textbf{Modos CON/NON}: Confirmable (con ACK) para comandos críticos, Non-Confirmable para telemetría best-effort.
+\item \textbf{Observe (RFC 7641)}: Subscripciones a recursos para notificaciones push (vs polling HTTP).
+\item \textbf{Block-wise Transfer (RFC 7959)}: Transferencia de payloads grandes en bloques (crítico para firmware OTA).
+\item \textbf{DTLS integrado}: Seguridad con overhead menor que TLS/TCP.
+\end{itemize}
+
+\subsubsection{Estructura de Mensaje CoAP}
+
+\begin{verbatim}
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|Ver| T |  TKL  |      Code     |          Message ID           |
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|   Token (if any, TKL bytes) ...
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|   Options (if any) ...
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|1 1 1 1 1 1 1 1|    Payload (if any) ...
++-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+\end{verbatim}
+
+\textbf{Campos del Header (4 bytes fijos):}
+\begin{itemize}
+\item \textbf{Ver (2 bits)}: Versión CoAP (siempre 01 para CoAP/1).
+\item \textbf{T (2 bits)}: Tipo de mensaje (CON, NON, ACK, RST).
+\item \textbf{TKL (4 bits)}: Token Length (0-8 bytes para correlación request/response).
+\item \textbf{Code (8 bits)}: Método (0.01=GET, 0.02=POST, 0.03=PUT, 0.04=DELETE) o Response Code (2.05=Content, 4.04=Not Found).
+\item \textbf{Message ID (16 bits)}: Identificador único para detección de duplicados.
+\end{itemize}
+
+\subsubsection{CoAP vs HTTP - Análisis Comparativo}
+
+\begin{table}[h]
+\centering
+\caption{Comparación CoAP vs HTTP}
+\label{tab:coap-vs-http}
+\begin{tabular}{|p{4cm}|p{4.5cm}|p{4.5cm}|}
+\hline
+\textbf{Característica} & \textbf{CoAP/UDP} & \textbf{HTTP/TCP} \\
+\hline
+\textbf{Header mínimo} & 4 bytes & 100+ bytes (típico 200-500) \\
+\hline
+\textbf{Transporte} & UDP (8 bytes) & TCP (20 bytes + handshake) \\
+\hline
+\textbf{Overhead total} & 12-30 bytes & 120-520 bytes \\
+\hline
+\textbf{Latencia conexión} & 0 ms (stateless) & 50-150 ms (3-way handshake) \\
+\hline
+\textbf{Formato} & Binario (parsing rápido) & Texto (parsing lento) \\
+\hline
+\textbf{Subscripciones} & Observe (push nativo) & Polling o WebSocket \\
+\hline
+\textbf{Fragmentación} & Block-wise (CoAP-aware) & TCP segmentation (opaco) \\
+\hline
+\textbf{Multicast} & Sí (UDP nativo) & No (TCP unicast only) \\
+\hline
+\textbf{Seguridad} & DTLS (menor overhead) & TLS (mayor overhead) \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{Ejemplo de GET Request:}
+
+\textit{CoAP:}
+\begin{verbatim}
+GET coap://10.0.0.1/sensor/temp
+Header: 4 bytes + Token: 2 bytes + URI-Path options: 12 bytes = 18 bytes total
+\end{verbatim}
+
+\textit{HTTP:}
+\begin{verbatim}
+GET /sensor/temp HTTP/1.1
+Host: 10.0.0.1
+User-Agent: curl/7.68.0
+Accept: */*
+
+Total: ~120 bytes (6.7× más overhead)
+\end{verbatim}
+
+\subsubsection{Modos de Confiabilidad CoAP}
+
+\textbf{1. Confirmable (CON):} Requiere ACK del receptor, con retransmisiones exponenciales si no se recibe ACK.
+
+\begin{verbatim}
+Cliente                                Servidor
+  |                                        |
+  |  CON [0x7d34] GET /temp               |
+  +--------------------------------------->|
+  |                                        |
+  |  ACK [0x7d34] 2.05 Content "23.5°C"   |
+  |<---------------------------------------+
+  |                                        |
+\end{verbatim}
+
+\textbf{2. Non-Confirmable (NON):} Fire-and-forget, sin ACK ni retransmisiones.
+
+\begin{verbatim}
+Sensor                                 Gateway
+  |                                        |
+  |  NON [0x8a21] POST /telemetry          |
+  +--------------------------------------->|
+  |                                        |
+  (sin ACK)
+\end{verbatim}
+
+\textbf{Selección de Modo:}
+\begin{itemize}
+\item \textbf{CON}: Comandos críticos (activar alarma, corte de servicio), firmware OTA, confirmación de escritura.
+\item \textbf{NON}: Telemetría periódica (temperatura cada 30s), métricas no críticas, escenarios de alta frecuencia donde pérdida ocasional es aceptable.
+\end{itemize}
+
+\subsubsection{Observe - Subscripciones CoAP}
+
+RFC 7641 define extensión Observe para subscripciones a recursos, eliminando necesidad de polling:
+
+\begin{verbatim}
+Cliente                                Servidor
+  |                                        |
+  |  CON [0x1234] GET /temp                |
+  |  Observe: 0 (register)                 |
+  +--------------------------------------->|
+  |                                        |
+  |  ACK [0x1234] 2.05 Content "22°C"     |
+  |  Observe: 10 (sequence number)         |
+  |<---------------------------------------+
+  |                                        |
+  ... (servidor detecta cambio de temperatura)
+  |                                        |
+  |  CON [0x5678] 2.05 Content "25°C"     |
+  |  Observe: 11                           |
+  |<---------------------------------------+
+  |                                        |
+  |  ACK [0x5678]                          |
+  +--------------------------------------->|
+\end{verbatim}
+
+\textbf{Ventajas de Observe vs Polling HTTP:}
+\begin{itemize}
+\item Reduce tráfico en 90-95\% (notificaciones solo cuando hay cambios vs polling continuo cada N segundos).
+\item Latencia de notificación <50 ms (vs 0.5×polling\_interval promedio para HTTP).
+\item Menor consumo energético en dispositivos (no requiere wake-up periódico para polling).
+\end{itemize}
+
+\subsection{LwM2M - Gestión Ligera de Máquina a Máquina}
+
+LwM2M (Lightweight Machine-to-Machine) es un protocolo de gestión de dispositivos IoT estandarizado por OMA SpecWorks (anteriormente Open Mobile Alliance), diseñado específicamente para dispositivos constrained. LwM2M 1.2 (2019) es la versión actual con mejoras en seguridad y eficiencia.
+
+\subsubsection{Arquitectura LwM2M}
+
+\textbf{Componentes:}
+\begin{itemize}
+\item \textbf{LwM2M Client}: Ejecuta en dispositivo IoT (ej. medidor inteligente, sensor). Implementa objetos LwM2M y responde a operaciones del servidor.
+\item \textbf{LwM2M Server}: Gestiona flota de dispositivos. Ejecuta operaciones CRUD (Create, Read, Update, Delete) sobre objetos del cliente.
+\item \textbf{Bootstrap Server (opcional)}: Provisiona credenciales y configuración inicial de clientes antes de conectar a LwM2M Server.
+\end{itemize}
+
+\textbf{Modelo de Objetos:}
+
+LwM2M estructura datos en jerarquía de 3 niveles:
+\begin{enumerate}
+\item \textbf{Object}: Tipo de funcionalidad (ej. Object 3 = Device Info, Object 4 = Connectivity Monitoring).
+\item \textbf{Object Instance}: Instancia específica de un objeto (ej. múltiples sensores de temperatura = múltiples instancias de Object 3303).
+\item \textbf{Resource}: Dato individual dentro de instancia (ej. temperatura actual, timestamp, unidades).
+\end{enumerate}
+
+\textbf{Notación:}
+\begin{verbatim}
+/ObjectID/InstanceID/ResourceID
+Ejemplo: /3303/0/5700 = Temperature Sensor (3303) / Instance 0 / Sensor Value (5700)
+\end{verbatim}
+
+\subsubsection{Objetos LwM2M Estándar para Smart Energy}
+
+\begin{table}[h]
+\centering
+\caption{Objetos LwM2M Relevantes para Smart Energy}
+\label{tab:lwm2m-objects}
+\begin{tabular}{|c|p{4cm}|p{7cm}|}
+\hline
+\textbf{Object ID} & \textbf{Nombre} & \textbf{Recursos Clave} \\
+\hline
+0 & Security & Server URI (0), Bootstrap (1), Security Mode (2), Public Key (3), Server Public Key (4), Secret Key (5) \\
+\hline
+1 & Server & Lifetime (1), Min Period (2), Max Period (3), Disable (4), Notification Storing (6) \\
+\hline
+3 & Device & Manufacturer (0), Model (1), Serial Number (2), Firmware Ver (3), Reboot (4), Factory Reset (5), Battery Level (9) \\
+\hline
+4 & Connectivity Monitoring & Network Bearer (0), Available Network Bearer (1), Radio Signal Strength (2), Link Quality (3), IP Addresses (4) \\
+\hline
+5 & Firmware Update & Package (0), Package URI (1), Update (2), State (3), Update Result (5) \\
+\hline
+3303 & Temperature & Sensor Value (5700), Units (5701), Min/Max (5601/5602) \\
+\hline
+3305 & Power Measurement & Instantaneous Active Power (5800), Active Energy (5805), Reactive Energy (5810) \\
+\hline
+3331 & Voltage Measurement & Sensor Value (5700), Min/Max (5601/5602), Application Type (5750) \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Operaciones LwM2M}
+
+LwM2M define 8 operaciones que el servidor puede ejecutar sobre clientes:
+
+\begin{enumerate}
+\item \textbf{Read}: Leer valor de recurso/instancia/objeto (ej. leer temperatura actual \texttt{/3303/0/5700}).
+\item \textbf{Write}: Escribir valor de recurso (ej. actualizar intervalo de reporte \texttt{/1/0/2}).
+\item \textbf{Execute}: Ejecutar acción (ej. reiniciar dispositivo \texttt{/3/0/4}).
+\item \textbf{Create}: Crear nueva instancia de objeto (ej. añadir segundo sensor temperatura).
+\item \textbf{Delete}: Eliminar instancia de objeto.
+\item \textbf{Observe}: Subscribirse a notificaciones de cambios en recurso (similar a CoAP Observe).
+\item \textbf{Discover}: Obtener lista de objetos/recursos soportados por cliente.
+\item \textbf{Write-Attributes}: Configurar atributos de notificación (pmin, pmax, gt, lt para thresholds).
+\end{enumerate}
+
+\textbf{Ejemplo de flujo Read-Write-Execute:}
+
+\begin{verbatim}
+Server                                    Client (Medidor)
+  |                                            |
+  | CoAP GET coap://client/3/0/3              | (Read firmware version)
+  +-------------------------------------------->|
+  |                                            |
+  | 2.05 Content "v2.1.3"                      |
+  |<--------------------------------------------+
+  |                                            |
+  | CoAP PUT coap://client/1/0/1              | (Write Lifetime = 3600s)
+  | Payload: 3600                              |
+  +-------------------------------------------->|
+  |                                            |
+  | 2.04 Changed                               |
+  |<--------------------------------------------+
+  |                                            |
+  | CoAP POST coap://client/3/0/4             | (Execute Reboot)
+  +-------------------------------------------->|
+  |                                            |
+  | 2.04 Changed                               |
+  |<--------------------------------------------+
+  |                                            |
+  (dispositivo reinicia...)
+\end{verbatim}
+
+\subsubsection{Observe y Notificaciones}
+
+LwM2M utiliza CoAP Observe (RFC 7641) para subscripciones eficientes con atributos de notificación avanzados:
+
+\textbf{Atributos de Notificación:}
+\begin{itemize}
+\item \textbf{pmin (period min)}: Intervalo mínimo entre notificaciones (ej. 60s). Evita flooding si valor cambia rápidamente.
+\item \textbf{pmax (period max)}: Intervalo máximo sin notificación (ej. 600s). Garantiza heartbeat incluso si valor no cambia.
+\item \textbf{gt (greater than)}: Umbral superior. Notifica solo si valor > gt.
+\item \textbf{lt (less than)}: Umbral inferior. Notifica solo si valor < lt.
+\item \textbf{st (step)}: Cambio mínimo para notificación. Notifica solo si |valor\_nuevo - valor\_anterior| ≥ st.
+\end{itemize}
+
+\textbf{Ejemplo de configuración:}
+
+\begin{verbatim}
+Server                                    Client
+  |                                            |
+  | CoAP GET coap://client/3303/0/5700        | (Observe temperature)
+  | Observe: 0                                 |
+  | URI-Query: pmin=60&pmax=3600&gt=30        | (notificar si T>30°C, min 60s, max 1h)
+  +-------------------------------------------->|
+  |                                            |
+  | 2.05 Content "22°C"                        |
+  | Observe: 1                                 |
+  |<--------------------------------------------+
+  |                                            |
+  ... (temperatura sube a 32°C después de 80s)
+  |                                            |
+  | CON [MID] 2.05 Content "32°C"             | (notificación porque T>30°C y pmin cumplido)
+  | Observe: 2                                 |
+  |<--------------------------------------------+
+  |                                            |
+  | ACK [MID]                                  |
+  +-------------------------------------------->|
+\end{verbatim}
+
+Esta configuración reduce tráfico en >80\% vs polling periódico cada 60s, notificando solo cuando condiciones de umbral se cumplen.
+
+\subsubsection{Firmware Update OTA con LwM2M}
+
+Object 5 (Firmware Update) estandariza proceso de actualización remota:
+
+\textbf{Flujo típico:}
+\begin{enumerate}
+\item Server escribe URI de firmware en \texttt{/5/0/1} (Package URI).
+\item Server ejecuta \texttt{/5/0/2} (Update). Cliente descarga firmware en background.
+\item Cliente reporta progreso en \texttt{/5/0/3} (State): 0=Idle, 1=Downloading, 2=Downloaded, 3=Updating.
+\item Al completar descarga, cliente verifica firma digital y actualiza si válida.
+\item Cliente reporta resultado en \texttt{/5/0/5} (Update Result): 0=Success, 1=Not enough storage, 2=Out of memory, etc.
+\item Cliente reinicia con nuevo firmware.
+\end{enumerate}
+
+\textbf{Ventajas sobre soluciones propietarias:}
+\begin{itemize}
+\item Estandarizado (interoperable multi-vendor).
+\item Reporta progreso granular (evita timeouts en descargas lentas).
+\item Soporta download resume (crítico en enlaces inestables).
+\item Integra verificación de integridad (checksum/firma digital).
+\end{itemize}
+
+\subsubsection{Bindings de Transporte}
+
+LwM2M soporta múltiples bindings según capacidades de red:
+
+\begin{table}[h]
+\centering
+\caption{Bindings de Transporte LwM2M}
+\label{tab:lwm2m-bindings}
+\begin{tabular}{|c|p{3.5cm}|p{4cm}|p{4cm}|}
+\hline
+\textbf{Binding} & \textbf{Transporte} & \textbf{Seguridad} & \textbf{Uso Típico} \\
+\hline
+U & UDP + CoAP & DTLS + PSK o Certs & Thread, Wi-Fi, Ethernet \\
+\hline
+T & TCP + CoAP & TLS + PSK o Certs & LTE Cat-M1, NB-IoT \\
+\hline
+S & SMS & SMS encryption & Fallback en NB-IoT \\
+\hline
+N & Non-IP (NB-IoT) & AS-layer security & NB-IoT optimizado \\
+\hline
+Q & MQTT & TLS + MQTT auth & Integración con brokers existentes \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{Selección de Binding:}
+\begin{itemize}
+\item \textbf{Binding U (UDP)}: Preferido para Thread/HaLow por overhead mínimo y soporte de multicast.
+\item \textbf{Binding T (TCP)}: Para LTE Cat-M1 donde NAT traversal y session continuity son críticos.
+\item \textbf{Binding Q (MQTT)}: Para integración con infraestructuras MQTT existentes (ej. ThingsBoard).
+\end{itemize}
+
+\subsubsection{Seguridad LwM2M}
+
+\textbf{Modos de Seguridad (Security Object /0):}
+\begin{enumerate}
+\item \textbf{Pre-Shared Key (PSK)}: Clave simétrica 128-256 bits preconfigurada. Overhead mínimo (DTLS-PSK ~16 bytes).
+\item \textbf{Raw Public Key (RPK)}: Claves públicas ECC sin certificados X.509 completos. Reduce overhead vs PKI.
+\item \textbf{Certificate (X.509)}: PKI completa con certificados. Mayor overhead (~2 KB) pero mejor para deployments grandes.
+\item \textbf{NoSec}: Sin seguridad (solo para testing, no producción).
+\end{enumerate}
+
+\textbf{Comparación de Overhead:}
+
+\begin{table}[h]
+\centering
+\caption{Overhead de Seguridad LwM2M}
+\label{tab:lwm2m-security-overhead}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Modo} & \textbf{Handshake Size} & \textbf{Per-Message Overhead} & \textbf{Recomendación} \\
+\hline
+NoSec & 0 bytes & 0 bytes & Solo testing \\
+PSK & ~200 bytes & 13-29 bytes (DTLS) & Smart Energy (keys preprovisioned) \\
+RPK & ~500 bytes & 13-29 bytes (DTLS) & Deployments medianos \\
+X.509 & ~3-5 KB & 13-29 bytes (DTLS) & Enterprise, multi-tenant \\
+\hline
+\end{tabular}
+\end{table}
+
+Para Smart Energy con PSK preconfigurado, overhead de DTLS-PSK es ~15 bytes por mensaje vs ~40+ bytes TLS/TCP, reduciendo tráfico en 60\%.
+
+\subsubsection{LwM2M vs Soluciones Propietarias}
+
+\begin{table}[h]
+\centering
+\caption{Comparación LwM2M vs Alternativas}
+\label{tab:lwm2m-comparison}
+\begin{tabular}{|p{3.5cm}|p{4cm}|p{4cm}|p{3cm}|}
+\hline
+\textbf{Característica} & \textbf{LwM2M 1.2} & \textbf{MQTT + JSON} & \textbf{HTTP REST} \\
+\hline
+\textbf{Overhead típico} & 20-40 bytes & 100-300 bytes & 200-500 bytes \\
+\hline
+\textbf{Gestión dispositivos} & Nativa (objects std) & Custom (topics) & Custom (endpoints) \\
+\hline
+\textbf{Firmware OTA} & Estandarizado (Obj 5) & Custom impl & Custom impl \\
+\hline
+\textbf{Observe/Subscribe} & Nativo + thresholds & MQTT native & Polling o SSE \\
+\hline
+\textbf{Seguridad} & DTLS-PSK (ligero) & TLS (pesado) & TLS (pesado) \\
+\hline
+\textbf{Interoperabilidad} & Multi-vendor (OMA) & Propietario & Propietario \\
+\hline
+\textbf{Complejidad impl} & Media & Baja & Baja \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{Ventajas de LwM2M para Smart Energy:}
+\begin{itemize}
+\item Reduce tráfico de gestión en 70-80\% vs MQTT/JSON (objetos binarios TLV vs JSON verbose).
+\item Estandariza operaciones comunes (device info, connectivity monitoring, firmware update) eliminando necesidad de reinventar.
+\item Soporta notificaciones con thresholds complejos (pmin/pmax/gt/lt/st) reduciendo tráfico adicional 80-90\%.
+\item DTLS-PSK con overhead 60\% menor que TLS/TCP, crítico para dispositivos battery-powered.
+\end{itemize}
+
+\subsection{Wi-Fi HaLow (IEEE 802.11ah) - Última Milla de Largo Alcance}
+
+IEEE 802.11ah, comercialmente denominado Wi-Fi HaLow, es un estándar ratificado en 2017 que extiende Wi-Fi a bandas sub-GHz (sub-1 GHz), optimizado para aplicaciones IoT de largo alcance con miles de dispositivos concurrentes.
+
+\subsubsection{Características Técnicas Distintivas}
+
+\begin{itemize}
+\item \textbf{Frecuencia}: Bandas regionales no licenciadas: 902-928 MHz (EE.UU./América), 863-868 MHz (Europa), 755-787 MHz (China, Korea), 917-923.5 MHz (Japón).
+
+\item \textbf{Channel width}: 1, 2, 4, 8, 16 MHz (downclocking de 802.11ac por factor 10×).
+
+\item \textbf{Modulación}: MCS 0-10 (BPSK, QPSK, 16-QAM, 64-QAM, 256-QAM opcional), con LDPC o BCC FEC.
+
+\item \textbf{Alcance}: 1-2 km en exteriores (LOS - Line of Sight), 100-300 m en interiores con penetración superior a 2.4/5 GHz gracias a propagación sub-GHz.
+
+\item \textbf{Throughput}: 150 kbps (MCS 0, 1 MHz BW) hasta 86.7 Mbps (MCS 10, 16 MHz BW, 4 spatial streams - teórico).
+
+\item \textbf{Número de estaciones}: Hasta 8,191 dispositivos por AP mediante hierarchical AID (Association Identifier) con páginas.
+
+\item \textbf{Power save}: Target Wake Time (TWT) permite negociar ventanas de actividad, logrando duty cycles <1\% con años de autonomía en batería.
+\end{itemize}
+
+\subsubsection{Análisis de Capa Física HaLow}
+
+HaLow reutiliza la capa física OFDM de 802.11ac/n, reduciendo bandwidth y clock rate por factor 10 para operar en sub-GHz. Los parámetros clave son:
+
+\begin{equation}
+T_{symbol} = 40 \,\mu s \quad (\text{vs } 4 \,\mu s \text{ en 802.11ac})
+\end{equation}
+
+\begin{equation}
+N_{subcarriers} = \begin{cases}
+32 & (1 \text{ MHz BW}) \\
+64 & (2 \text{ MHz BW}) \\
+128 & (4 \text{ MHz BW}) \\
+256 & (8 \text{ MHz BW}) \\
+512 & (16 \text{ MHz BW})
+\end{cases}
+\end{equation}
+
+El data rate se calcula como:
+
+\begin{equation}
+R_{data} = \frac{N_{DBPS} \times N_{SS} \times R_{code}}{T_{symbol} + T_{GI}}
+\end{equation}
+
+donde:
+\begin{itemize}
+\item $N_{DBPS}$: Data bits per symbol (depende de modulación y BW)
+\item $N_{SS}$: Number of spatial streams (1-4)
+\item $R_{code}$: Code rate (1/2, 2/3, 3/4, 5/6)
+\item $T_{GI}$: Guard interval (8 o 4 µs)
+\end{itemize}
+
+Tabla completa de MCS para 1 MHz channel width (caso típico Smart Energy):
+
+\begin{table}[h]
+\centering
+\caption{MCS HaLow para 1 MHz Channel Width}
+\label{tab:halow-mcs}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\textbf{MCS} & \textbf{Modulation} & \textbf{Code Rate} & \textbf{Data Rate (Mbps)} & \textbf{Sensitivity (dBm)} \\
+\hline
+0 & BPSK & 1/2 & 0.150 & -99 \\
+1 & QPSK & 1/2 & 0.300 & -96 \\
+2 & QPSK & 3/4 & 0.450 & -94 \\
+3 & 16-QAM & 1/2 & 0.600 & -91 \\
+4 & 16-QAM & 3/4 & 0.900 & -88 \\
+5 & 64-QAM & 2/3 & 1.200 & -85 \\
+6 & 64-QAM & 3/4 & 1.350 & -82 \\
+7 & 64-QAM & 5/6 & 1.500 & -80 \\
+8 & 256-QAM & 3/4 & 1.800 & -77 \\
+9 & 256-QAM & 5/6 & 2.000 & -75 \\
+10 & — & — & (Reservado) & — \\
+\hline
+\end{tabular}
+\end{table}
+
+El link budget de HaLow permite alcances superiores a tecnologías 2.4 GHz:
+
+\begin{equation}
+\text{Path Loss} = 20 \log_{10}(f) + 20 \log_{10}(d) + 32.44
+\end{equation}
+
+Para 900 MHz vs 2400 MHz a distancia $d=1$ km:
+
+\begin{align}
+PL_{900MHz} &= 20 \log_{10}(900) + 20 \log_{10}(1000) + 32.44 = 91.5 \text{ dB} \\
+PL_{2400MHz} &= 20 \log_{10}(2400) + 20 \log_{10}(1000) + 32.44 = 100.0 \text{ dB}
+\end{align}
+
+Ganancia de propagación: $100.0 - 91.5 = 8.5$ dB, equivalente a $\approx 2.4\times$ de alcance para misma potencia TX.
+
+\subsubsection{Modos de Operación HaLow}
+
+\textbf{1. Target Wake Time (TWT):} Mecanismo de ahorro de energía que permite al AP negociar con cada estación ventanas de actividad específicas. Parámetros TWT:
+
+\begin{itemize}
+\item \textbf{TWT Wake Interval}: Período entre ventanas de actividad (ej. 60 segundos).
+\item \textbf{TWT Wake Duration}: Duración de ventana activa (ej. 10 ms).
+\item \textbf{TWT Flow ID}: Identificador de flujo para múltiples acuerdos TWT simultáneos.
+\end{itemize}
+
+Duty cycle logrado:
+\begin{equation}
+DC = \frac{T_{wake}}{T_{interval}} = \frac{10 \text{ ms}}{60 \text{ s}} = 0.017\% \rightarrow \text{autonomía de años con batería AA}
+\end{equation}
+
+\textbf{2. Restricted Access Window (RAW):} Mecanismo para coordinar acceso de múltiples estaciones, dividiendo tiempo en slots asignados a grupos de dispositivos (RAW groups) para reducir colisiones en redes densas.
+
+\textbf{3. Sectorization:} Capacidad del AP de utilizar antenas direccionales o phased arrays para crear sectores espaciales, aumentando capacidad y mitigando interferencia.
+
+\subsubsection{Análisis Comparativo de Bandwidths 2/4/8 MHz para Smart Energy}
+
+La selección estratégica de bandwidth HaLow es crítica para optimizar el trade-off entre alcance, throughput, latencia y eficiencia espectral según caso de uso específico. Los bandwidths 2/4/8 MHz representan el rango práctico para aplicaciones Smart Energy (1 MHz demasiado lento para backhaul, 16 MHz excesivo para alcance requerido).
+
+\textbf{2 MHz Bandwidth - Conexiones Estables de Largo Alcance}
+
+\textbf{Características Técnicas:}
+\begin{itemize}
+\item \textbf{MCS típico}: MCS 1-2 (QPSK, code rate 1/2 - 3/4)
+\item \textbf{Throughput}: 300-450 kbps por enlace, 6-8 Mbps agregado con 20 clientes
+\item \textbf{Sensibilidad}: -96 dBm @ MCS 1 (QPSK 1/2), -94 dBm @ MCS 2 (QPSK 3/4)
+\item \textbf{Alcance}: >2 km en exteriores NLOS, >3 km LOS con antena direccional 10 dBi
+\item \textbf{Latencia}: 80-120 ms típica (incluye contención CSMA/CA + retransmisiones)
+\item \textbf{Robustez}: PDR >98\% con SNR 8-12 dB (condiciones adversas multipath/interferencia)
+\end{itemize}
+
+\textbf{Link Budget @ 2 MHz:}
+\begin{align}
+P_{TX} &= 20 \text{ dBm (100 mW)} \\
+G_{TX} &= 5 \text{ dBi (antena omnidireccional AP)} \\
+G_{RX} &= 2 \text{ dBi (antena cliente)} \\
+Sensitivity_{MCS1} &= -96 \text{ dBm} \\
+\text{Path Loss permitido} &= 20 + 5 + 2 - (-96) = 123 \text{ dB}
+\end{align}
+
+Con modelo de propagación Hata urbano (900 MHz):
+\begin{equation}
+PL = 69.55 + 26.16 \log_{10}(f) - 13.82 \log_{10}(h_b) + (44.9 - 6.55 \log_{10}(h_b)) \log_{10}(d)
+\end{equation}
+
+Para $h_b=15$ m (altura AP), $f=915$ MHz:
+\begin{equation}
+123 = 124.7 + 33.3 \log_{10}(d) \rightarrow d \approx 2.2 \text{ km (NLOS urbano)}
+\end{equation}
+
+\textbf{Casos de Uso 2 MHz:}
+\begin{enumerate}
+\item \textbf{Sensores remotos rurales}: Medidores en zonas periféricas a >1.5 km del gateway, sin línea de vista directa, con edificaciones/vegetación intermedia.
+\item \textbf{Penetración indoor profunda}: Medidores en sótanos o instalaciones eléctricas subterráneas donde pérdida adicional indoor es 15-25 dB.
+\item \textbf{Telemetría baja frecuencia}: Lecturas horarias o diarias donde throughput <500 kbps es suficiente (ej. 100 medidores × 200 bytes × 4 lecturas/hora = 22 kbps promedio).
+\item \textbf{Redundancia/failover}: Enlaces secundarios de respaldo para gateways con uplink primario de 4-8 MHz, activándose solo cuando primario falla.
+\end{enumerate}
+
+\textbf{4 MHz Bandwidth - Balance Gestión y Throughput}
+
+\textbf{Características Técnicas:}
+\begin{itemize}
+\item \textbf{MCS típico}: MCS 3-4 (16-QAM, code rate 1/2 - 3/4)
+\item \textbf{Throughput}: 600-900 kbps por enlace, 40-60 Mbps agregado con 50+ clientes
+\item \textbf{Sensibilidad}: -91 dBm @ MCS 3 (16-QAM 1/2), -88 dBm @ MCS 4 (16-QAM 3/4)
+\item \textbf{Alcance}: 1-1.5 km exteriores, 300-500 m indoor
+\item \textbf{Latencia}: 40-60 ms P95 (menor contención que 2 MHz debido a mayor throughput)
+\item \textbf{Eficiencia espectral}: 0.15-0.225 bps/Hz (vs 0.15-0.225 bps/Hz en 2 MHz - similar pero con 2× bandwidth absoluto)
+\end{itemize}
+
+\textbf{Link Budget @ 4 MHz:}
+\begin{align}
+\text{Path Loss permitido} &= 20 + 5 + 2 - (-91) = 118 \text{ dB} \\
+\rightarrow d &\approx 1.4 \text{ km (NLOS urbano, 5 dB menos que 2 MHz)}
+\end{align}
+
+\textbf{Ventajas de 4 MHz:}
+\begin{itemize}
+\item \textbf{Throughput 2× superior}: Permite agregación de más dispositivos por gateway (50+ vs 20 en 2 MHz) sin saturar enlace.
+\item \textbf{Latencia reducida}: Mayor throughput reduce tiempo de transmisión de paquetes grandes (ej. 1000 bytes @ 900 kbps = 9 ms vs 18 ms @ 450 kbps).
+\item \textbf{Soporta firmware OTA}: Transferencia de imágenes de 200-500 KB en tiempos razonables (5-10 min) para actualizaciones masivas simultáneas.
+\item \textbf{Balance alcance/capacidad}: Cubre zona suburbana típica (1-1.5 km) manteniendo capacidad para densidad media de dispositivos.
+\end{itemize}
+
+\textbf{Casos de Uso 4 MHz:}
+\begin{enumerate}
+\item \textbf{Gestión balanceada zonas suburbanas}: 30-50 medidores con lecturas cada 15 min (96 lecturas/día × 50 medidores = 4,800 transacciones/día, tráfico promedio ~15 kbps).
+\item \textbf{Backhaul de concentradores Thread}: DCUs que agregan datos de 50-100 nodos Thread (total 5-10 Mbps uplink hacia gateway).
+\item \textbf{Aplicaciones bidireccionales}: Comandos downlink frecuentes (respuesta a demanda, control de carga) requiriendo latencia <100 ms.
+\item \textbf{Arquitectura de referencia Smart Energy}: Zona de 300-500 medidores × 3-5 DCUs intermedios × 1 gateway central (throughput agregado 20-30 Mbps).
+\end{enumerate}
+
+\textbf{8 MHz Bandwidth - Alto Tráfico con Línea de Vista}
+
+\textbf{Características Técnicas:}
+\begin{itemize}
+\item \textbf{MCS típico}: MCS 5-7 (64-QAM, code rate 2/3 - 5/6)
+\item \textbf{Throughput}: 1.2-1.8 Mbps por enlace, >80 Mbps agregado con 50+ clientes
+\item \textbf{Sensibilidad}: -85 dBm @ MCS 5 (64-QAM 2/3), -80 dBm @ MCS 7 (64-QAM 5/6)
+\item \textbf{Alcance}: 0.5-1 km LOS exteriores, <200 m NLOS (degradación significativa)
+\item \textbf{Latencia}: <20 ms P99 (mínima contención, procesamiento rápido)
+\item \textbf{Eficiencia espectral}: 0.15-0.225 bps/Hz (similar a 2/4 MHz - ley Shannon limits)
+\end{itemize}
+
+\textbf{Link Budget @ 8 MHz:}
+\begin{align}
+\text{Path Loss permitido} &= 20 + 5 + 2 - (-85) = 112 \text{ dB} \\
+\rightarrow d &\approx 0.9 \text{ km (NLOS urbano, 11 dB menos que 2 MHz)} \\
+\rightarrow d_{LOS} &\approx 1.5\text{-}2 \text{ km (LOS con Fresnel zone clearance)}
+\end{align}
+
+\textbf{Ventajas de 8 MHz:}
+\begin{itemize}
+\item \textbf{Throughput máximo}: 4× superior a 2 MHz, permite backhaul de múltiples concentradores simultáneos (ej. 5 DCUs × 10 Mbps = 50 Mbps agregado).
+\item \textbf{Latencia ultra-baja}: Crítico para aplicaciones tiempo-real (respuesta a demanda <50 ms, detección de fallas <100 ms).
+\item \textbf{Firmware OTA masivo}: Actualización simultánea de 50+ dispositivos con imágenes 500 KB en <5 minutos (vs 20-30 min con 2-4 MHz).
+\item \textbf{Soporta video/analytics}: Streaming de cámaras de inspección, telemetría de alta frecuencia (muestreo 1 kHz para calidad de potencia).
+\end{itemize}
+
+\textbf{Limitaciones de 8 MHz:}
+\begin{itemize}
+\item \textbf{Requiere LOS o quasi-LOS}: Degradación rápida con obstrucciones (cada 6 dB adicional de pérdida reduce throughput 50\%).
+\item \textbf{Sensible a interferencia}: Mayor bandwidth = mayor probabilidad de interferencia cocanal en espectro ISM 902-928 MHz.
+\item \textbf{Menor alcance}: 40-50\% de alcance de 2 MHz en mismas condiciones.
+\end{itemize}
+
+\textbf{Casos de Uso 8 MHz:}
+\begin{enumerate}
+\item \textbf{Backhaul urbano LOS}: Enlaces punto-a-punto entre gateways en edificios con línea de vista (ej. edificio A torre 15m → edificio B torre 12m, distancia 800m).
+\item \textbf{Agregación de concentradores}: Gateway central agregando datos de 5-10 DCUs intermedios (cada DCU gestiona 50-100 medidores).
+\item \textbf{Aplicaciones críticas tiempo-real}: Protección diferencial de líneas eléctricas, detección de fallas de arco, respuesta rápida a eventos de calidad de potencia.
+\item \textbf{Zonas industriales/campus}: Infraestructura controlada con topología planificada (postes/torres optimizados para LOS).
+\end{enumerate}
+
+\textbf{Tabla Comparativa 2/4/8 MHz:}
+
+\begin{table}[h]
+\centering
+\caption{Comparación de Bandwidths HaLow para Smart Energy}
+\label{tab:halow-bw-comparison}
+\begin{tabular}{|p{3.5cm}|p{3.5cm}|p{3.5cm}|p{3.5cm}|}
+\hline
+\textbf{Métrica} & \textbf{2 MHz} & \textbf{4 MHz} & \textbf{8 MHz} \\
+\hline
+\textbf{Throughput/enlace} & 300-450 kbps & 600-900 kbps & 1.2-1.8 Mbps \\
+\hline
+\textbf{Throughput agregado} & 6-8 Mbps (20 nodos) & 40-60 Mbps (50 nodos) & >80 Mbps (50+ nodos) \\
+\hline
+\textbf{Sensibilidad MCS típico} & -96 dBm & -91 dBm & -85 dBm \\
+\hline
+\textbf{Alcance NLOS} & >2 km & 1-1.5 km & 0.5-0.9 km \\
+\hline
+\textbf{Alcance LOS} & >3 km & 2-2.5 km & 1.5-2 km \\
+\hline
+\textbf{Latencia P95} & 80-120 ms & 40-60 ms & <20 ms \\
+\hline
+\textbf{PDR @ SNR 10dB} & 98-99\% & 96-98\% & 92-96\% \\
+\hline
+\textbf{Nodos soportados} & 20-30 & 50-80 & 80-150 \\
+\hline
+\textbf{Caso uso óptimo} & Remoto/rural NLOS & Suburbano balanceado & Urbano LOS backhaul \\
+\hline
+\textbf{Costo energético TX} & Bajo (100 mW avg) & Medio (150-200 mW) & Alto (250-350 mW) \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{Estrategia de Selección de Bandwidth:}
+
+\begin{enumerate}
+\item \textbf{Análisis de propagación}: Realizar site survey con herramientas RF (Ekahau, Ubiquiti) midiendo RSSI/SNR en puntos críticos. Si RSSI promedio <-85 dBm → 2 MHz. Si RSSI -75 a -85 dBm → 4 MHz. Si RSSI >-75 dBm con LOS → 8 MHz.
+
+\item \textbf{Estimación de tráfico}: Calcular throughput agregado requerido:
+\begin{equation}
+T_{required} = N_{devices} \times \frac{PayloadSize}{ReportInterval} \times (1 + \text{Overhead}_{protocol})
+\end{equation}
+
+Ejemplo: 50 medidores, 200 bytes, cada 15 min, overhead 40\%:
+\begin{equation}
+T_{req} = 50 \times \frac{200 \text{ bytes}}{900 \text{ s}} \times 1.4 = 15.5 \text{ kbps} \rightarrow \text{2 MHz suficiente}
+\end{equation}
+
+Si $T_{req} > 5$ Mbps → 4 MHz. Si $T_{req} > 30$ Mbps → 8 MHz.
+
+\item \textbf{Requisitos de latencia}: Aplicaciones DR/protección requieren P95 <50 ms → 4-8 MHz. Telemetría batch tolerante a 100-200 ms → 2-4 MHz.
+
+\item \textbf{Arquitectura multi-banda}: Desplegar APs dual-radio con 2 MHz (largo alcance) + 8 MHz (backhaul) en mismo gateway, band-steering dinámico según RSSI/carga.
+\end{enumerate}
+
+\textbf{Recomendación para Arquitectura Smart Energy (900 medidores):}
+\begin{itemize}
+\item \textbf{Tier 1 (sensores remotos)}: 2 MHz para 300 medidores periféricos (>1.5 km, NLOS)
+\item \textbf{Tier 2 (gestión media)}: 4 MHz para 500 medidores zona suburbana (0.5-1.5 km)
+\item \textbf{Tier 3 (backhaul concentradores)}: 8 MHz para 3-5 DCUs intermedios agregando datos (LOS, <1 km)
+\end{itemize}
+
+Esta estrategia multi-banda maximiza cobertura (tier 1), capacidad (tier 2) y latencia (tier 3) con inversión de infraestructura optimizada.
+
+\subsection{LTE Cat-M1 / NB-IoT - Conectividad Celular IoT}
+
+LTE Cat-M1 (eMTC) y NB-IoT (Narrowband IoT) son tecnologías celulares 3GPP Release 13/14 optimizadas para aplicaciones IoT, operando sobre infraestructura LTE existente con cobertura global y movilidad nativa.
+
+\subsubsection{Comparativa Cat-M1 vs NB-IoT}
+
+\begin{table}[h]
+\centering
+\caption{Comparación LTE Cat-M1 vs NB-IoT}
+\label{tab:lte-iot-comparison}
+\begin{tabular}{|p{4cm}|p{4.5cm}|p{4.5cm}|}
+\hline
+\textbf{Característica} & \textbf{LTE Cat-M1 (eMTC)} & \textbf{NB-IoT} \\
+\hline
+\textbf{Bandwidth} & 1.4 MHz (6 PRBs) & 200 kHz (1 PRB o standalone) \\
+\hline
+\textbf{Peak rate DL/UL} & 1 Mbps / 1 Mbps & 250 kbps / 250 kbps (multi-tone) \\
+\hline
+\textbf{Latency} & 10-15 ms (connected mode) & 1.6-10 s (idle-to-connected) \\
+\hline
+\textbf{Mobility} & Full mobility (handover) & Limited (reselection only) \\
+\hline
+\textbf{Voice support} & VoLTE (half-duplex) & No \\
+\hline
+\textbf{Power consumption} & PSM: 3 µA, eDRX: 0.2 mA & PSM: 5 µA, eDRX: 0.6 mA \\
+\hline
+\textbf{MCL (Max Coupling Loss)} & 156 dB & 164 dB \\
+\hline
+\textbf{Deployment} & In-band LTE & In-band / Guard-band / Standalone \\
+\hline
+\textbf{Use cases} & Asset tracking, wearables, smart city & Medidores, sensores estáticos \\
+\hline
+\end{tabular}
+\end{table}
+
+Para aplicaciones Smart Energy donde se requiere throughput moderado (kB/s) y latencia <100 ms, LTE Cat-M1 es preferible. NB-IoT se optimiza para sensores ultra-low-power con reportes esporádicos (daily).
+
+\subsubsection{Optimizaciones de Potencia LTE IoT}
+
+\textbf{1. Power Saving Mode (PSM):} El dispositivo entra en deep sleep profundo donde solo el timer RTC permanece activo. No es accesible desde red (downlink imposible). Consumo típico: 3-5 µA. Timers T3324 (Active Timer) y T3412 (TAU periodic update).
+
+\textbf{2. Extended Discontinuous Reception (eDRX):} Extiende ciclos DRX de segundos a minutos/horas. El dispositivo sincroniza con red solo en ventanas eDRX periódicas. Permite MT (mobile terminated) traffic a diferencia de PSM. Consumo: 0.2-0.6 mA promedio.
+
+\textbf{3. Release Assistance Indication (RAI):} El dispositivo señaliza a la red que no espera más tráfico, acelerando liberación de conexión RRC.
+
+\subsection{Análisis de Capa de Enlace IEEE 802.15.4}
+
+IEEE 802.15.4 define PHY y MAC para WPANs de baja potencia. Su capa MAC implementa CSMA/CA (Carrier Sense Multiple Access with Collision Avoidance) con características específicas para minimizar colisiones en topologías densas.
+
+\subsubsection{CSMA/CA con Backoff Exponencial}
+
+El algoritmo CSMA/CA opera como sigue:
+
+\begin{enumerate}
+\item \textbf{Inicialización}: Backoff Exponent $BE = macMinBE$ (típicamente 3), Number of Backoffs $NB = 0$.
+
+\item \textbf{Delay aleatorio}: Esperar $rand(0, 2^{BE}-1) \times aUnitBackoffPeriod$ (320 µs @ 2.4 GHz).
+
+\item \textbf{CCA (Clear Channel Assessment)}: Medir energía RF durante 8 symbol periods. Si channel idle → transmitir. Si busy → incrementar $BE = \min(BE+1, macMaxBE)$ y $NB = NB+1$.
+
+\item \textbf{Retry limit}: Si $NB > macMaxCSMABackoffs$ (típicamente 4) → reportar channel access failure.
+
+\item \textbf{Acknowledgment}: Esperar ACK del receptor durante macAckWaitDuration (54 symbol periods = 864 µs). Si no recibido → retransmitir hasta macMaxFrameRetries (típicamente 3).
+\end{enumerate}
+
+Probabilidad de colisión para $n$ nodos concurrentes con misma ventana de contención $W$:
+
+\begin{equation}
+P_{collision} = 1 - \left(1 - \frac{1}{W}\right)^{n-1}
+\end{equation}
+
+Para $W = 2^{BE} = 8$ y $n=10$ nodos:
+\begin{equation}
+P_{collision} = 1 - \left(\frac{7}{8}\right)^9 = 0.659 \quad (66\% \text{ probabilidad de colisión})
+\end{equation}
+
+Eficiencia del canal en función del número de nodos (asumiendo tráfico Poisson con carga ofrecida $\lambda$):
+
+\begin{equation}
+S = \frac{G \cdot e^{-G}}{1 + 2a}
+\end{equation}
+
+donde $G$ es la carga ofrecida normalizada y $a$ es la relación propagation delay / packet transmission time.
+
+\begin{table}[h]
+\centering
+\caption{Eficiencia CSMA/CA vs Número de Nodos (p=0.1)}
+\label{tab:csma-efficiency}
+\begin{tabular}{|c|c|c|c|}
+\hline
+\textbf{Número de Nodos} & \textbf{Throughput (kbps)} & \textbf{Avg Delay (ms)} & \textbf{Collision Rate (\%)} \\
+\hline
+5 & 220 & 12 & 8 \\
+10 & 195 & 28 & 18 \\
+25 & 140 & 85 & 35 \\
+50 & 95 & 220 & 52 \\
+\hline
+\end{tabular}
+\end{table}
+
+Para mitigar colisiones en redes densas, Thread implementa traffic shaping y jitter aleatorio en capa de aplicación.
+
+\section{Estándares de Interoperabilidad Smart Energy}
+
+\subsection{IEEE 2030.5-2023 (Smart Energy Profile 2.0)}
+
+IEEE 2030.5, anteriormente conocido como ZigBee SEP 2.0, es el estándar de facto para interoperabilidad de dispositivos Smart Energy en América del Norte (mandatorio para DR programs en California SB-2030). Define un modelo RESTful sobre HTTP/TLS para comunicación cliente-servidor entre dispositivos de campo (medidores, termostatos, inversores solares) y sistemas de gestión (DERMS, head-end systems).
+
+\subsubsection{Arquitectura RESTful del Estándar}
+
+IEEE 2030.5 estructura funcionalidades en Function Sets, cada uno exponiendo recursos REST con URIs jerárquicas:
+
+\begin{itemize}
+\item \textbf{/dcap} (Device Capability): Punto de entrada para descubrir Function Sets soportados.
+\item \textbf{/tm} (Time): Sincronización horaria NTP-like.
+\item \textbf{/edev} (End Device): Registro y gestión de dispositivos.
+\item \textbf{/mup} (Mirror Usage Point): Espejo de datos de medición.
+\item \textbf{/mr} (Meter Reading): Lecturas de perfiles de carga.
+\item \textbf{/msg} (Messaging): Notificaciones y alertas bidireccionales.
+\item \textbf{/dr} (Demand Response): Programación de eventos DR.
+\item \textbf{/fsa} (Flow Reservation): QoS para flujos críticos.
+\end{itemize}
+
+Ejemplo de request GET al Function Set Time:
+
+\begin{verbatim}
+GET /tm HTTP/1.1
+Host: gateway.smartenergy.local
+Accept: application/sep+xml
+\end{verbatim}
+
+Response:
+\begin{verbatim}
+HTTP/1.1 200 OK
+Content-Type: application/sep+xml
+
+<Time xmlns="urn:ieee:std:2030.5:ns">
+  <currentTime>1698796800</currentTime>
+  <dstEndTime>1730617200</dstEndTime>
+  <dstOffset>3600</dstOffset>
+  <dstStartTime>1710054000</dstStartTime>
+  <localTime>-18000</localTime>
+  <quality>7</quality>
+</Time>
+\end{verbatim}
+
+\subsubsection{Function Sets Implementados}
+
+\textbf{1. Device Capability (DCAP)}: El cliente consulta /dcap para descubrir qué Function Sets implementa el servidor:
+
+\begin{verbatim}
+<DeviceCapability>
+  <EndDeviceListLink href="/edev"/>
+  <MirrorUsagePointListLink href="/mup"/>
+  <TimeLink href="/tm"/>
+  <MessagingProgramListLink href="/msg"/>
+</DeviceCapability>
+\end{verbatim}
+
+\textbf{2. End Device (ED)}: Registro de dispositivos con LFDI (Long Form Device Identifier) derivado de certificado X.509:
+
+\begin{equation}
+\text{LFDI} = \text{SHA256}(\text{SubjectPublicKeyInfo})[:160 \text{ bits}]
+\end{equation}
+
+\textbf{3. Mirror Meter Reading (MMR)}: Publicación de lecturas de medición con granularidad configurable (típicamente 15 minutos). Datos codificados en formato OBIS (Object Identification System) según IEC 62056:
+
+\begin{itemize}
+\item 1-0:1.8.0*255 (Active energy import total)
+\item 1-0:2.8.0*255 (Active energy export total)
+\item 1-0:31.7.0*255 (Instantaneous current L1)
+\end{itemize}
+
+\textbf{4. Messaging (MSG)}: Push notifications del servidor hacia clientes mediante polling o subscriptions. Prioridades 0-9, donde 0 es crítico (ej. alerta de sobretensión).
+
+\subsubsection{Modelo de Datos y Schemas XML}
+
+IEEE 2030.5 define schemas XML estrictos para todos los recursos. Ejemplo completo de MirrorMeterReading:
+
+\begin{verbatim}
+<MirrorMeterReading xmlns="urn:ieee:std:2030.5:ns">
+  <mRID>4A8F6B3C</mRID>
+  <description>Smart Meter #12345</description>
+  <Reading>
+    <timePeriod>
+      <duration>900</duration>
+      <start>1698796800</start>
+    </timePeriod>
+    <value>12500</value>
+    <ReadingType>
+      <accumulationBehaviour>4</accumulationBehaviour>
+      <commodity>1</commodity>
+      <dataQualifier>12</dataQualifier>
+      <flowDirection>1</flowDirection>
+      <powerOfTenMultiplier>0</powerOfTenMultiplier>
+      <uom>72</uom>
+    </ReadingType>
+  </Reading>
+</MirrorMeterReading>
+\end{verbatim}
+
+Donde:
+\begin{itemize}
+\item \texttt{commodity=1}: Electricidad
+\item \texttt{uom=72}: Wh (Watt-hour)
+\item \texttt{flowDirection=1}: Forward (import)
+\item \texttt{accumulationBehaviour=4}: Cumulative
+\end{itemize}
+
+El estándar define 200+ ReadingTypes combinando 7 dimensiones (commodity, uom, flowDirection, etc.) para representar cualquier tipo de medición energética.
+
+\subsection{ISO/IEC 30141:2024 - IoT Reference Architecture}
+
+ISO/IEC 30141, publicado en 2018 y actualizado en 2024, proporciona un marco arquitectónico normalizado para sistemas IoT, definiendo componentes, interfaces y flujos de información. Complementa a ISO/IEC 29100 (Privacy Framework) y ISO/IEC 27001 (Security Management).
+
+\subsubsection{Modelo de Capas}
+
+ISO/IEC 30141 define cuatro vistas complementarias:
+
+\textbf{1. Vista Funcional:} Descompone el sistema IoT en entidades funcionales (FE - Functional Entities):
+
+\begin{itemize}
+\item \textbf{Sensing FE}: Adquisición de datos del mundo físico (sensores).
+\item \textbf{Actuation FE}: Control de actuadores.
+\item \textbf{Processing FE}: Transformación, agregación, filtrado de datos.
+\item \textbf{Storage FE}: Persistencia de datos (time-series DB, object storage).
+\item \textbf{Communication FE}: Transporte de datos entre FEs.
+\item \textbf{Security FE}: Autenticación, autorización, cifrado, auditoría.
+\item \textbf{Management FE}: Configuración, monitoreo, actualizaciones OTA.
+\item \textbf{Application Support FE}: APIs, event management, workflows.
+\end{itemize}
+
+\textbf{2. Vista de Información:} Define modelos de datos, metadatos, y formatos de intercambio (JSON, CBOR, Protobuf).
+
+\textbf{3. Vista de Despliegue:} Mapeo de entidades funcionales a componentes físicos (devices, gateways, cloud servers) con especificación de protocolos de comunicación.
+
+\textbf{4. Vista Operacional:} Workflows de operación, mantenimiento, troubleshooting.
+
+\subsubsection{Mapeo de Arquitectura Propuesta a ISO/IEC 30141}
+
+\begin{table}[h]
+\centering
+\caption{Mapeo Capas ISO/IEC 30141 a Componentes de la Arquitectura}
+\label{tab:iso30141-mapping}
+\begin{tabular}{|p{4cm}|p{10cm}|}
+\hline
+\textbf{Entidad Funcional ISO/IEC 30141} & \textbf{Componente Implementado} \\
+\hline
+Sensing FE & Nodos ESP32-C6 Thread + sensores BME280 \\
+\hline
+Communication FE & Thread Border Router (nRF52840 RCP) + HaLow AP (Morse Micro MM6108) + LTE modem (Quectel EG25-G) \\
+\hline
+Processing FE & ThingsBoard Rule Engine + Kafka Streams \\
+\hline
+Storage FE & PostgreSQL + TimescaleDB (hypertables con particionado automático) \\
+\hline
+Security FE & TLS 1.2/1.3 mutual auth + IEEE 2030.5 LFDI + WPA3-SAE \\
+\hline
+Management FE & ThingsBoard Device Management + OpenWRT UCI + OTA updates \\
+\hline
+Application Support FE & IEEE 2030.5 REST API + ThingsBoard Dashboards + Ollama LLM (MCP) \\
+\hline
+\end{tabular}
+\end{table}
+
+La conformidad con ISO/IEC 30141 garantiza que la arquitectura puede integrarse con otros sistemas IoT estándar, facilita auditorías de seguridad y compliance, y proporciona lenguaje común para documentación técnica.
+
+\subsection{IEC 61850 - Comunicación en Subestaciones}
+
+IEC 61850 es la familia de estándares para comunicación en sistemas de automatización de subestaciones eléctricas (SAS). Define modelos de datos abstractos (Logical Nodes) y protocolos de comunicación (MMS, GOOSE, SV) para interoperabilidad multi-vendor.
+
+Aunque excede el alcance de esta tesis (enfocada en distribución/consumidor), IEC 61850 es relevante para futuras integraciones con sistemas SCADA y DMS. El mapeo entre IEEE 2030.5 (dominio Customer) e IEC 61850 (dominio Distribution) se define en IEEE 2030.7.
+
+\section{Tecnologías de Edge Computing}
+
+\subsection{Containerización con Docker}
+
+Docker es una plataforma de containerización que encapsula aplicaciones y sus dependencias en imágenes portables, aisladas mediante namespaces y cgroups del kernel Linux.
+
+\subsubsection{Fundamentos de Containers}
+
+Un container Docker ejecuta procesos en espacio de usuario aislado, compartiendo el kernel del host pero con:
+
+\begin{itemize}
+\item \textbf{PID namespace}: Cada container ve su propia jerarquía de procesos (PID 1 = init del container).
+\item \textbf{Network namespace}: Stack de red independiente (interfaces, routing table, firewall rules).
+\item \textbf{Mount namespace}: Filesystem root independiente (union filesystem overlay2/aufs).
+\item \textbf{IPC namespace}: Colas de mensajes System V aisladas.
+\item \textbf{UTS namespace}: Hostname independiente.
+\end{itemize}
+
+Cgroups (Control Groups) limitan recursos:
+\begin{itemize}
+\item \textbf{cpu.cfs\_quota\_us}: CPU time limit (ej. 100000 = 1 CPU core).
+\item \textbf{memory.limit\_in\_bytes}: RAM limit (ej. 2 GB).
+\item \textbf{blkio.throttle}: I/O bandwidth throttling.
+\end{itemize}
+
+\subsubsection{Docker Compose para Orquestación}
+
+Docker Compose define stacks multi-container mediante archivos YAML declarativos. Ejemplo simplificado:
+
+\begin{verbatim}
+version: '3.8'
+services:
+  thingsboard:
+    image: thingsboard/tb-edge:3.6.0
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/thingsboard
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '3'
+          memory: 4G
+\end{verbatim}
+
+Health checks con restart policies garantizan resiliencia ante fallas transitorias.
+
+\subsection{Time-Series Databases - TimescaleDB}
+
+TimescaleDB es una extensión de PostgreSQL optimizada para series temporales, implementando hypertables (particionado automático por tiempo), continuous aggregates (materialización de queries agregadas), y compresión columnar.
+
+\subsubsection{Optimizaciones para Series Temporales}
+
+\textbf{1. Hypertables:} Una hypertable se particiona automáticamente en chunks basados en columna de tiempo:
+
+\begin{verbatim}
+CREATE TABLE telemetry (
+  time TIMESTAMPTZ NOT NULL,
+  device_id UUID NOT NULL,
+  metric TEXT NOT NULL,
+  value DOUBLE PRECISION
+);
+
+SELECT create_hypertable('telemetry', 'time', chunk_time_interval => INTERVAL '1 day');
+\end{verbatim}
+
+Cada chunk es una tabla PostgreSQL estándar. Queries se optimizan mediante constraint exclusion (solo escanea chunks relevantes).
+
+\textbf{2. Continuous Aggregates:} Precomputación de agregaciones (ej. promedio horario) con actualización incremental:
+
+\begin{verbatim}
+CREATE MATERIALIZED VIEW telemetry_hourly
+WITH (timescaledb.continuous) AS
+SELECT time_bucket('1 hour', time) AS bucket,
+       device_id,
+       metric,
+       AVG(value) AS avg_value
+FROM telemetry
+GROUP BY bucket, device_id, metric;
+\end{verbatim}
+
+\textbf{3. Compresión:} Columnar compression de chunks antiguos reduce storage 90-95\%:
+
+\begin{verbatim}
+ALTER TABLE telemetry SET (
+  timescaledb.compress,
+  timescaledb.compress_segmentby = 'device_id,metric',
+  timescaledb.compress_orderby = 'time'
+);
+
+SELECT add_compression_policy('telemetry', INTERVAL '7 days');
+\end{verbatim}
+
+\subsection{Message Brokers - Apache Kafka}
+
+Apache Kafka es un sistema de streaming distribuido que funciona como log commit distribuido, proporcionando alta throughput (millones mensajes/seg), persistencia durable, y procesamiento de streams.
+
+\subsubsection{Arquitectura de Kafka}
+
+\begin{itemize}
+\item \textbf{Topic}: Canal lógico de mensajes (ej. "telemetry.raw", "commands.downlink").
+\item \textbf{Partition}: Subdivisión de topic para paralelismo. Mensajes en misma partition mantienen orden.
+\item \textbf{Broker}: Servidor Kafka que almacena partitions.
+\item \textbf{Producer}: Cliente que publica mensajes en topics.
+\item \textbf{Consumer}: Cliente que suscribe a topics y procesa mensajes. Consumers en mismo Consumer Group balancean carga.
+\item \textbf{Zookeeper/KRaft}: Coordinación de cluster (elección de líderes, metadata).
+\end{itemize}
+
+Garantías de entrega:
+\begin{itemize}
+\item \texttt{acks=0}: Fire-and-forget (no wait for ACK)
+\item \texttt{acks=1}: Leader replica confirma escritura
+\item \texttt{acks=all}: Todas replicas in-sync confirman (máxima durabilidad)
+\end{itemize}
+
+\subsubsection{Kafka en Edge Gateways}
+
+En edge gateways, Kafka proporciona buffer persistente de telemetría durante particiones WAN:
+
+\begin{enumerate}
+\item Nodos IoT publican vía MQTT → MQTT bridge → Kafka topic local
+\item Kafka consumer local almacena en TimescaleDB
+\item Kafka Mirror Maker replica hacia Kafka cloud (sync bidireccional)
+\end{enumerate}
+
+Configuración optimizada para embedded:
+\begin{itemize}
+\item \texttt{log.retention.bytes=1GB} (limit total storage)
+\item \texttt{log.segment.bytes=100MB} (smaller segments)
+\item \texttt{num.io.threads=4} (reduce CPU overhead)
+\end{itemize}
+
+\section{Plataformas IoT - ThingsBoard}
+
+\subsection{Arquitectura de ThingsBoard}
+
+ThingsBoard es una plataforma IoT open-source (Apache 2.0) que proporciona device management, data collection, procesamiento (rule engine), visualización (dashboards), y APIs programáticas. Arquitectura microservices en Java/Spring Boot.
+
+Componentes principales:
+\begin{itemize}
+\item \textbf{Transport Layer}: MQTT, CoAP, HTTP, LwM2M servers.
+\item \textbf{Core Services}: Device registry, telemetry persistence, rule engine.
+\item \textbf{Database}: PostgreSQL (metadata) + Cassandra/TimescaleDB (telemetry).
+\item \textbf{Message Queue}: Kafka (inter-service communication).
+\item \textbf{Web UI}: Angular dashboard con widgets configurables.
+\end{itemize}
+
+\subsection{ThingsBoard Edge}
+
+ThingsBoard Edge es una distribución edge-optimized que replica funcionalidad completa de ThingsBoard en gateways locales, con sincronización bidireccional hacia instancia cloud.
+
+Capacidades clave:
+\begin{itemize}
+\item \textbf{Local dashboards}: Full-featured UI accesible durante offline.
+\item \textbf{Rule chains locales}: Procesamiento CEP (Complex Event Processing) sin round-trip cloud.
+\item \textbf{Buffering automático}: Cola persistente de eventos no sincronizados.
+\item \textbf{Asset/Device sync}: Replicación de definiciones de dispositivos, atributos, relaciones.
+\end{itemize}
+
+Sincronización: protocolo gRPC bidireccional con batching y compresión (Snappy).
+
+\subsection{Modelado de Latencia End-to-End mediante Teoría de Colas}
+
+Para estimar latencias en arquitecturas edge vs cloud, aplicamos teoría de colas M/M/1 (arribos Poisson, servicio exponencial, 1 servidor).
+
+\subsubsection{Sistema M/M/1 para Gateway de Borde}
+
+Variables:
+\begin{itemize}
+\item $\lambda$: Tasa de arribos de mensajes (mensajes/seg)
+\item $\mu$: Tasa de servicio del gateway (mensajes/seg)
+\item $\rho = \lambda / \mu$: Utilización del servidor ($\rho < 1$ para estabilidad)
+\end{itemize}
+
+Tiempo promedio en sistema (queuing + servicio):
+\begin{equation}
+W = \frac{1}{\mu - \lambda}
+\end{equation}
+
+Ejemplo: Gateway procesa $\mu = 100$ msg/s, carga $\lambda = 70$ msg/s:
+\begin{equation}
+W = \frac{1}{100 - 70} = 0.0333 \text{ s} = 33.3 \text{ ms}
+\end{equation}
+
+Tiempo en cola (solo waiting):
+\begin{equation}
+W_q = \frac{\rho}{\mu - \lambda} = \frac{0.7}{30} = 23.3 \text{ ms}
+\end{equation}
+
+Latencia total end-to-end (device → storage):
+\begin{equation}
+L_{total} = L_{device \rightarrow GW} + W_{GW} + L_{GW \rightarrow DB}
+\end{equation}
+
+Para arquitectura edge:
+\begin{equation}
+L_{edge} = 40 \text{ ms (Thread)} + 33 \text{ ms (GW queue)} + 8 \text{ ms (TimescaleDB write)} = 81 \text{ ms}
+\end{equation}
+
+Para arquitectura cloud-centric:
+\begin{equation}
+L_{cloud} = 40 + 33 + 80 \text{ (LTE RTT)} + 50 \text{ (WAN)} + 30 \text{ (cloud ingestion)} + 10 \text{ (RDS write)} = 243 \text{ ms}
+\end{equation}
+
+Reducción: $(243-81)/243 = 66.7\%$
+
+\section{Seguridad en Sistemas IoT}
+
+\subsection{Amenazas Específicas de IoT}
+
+Los sistemas IoT presentan superficie de ataque ampliada respecto a IT tradicional:
+
+\begin{enumerate}
+\item \textbf{Compromise de dispositivos}: Dispositivos resource-constrained son vulnerables a ataques de firmware (ej. Mirai botnet).
+\item \textbf{Man-in-the-Middle (MitM)}: Intercepción de comunicaciones no cifradas (ej. MQTT sin TLS).
+\item \textbf{Replay attacks}: Reenvío de mensajes legítimos capturados (mitigado con nonces/timestamps).
+\item \textbf{Denial of Service (DoS)}: Inundación de gateways con tráfico malicioso.
+\item \textbf{Escalation de privilegios}: Explotación de APIs sin RBAC adecuado.
+\item \textbf{Data exfiltration}: Acceso no autorizado a datos de telemetría sensibles.
+\end{enumerate}
+
+\subsection{Defence in Depth para Edge Gateways}
+
+Estrategia de seguridad en capas:
+
+\textbf{Capa Física:}
+\begin{itemize}
+\item Secure Boot con cadena de confianza (U-Boot verified boot).
+\item Enclosure físico anti-tamper.
+\item TPM (Trusted Platform Module) para almacenamiento de claves.
+\end{itemize}
+
+\textbf{Capa de Red:}
+\begin{itemize}
+\item Firewall OpenWRT (nftables) con políticas default-deny.
+\item Segmentación de redes (VLANs): Management, IoT Field, Backhaul, WAN.
+\item WPA3-SAE con PMF obligatorio en HaLow.
+\item TLS 1.2/1.3 mutual authentication para MQTT/HTTPS.
+\end{itemize}
+
+\textbf{Capa de Aplicación:}
+\begin{itemize}
+\item RBAC en ThingsBoard (roles: Tenant Admin, Customer User, Device).
+\item Input validation/sanitization en APIs REST.
+\item Rate limiting para prevenir DoS.
+\item Logging centralizado y SIEM integration.
+\end{itemize}
+
+\textbf{Capa de Datos:}
+\begin{itemize}
+\item Cifrado at-rest de bases de datos (LUKS full-disk encryption).
+\item Backup automático con cifrado GPG.
+\item Anonymization de datos sensibles (hashing de identificadores).
+\end{itemize}
+
+\section{Estado del Arte - Trabajos Relacionados}
+
+\subsection{Gateways Multi-Protocolo Académicos}
+
+\textbf{1. "A Multi-Protocol IoT Gateway for Smart Home Applications" (2019):} Propone gateway basado en Raspberry Pi con soporte Zigbee, Z-Wave y Wi-Fi. Limitaciones: no implementa estándares IEEE 2030.5, almacenamiento local limitado (SD card), sin failover WAN.
+
+\textbf{2. "Edge Computing Gateway with Thread Border Router for Smart Energy" (2021):} Implementa OTBR con uplink LTE Cat-M1. Contribuciones: caracterización de latencias Thread. Limitaciones: no integra HaLow, no conformidad con ISO/IEC 30141.
+
+\textbf{3. "LoRaWAN-WiFi Gateway for Smart Metering" (2022):} Combina LoRaWAN para última milla con Wi-Fi backhaul. Limitaciones: throughput LoRa insuficiente para firmware OTA, latencia >1 segundo.
+
+\subsection{Soluciones Comerciales}
+
+\textbf{1. Cisco IoT Gateway IR829:} Gateway industrial con LTE/Wi-Fi/Ethernet, IOS XE routing, soporte VPN. Precio: \$2,500-4,000. Limitaciones: sin Thread/HaLow, plataforma cerrada.
+
+\textbf{2. Dell Edge Gateway 3000:} x86-based con Ubuntu Core, soporte containers. Precio: \$1,200-2,000. Limitaciones: alto consumo (25-40 W), sin IEEE 2030.5.
+
+\textbf{3. MultiTech Conduit:} Gateway programable con LoRaWAN/LTE. Precio: \$400-800. Limitaciones: CPU limitada (ARM Cortex-A9 @ 456 MHz), sin edge analytics.
+
+\subsection{Análisis Comparativo}
+
+\begin{table}[h]
+\centering
+\caption{Comparación Arquitecturas Edge Gateway}
+\label{tab:edge-gateway-comparison}
+\begin{tabular}{|p{3.5cm}|p{2.5cm}|p{2.5cm}|p{2.5cm}|p{2.5cm}|}
+\hline
+\textbf{Característica} & \textbf{Propuesta} & \textbf{Cisco IR829} & \textbf{Dell EG3000} & \textbf{MultiTech Conduit} \\
+\hline
+\textbf{Thread support} & Sí (OTBR) & No & No & No \\
+\hline
+\textbf{HaLow support} & Sí (MM6108) & No & No & No \\
+\hline
+\textbf{IEEE 2030.5} & Sí & No & No & No \\
+\hline
+\textbf{Edge platform} & ThingsBoard & No & EdgeX & Node-RED \\
+\hline
+\textbf{Containers} & Docker & No & Docker & Docker \\
+\hline
+\textbf{Costo aprox.} & \$600-800 & \$2,500+ & \$1,200+ & \$400-800 \\
+\hline
+\textbf{Open-source} & Sí & No & Parcial & Parcial \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Brechas Identificadas}
+
+\begin{enumerate}
+\item \textbf{Ausencia de HaLow en literatura académica}: Ningún trabajo publicado integra Wi-Fi HaLow como tecnología de backhaul en gateways Smart Energy.
+
+\item \textbf{Conformidad limitada con estándares}: Pocas implementaciones cumplen simultáneamente IEEE 2030.5 e ISO/IEC 30141.
+
+\item \textbf{Evaluaciones cuantitativas insuficientes}: La mayoría de trabajos reportan pruebas de concepto funcionales sin benchmarking riguroso de latencia/throughput/disponibilidad.
+
+\item \textbf{Integración LLM edge inexplorada}: No existen trabajos que integren inferencia LLM local en gateways IoT para análisis contextual de telemetría.
+\end{enumerate}
+
+\section{Síntesis del Marco Teórico}
+
+Este capítulo estableció los fundamentos teóricos necesarios para comprender la arquitectura propuesta:
+
+\begin{itemize}
+\item \textbf{Redes Smart Energy}: Evolución hacia Smart Grids con AMI como infraestructura de medición inteligente.
+
+\item \textbf{Protocolos IoT}: Thread proporciona routing mesh IPv6 para campo, HaLow ofrece throughput/latencia superior a LoRaWAN/NB-IoT para backhaul, LTE Cat-M1 provee failover con cobertura global.
+
+\item \textbf{Estándares}: IEEE 2030.5 garantiza interoperabilidad Smart Energy, ISO/IEC 30141 proporciona framework arquitectónico completo.
+
+\item \textbf{Edge computing}: Docker containerization + TimescaleDB + Kafka + ThingsBoard Edge permiten procesamiento local completo con resiliencia.
+
+\item \textbf{Seguridad}: Defence in depth con TLS mutual auth, RBAC, firewalling, cifrado at-rest.
+
+\item \textbf{Estado del arte}: Brechas identificadas en integración HaLow, conformidad estándares, y evaluación cuantitativa rigurosa.
+\end{itemize}
+
+El próximo capítulo presenta el diseño arquitectónico del gateway multi-protocolo que aborda estas brechas.
