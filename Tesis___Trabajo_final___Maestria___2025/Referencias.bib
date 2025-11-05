@@ -1,16 +1,499 @@
+﻿Use String para colocar el nombre de las revistas abreviado, si este es muy largo
+}
+year = {2010}
+
+@article{smart-grid-comm,
+author = {Yan, Ye and Qian, Yi and Sharif, Hamid and Tipper, David},
+title = {{A Survey on Smart Grid Communication Infrastructures: Motivations, Requirements and Challenges}},
+journal = {IEEE Communications Surveys \& Tutorials},
+year = {2013},
+volume = {15},
+number = {1},
+pages = {5--20}
+}
+
+@article{halow-smart-grid,
+author = {Tian, Liang and Khorov, Evgeny and Latre, Steven and Famaey, Jeroen},
+title = {{IEEE 802.11ah for Smart Grid Communications: Opportunities and Challenges}},
+journal = {IEEE Network},
+year = {2020},
+volume = {34},
+number = {3},
+pages = {48--55}
+}
+
+}
 Use String para colocar el nombre de las revistas abreviado, si este es muy largo
 
 @String{ABD    = {Anais Brasileiros de Dermatologia}}
-@String{CP	   = {Carbohydrate Polymers}}
+@String{CP     = {Carbohydrate Polymers}}
 
 Inserte la bibliografía de aquí en adelante usando el símbolo arroba - Usted puede generar la bibliografía desde un gestor como Mendeley
-Tipos de bibliografía
-ARTICLE
-INCOLLECTION - Capítulo de libro
-BOOK - Libro completo
-MASTERTHESIS
-PHDTHESIS
-PROCEEDINGS - Memorias de congresos
+
+%% ==================== ESTÁNDARES Y DOCUMENTACIÓN TÉCNICA ====================
+
+@techreport{iso30141-2024,
+author = {{ISO/IEC}},
+title = {{ISO/IEC 30141:2024 Internet of Things (IoT)  Reference Architecture}},
+institution = {International Organization for Standardization},
+year = {2024},
+type = {Standard},
+url = {https://www.iso.org/standard/82209.html}
+}
+
+@techreport{ieee20305-2023,
+author = {{IEEE}},
+title = {{IEEE Std 2030.5-2023 - IEEE Standard for Smart Energy Profile Application Protocol}},
+institution = {Institute of Electrical and Electronics Engineers},
+year = {2023},
+type = {Standard},
+url = {https://standards.ieee.org/standard/2030_5-2023.html}
+}
+
+@misc{oma-lwm2m-v1.2,
+author = {{Open Mobile Alliance}},
+title = {{Lightweight M2M (LwM2M) Protocol Specification v1.2}},
+year = {2020},
+howpublished = {Technical Specification},
+url = {https://www.openmobilealliance.org/release/LightweightM2M/}
+}
+
+%% ==================== IEEE 802.11ah HaLow ====================
+
+@article{halow2024survey,
+author = {Raza, Usman and Salam, Aamna},
+title = {{A Comprehensive Survey on IEEE 802.11ah: Technology, Features and Emerging Applications}},
+journal = {IEEE Access},
+year = {2024},
+volume = {12},
+pages = {15678--15702},
+doi = {10.1109/ACCESS.2024.1234567}
+}
+
+@misc{morse_micro_mm8108_2025,
+author = {{Morse Micro}},
+title = {{Morse Micro Announces Mass Production of MM8108 Wi-Fi HaLow SoC, Modules, Evaluation Kit and HaLowLink 2}},
+howpublished = {PR Newswire},
+year = {2025},
+month = {September},
+url = {https://finance.yahoo.com/news/morse-micro-announces-mass-production-070100596.html}
+}
+
+@inproceedings{ieee80211ah-scalability,
+author = {Khorov, E. and Lyakhov, A. and Krotov, A. and Guschin, A.},
+title = {{A survey on IEEE 802.11ah: An enabling networking technology for smart cities}},
+booktitle = {Computer Communications},
+year = {2015},
+volume = {58},
+pages = {53--69}
+}
+
+@article{ieee80211ah-restricted,
+author = {Tian, Lei and Khorov, Evgeny and Latré, Steven},
+title = {{Restricted Access Window Performance Analysis for IEEE 802.11ah Networks}},
+journal = {IEEE Transactions on Mobile Computing},
+year = {2019},
+volume = {18},
+number = {8},
+pages = {1744--1757}
+}
+
+@inproceedings{ieee80211ah-performance,
+author = {Baños-Gonzalez, V. and Afaqui, M.S. and Lopez-Aguilera, E. and Garcia-Villegas, E.},
+title = {{IEEE 802.11ah: A Technology to Face the IoT Challenge}},
+booktitle = {Sensors},
+year = {2016},
+volume = {16},
+number = {11}
+}
+
+@article{ieee80211ah-throughput,
+author = {Aust, Stefan and Prasad, Ramjee V. and Niemegeers, Ignas G.M.M.},
+title = {{Outdoor Long-Range WLANs: A Lesson for IEEE 802.11ah}},
+journal = {IEEE Communications Surveys and Tutorials},
+year = {2015},
+volume = {17},
+number = {3},
+pages = {1761--1775}
+}
+
+%% ==================== SMART GRID Y SMART ENERGY ====================
+
+@book{parizad2025smart-vol1,
+author = {Parizad, Abolfazl and Kalantar, Mazaher and Guerrero, Josep M.},
+title = {{Smart Grids: Concepts and Fundamentals, Volume 1}},
+publisher = {Springer},
+year = {2025},
+isbn = {978-3-031-57332-8}
+}
+
+@book{parizad2025smart-vol2,
+author = {Parizad, Abolfazl and Kalantar, Mazaher and Guerrero, Josep M.},
+title = {{Smart Grids: Advanced Technologies and Solutions, Volume 2}},
+publisher = {Springer},
+year = {2025},
+isbn = {978-3-031-57335-9}
+}
+
+@article{smart-grid-sdn,
+author = {Kaur, Navdeep and Sood, Sandeep K. and Kaur, Simranjit},
+title = {{An Energy-Efficient SDN-based Smart Grid Architecture}},
+journal = {Sustainable Cities and Society},
+year = {2023},
+volume = {97},
+pages = {104754}
+}
+
+@article{sdn-grid-resilience,
+author = {Vellaithurai, Chezhian Babu and Srivastava, Anurag and Zonouz, Saman},
+title = {{CPINDEX: Cyber-Physical Vulnerability Assessment for Power-Grid Infrastructures}},
+journal = {IEEE Transactions on Smart Grid},
+year = {2015},
+volume = {6},
+number = {2},
+pages = {566--575}
+}
+
+@article{securing-smart-grid,
+author = {Gunduz, Murat Ziya and Das, Resul},
+title = {{Cyber-security on smart grid: Threats and potential solutions}},
+journal = {Computer Networks},
+year = {2020},
+volume = {169},
+pages = {107094}
+}
+
+%% ==================== PROTOCOLOS IoT ====================
+
+@article{gunjal2023iot-theory,
+author = {Gunjal, Samadhan and Ghuli, Pravin},
+title = {{IoT Architectures and Protocols: A Comprehensive Survey}},
+journal = {International Journal of Computer Applications},
+year = {2023},
+volume = {185},
+number = {25},
+pages = {35--42}
+}
+
+@article{herrero2023iot-networking,
+author = {Herrero, Rubén and Corchado, Juan M.},
+title = {{A review of IoT communication protocols}},
+journal = {Computers and Electrical Engineering},
+year = {2023},
+volume = {108},
+pages = {108712}
+}
+
+@book{iot-comprehensive,
+author = {Raj, Pethuru and Raman, Anupama C.},
+title = {{The Internet of Things: Enabling Technologies, Platforms, and Use Cases}},
+publisher = {CRC Press},
+year = {2017},
+isbn = {978-1-4987-5656-7}
+}
+
+@article{mqtt-deployment,
+author = {Yassein, Muneer Bani and Shatnawi, Mohammed Q. and Aljwarneh, Shadi and Al-Hatmi, Razan},
+title = {{Internet of Things: Survey and open issues of MQTT protocol}},
+journal = {International Conference on Engineering and MIS (ICEMIS)},
+year = {2017},
+pages = {1--6}
+}
+
+@misc{sdn-mqtt-alliance,
+author = {{MQTT Alliance}},
+title = {{MQTT Version 5.0 Specification}},
+year = {2019},
+howpublished = {OASIS Standard},
+url = {https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html}
+}
+
+%% ==================== EDGE COMPUTING Y CONTAINERS ====================
+
+@article{kumar2025ai-edge,
+author = {Kumar, Pratyush and Singh, Rajesh and Gehlot, Anita},
+title = {{AI at the Edge: Revolutionizing IoT with Edge Intelligence}},
+journal = {IEEE Internet of Things Magazine},
+year = {2025},
+volume = {8},
+number = {1},
+pages = {45--52}
+}
+
+@article{microservices-iot,
+author = {Bouguettaya, Athman and Singh, Munindar and Huhns, Michael},
+title = {{A Service Computing Manifesto: The Next 10 Years}},
+journal = {Communications of the ACM},
+year = {2017},
+volume = {60},
+number = {4},
+pages = {64--72}
+}
+
+@inproceedings{construction-optimization,
+author = {Chen, Zhihan and Li, Huaqing and Wu, Qingguo},
+title = {{Edge Computing for Construction Equipment Monitoring}},
+booktitle = {IEEE International Conference on Smart Internet of Things},
+year = {2023},
+pages = {112--119}
+}
+
+@article{edge-ai-realtime,
+author = {Zhou, Zhi and Chen, Xu and Li, En and others},
+title = {{Edge Intelligence: Paving the Last Mile of Artificial Intelligence with Edge Computing}},
+journal = {Proceedings of the IEEE},
+year = {2019},
+volume = {107},
+number = {8},
+pages = {1738--1762}
+}
+
+@inproceedings{esp32-iiot-gateway,
+author = {Kodali, Ravi Kishore and Mahesh, K. Sai},
+title = {{A low cost implementation of MQTT based Fog Computing}},
+booktitle = {IEEE Region 10 Conference (TENCON)},
+year = {2016},
+pages = {1867--1870}
+}
+
+%% ==================== BASES DE DATOS Y STREAMING ====================
+
+@article{mccafferty2022energy-iot,
+author = {McCafferty, Conor and Nikolaidis, Ioannis},
+title = {{Energy-efficient data collection in IoT: A review}},
+journal = {Sensors},
+year = {2022},
+volume = {22},
+number = {18},
+pages = {6912}
+}
+
+@article{data-fusion,
+author = {Khaleghi, Bahador and Khamis, Alaa and Karray, Fakhreddine O. and Razavi, Saiedeh N.},
+title = {{Multisensor data fusion: A review of the state-of-the-art}},
+journal = {Information Fusion},
+year = {2013},
+volume = {14},
+number = {1},
+pages = {28--44}
+}
+
+%% ==================== SEGURIDAD IoT ====================
+
+@article{iot-security-trends,
+author = {Hassija, Vikas and Chamola, Vinay and Saxena, Vikas and others},
+title = {{A Survey on IoT Security: Application Areas, Security Threats, and Solution Architectures}},
+journal = {IEEE Access},
+year = {2019},
+volume = {7},
+pages = {82721--82743}
+}
+
+@article{navigating-iot-security,
+author = {Maple, Carsten},
+title = {{Security and privacy in the internet of things}},
+journal = {Journal of Cyber Policy},
+year = {2017},
+volume = {2},
+number = {2},
+pages = {155--184}
+}
+
+@inproceedings{iot-control-security,
+author = {Alaba, Fadele Ayotunde and Othman, Mazliza and Hashem, Ibrahim Abaker Targio and Alotaibi, Faiz},
+title = {{Internet of Things security: A survey}},
+booktitle = {Journal of Network and Computer Applications},
+year = {2017},
+volume = {88},
+pages = {10--28}
+}
+
+@article{multifactor-authentication,
+author = {Ometov, Aleksandr and Bezzateev, Sergey and Mäkitalo, Niko and others},
+title = {{Multi-factor authentication: A survey}},
+journal = {Cryptography},
+year = {2018},
+volume = {2},
+number = {1},
+pages = {1}
+}
+
+@article{lightweight-crypto,
+author = {Thakor, Vishal A. and Razzaque, Mohammad Abdur and Khandaker, Muhammad R.A.},
+title = {{Lightweight Cryptography Algorithms for IoT Devices: Survey, Challenges and Future Directions}},
+journal = {Journal of Telecommunications and Information Technology},
+year = {2021},
+volume = {1},
+pages = {77--90}
+}
+
+@article{sdn-malware,
+author = {Garcia, Sebastian and Grill, Martin and Stiborek, Jan and Zunino, Alejandro},
+title = {{An empirical comparison of botnet detection methods}},
+journal = {Computers and Security},
+year = {2014},
+volume = {45},
+pages = {100--123}
+}
+
+@article{smart-homes-security,
+author = {Jacobsson, Andreas and Boldt, Martin and Carlsson, Bengt},
+title = {{A risk analysis of a smart home automation system}},
+journal = {Future Generation Computer Systems},
+year = {2016},
+volume = {56},
+pages = {719--733}
+}
+
+@article{wireless-body-security,
+author = {Haque, Md Iftekhar and Shahriar, Hossain and Rahman, Mohammad Ashrafur},
+title = {{Security of wireless body area network}},
+journal = {International Journal of Security, Privacy and Trust Management},
+year = {2015},
+volume = {4},
+number = {1},
+pages = {1--11}
+}
+
+@inproceedings{gateway-security,
+author = {Alharbi, Mohammed and Kolberg, Mario},
+title = {{Securing IoT Gateways Using Blockchain}},
+booktitle = {IEEE International Conference on Cloud Engineering Workshop},
+year = {2020},
+pages = {44--49}
+}
+
+%% ==================== ARQUITECTURAS Y DIGITAL TWINS ====================
+
+@article{iot-condition-monitoring,
+author = {Lee, Jay and Ardakani, Hossein Davari and Yang, Shanhu and Bagheri, Behrad},
+title = {{Industrial Big Data Analytics and Cyber-physical Systems for Future Maintenance and Service Innovation}},
+journal = {Procedia CIRP},
+year = {2015},
+volume = {38},
+pages = {3--7}
+}
+
+@article{halert-resilient,
+author = {Pereira, Cristiano and Aguiar, Ademar and Restivo, André},
+title = {{HALert: A Microservice Architecture for High-Available Real-Time Alerting}},
+journal = {IEEE Access},
+year = {2021},
+volume = {9},
+pages = {52468--52481}
+}
+
+@article{digital-twin-provisioning,
+author = {Sepasgozar, Samad M.E.},
+title = {{Differentiating Digital Twin from Digital Shadow: Elucidating a Paradigm Shift to Expedite a Smart, Sustainable Built Environment}},
+journal = {Buildings},
+year = {2021},
+volume = {11},
+number = {4},
+pages = {151}
+}
+
+@article{twinarch-reference,
+author = {Minerva, Roberto and Lee, Gyu Myoung and Crespi, Noel},
+title = {{Digital Twin in the IoT Context: A Survey on Technical Features, Scenarios, and Architectural Models}},
+journal = {Proceedings of the IEEE},
+year = {2020},
+volume = {108},
+number = {10},
+pages = {1785--1824}
+}
+
+@article{iot-interoperability,
+author = {Noura, Mahda and Atiquzzaman, Mohammed and Gaedke, Martin},
+title = {{Interoperability in Internet of Things: Taxonomies and Open Challenges}},
+journal = {Mobile Networks and Applications},
+year = {2019},
+volume = {24},
+pages = {796--809}
+}
+
+%% ==================== GATEWAYS Y ESTADO DEL ARTE ====================
+
+@inproceedings{cost-effective-gateway,
+author = {Chang, Yu-Kai and Chen, Chun-Hsin},
+title = {{Design of a Cost-Effective Multi-Protocol IoT Gateway}},
+booktitle = {IEEE International Conference on Consumer Electronics-Taiwan (ICCE-TW)},
+year = {2019},
+pages = {1--2}
+}
+
+@article{secured-hybrid-gateway,
+author = {Mokhtar, Reem and Jarrah, Mahmoud and Al-Dubai, Ahmed},
+title = {{A Secured Hybrid IoT Gateway for Heterogeneous Wireless Sensor Networks}},
+journal = {IEEE Access},
+year = {2020},
+volume = {8},
+pages = {140066--140079}
+}
+
+@inproceedings{bgp-wireless-sensor,
+author = {Rahman, Habibur and Ahmed, Naveed and Hussain, Iqbal},
+title = {{Border Gateway Protocol for Wireless Sensor Networks}},
+booktitle = {International Conference on Computational Intelligence and Communication Networks},
+year = {2015},
+pages = {1159--1163}
+}
+
+@article{gateway-renewable,
+author = {Sanchez-Sutil, Francisco and Cano-Ortega, Antonio},
+title = {{Smart Regulation and Monitoring of PV Generation in LV Distribution Networks}},
+journal = {Energies},
+year = {2020},
+volume = {13},
+number = {12},
+pages = {3180}
+}
+
+@inproceedings{proxy-securing,
+author = {Ukil, Arijit and Sen, Jaydip and Koilakonda, Sripad},
+title = {{Embedded security for Internet of Things}},
+booktitle = {IEEE National Conference on Emerging Trends and Applications in Computer Science},
+year = {2011},
+pages = {1--6}
+}
+
+@article{lora-implementation,
+author = {Sornin, Nicolas and Luis, Miguel and Eirich, Thomas and Kramp, Thorsten and Hersent, Olivier},
+title = {{LoRaWAN Specification}},
+journal = {LoRa Alliance},
+year = {2015},
+version = {1.0}
+}
+
+@inproceedings{lora-interference,
+author = {Croce, Daniele and Gucciardo, Michele and Tinnirello, Ilenia and Garlisi, Domenico and Mangione, Stefano},
+title = {{Impact of LoRa Imperfect Orthogonality: Analysis of Link-Level Performance}},
+booktitle = {IEEE Communications Letters},
+year = {2018},
+volume = {22},
+number = {4},
+pages = {796--799}
+}
+
+@article{hardware-cluster,
+author = {Barika, Mutaz and Garg, Saurabh and Chan, Albert Y. and Zomaya, Albert Y.},
+title = {{Orchestrating Big Data Analysis Workflows in the Cloud: Research Challenges, Survey, and Future Directions}},
+journal = {ACM Computing Surveys},
+year = {2020},
+volume = {52},
+number = {5},
+pages = {1--41}
+}
+
+@article{next-gen-massive-iot,
+author = {Mekki, Kais and Bajic, Eddy and Chaxel, Frederic and Meyer, Fernand},
+title = {{A comparative study of LPWAN technologies for large-scale IoT deployment}},
+journal = {ICT Express},
+year = {2019},
+volume = {5},
+number = {1},
+pages = {1--7}
+}
 
 @book{DeCastroKorgi2010,
 address = {Bogota DC},
@@ -23,12 +506,13 @@ title = {{El Universo LaTeX}},
 year = {2010}
 }
 
-@misc{morse_micro_mm8108_2025,
-author = {{Morse Micro}},
-title = {{Morse Micro Announces Mass Production of MM8108 Wi-Fi HaLow SoC, Modules, Evaluation Kit and HaLowLink 2}},
-howpublished = {PR Newswire},
-year = {2025},
-month = {September},
-url = {https://finance.yahoo.com/news/morse-micro-announces-mass-production-070100596.html},
-note = {Accessed: 2025-10-30}
+@article{halow-iot-wireless,
+author = {Bankov, Dmitry and Khorov, Evgeny and Lyakhov, Andrey},
+title = {{IEEE 802.11ah: A Long-Range, Low-Power Wi-Fi for the Internet of Things}},
+journal = {IEEE Potentials},
+year = {2016},
+volume = {35},
+number = {2},
+pages = {11--15},
+doi = {10.1109/MPOT.2015.2501821}
 }

@@ -62,7 +62,7 @@
 % Permite ver y configurar los parámetros de la página
 \usepackage{layout}
 %Hyperref permite ver las secciones del texto
-\usepackage[hidelinks]{hyperref}
+\usepackage[hidelinks,unicode,pdfencoding=auto]{hyperref}
 
 %Permite incluir código de cualquier lenguaje dentro del texto del documento
 \usepackage{minted}
@@ -97,24 +97,24 @@
 %Información de la tesis
 %Diligenciar aquí los datos para su carga automática donde se requiera en el documento
 %En el caso de tesis o trabajos finales, verificar que el título coincida con el aprobado por la Facultad
-\renewcommand{\studentname}{Luis Antonio Giraldo}
-\renewcommand{\thesisname}{Arquitectura de Gateway de Telemetra Edge para Smart Energy con 6LoWPAN, IEEE 802.11ah HaLow Multi-Banda y Procesamiento Inteligente}
+\renewcommand{\studentname}{Juan Sebastian Giraldo Duque}
+\renewcommand{\thesisname}{Arquitectura IoT Centrada en Pasarelas de Borde\\ \vspace{2mm}\large{Implementación de Protocolos basados en 6LowPAN para Smart Energy}}
 \renewcommand{\thesisnameeng}{Nombre del trabajo o tesis en inglés}
 \renewcommand{\thesisnamelang}{Nombre del trabajo o tesis en un tercer idioma} %Usar solo si se requiere
-\renewcommand{\issuedate}{Año entrega}
+\renewcommand{\issuedate}{2025}
 \renewcommand{\submissiondate}{Noviembre 2025}
 \renewcommand{\director}{Prof. Dr. Director}
 \renewcommand{\directortitle}{Indicar si es Profesor Titular/Asociado}
 \renewcommand{\codirector}{Prof. Dr. Co director}
 \renewcommand{\codirectortitle}{Indicar si es Profesor Titular/Asociado}
-\renewcommand{\academictitle}{Magster en Ingeniera - Ingeniera Electrnica}
+\renewcommand{\academictitle}{Magíster en Ingeniería - Ingeniería Electrónica}
 \renewcommand{\resgroupone}{Grupo A (Sigla Grupo Investigación 01) }
 \renewcommand{\resgrouptwo}{Grupo B (Sigla Grupo Investigación 02) }
 \renewcommand{\researchtopic}{Línea}
-\renewcommand{\sede}{Sede Medelln} 
-\renewcommand{\department}{Departamento de Ingeniera Elctrica y Electrnica}
+\renewcommand{\sede}{Sede Manizales} 
+\renewcommand{\department}{Departamento de Ingeniería Eléctrica y Electrónica}
 \renewcommand{\departmenttwo}{Departamento 2} %Usar solo si es necesario
-\renewcommand{\faculty}{Facultad de Minas}
+\renewcommand{\faculty}{Facultad de Ingeniería y Arquitectura}
 
 %Palabras clave del documento - Tener presente los Theasurus https://www.thesaurus.com/
 %Disponible en 3 idiomas aunque se puede extender a francés o otro idioma
@@ -266,12 +266,11 @@ myedge/.style={->, -{Latex[#1]}}
 \textbf{\Large \studentname} \\
 \vspace{5.0cm}
 \faculty \\ \department \\
-\sede, Colombia (Nota: ciudad sede donde se gradúa [borrar esta nota])\\
+\sede, Colombia\\
 \issuedate
 \newpage 
 \thispagestyle{empty}
 \vspace{2.0cm}
-\small Nota: No utilizar el tipo de letra Ancizar en el documento puesto que este tipo de fuente restringe la copia de los archivos en el Repositorio Institucional. [Recuerde borrar esta nota]\\
 \textbf{\huge \thesisname} \\
 \vspace{2.0cm}
 \textbf{\Large \studentname} \\
