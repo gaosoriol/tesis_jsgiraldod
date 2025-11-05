@@ -1,0 +1,32 @@
+﻿[
+    {
+        "OldText":  "CoAP (Constrained Application Protocol, RFC 7252) es un protocolo web RESTful optimizado para dispositivos IoT con recursos limitados, diseÃado como alternativa ligera a HTTP.",
+        "Description":  "Tarea 1.1: Cita en descripción CoAP",
+        "NewText":  "CoAP (Constrained Application Protocol, RFC 7252) es un protocolo web RESTful optimizado para dispositivos IoT con recursos limitados, diseÃado como alternativa ligera a HTTP \\cite{gunjal2023iot-theory,herrero2023iot-networking}.",
+        "File":  "02MarcoTeorico.tex"
+    },
+    {
+        "OldText":  "MQTT (Message Queuing Telemetry Transport) es un protocolo de mensajerÃa publish/subscribe extremadamente ligero diseÃado para conexiones con ancho de banda limitado.",
+        "Description":  "Tarea 1.2: Cita en descripción MQTT",
+        "NewText":  "MQTT (Message Queuing Telemetry Transport) es un protocolo de mensajerÃa publish/subscribe extremadamente ligero diseÃado para conexiones con ancho de banda limitado \\cite{mqtt-deployment,sdn-mqtt-alliance}.",
+        "File":  "02MarcoTeorico.tex"
+    },
+    {
+        "OldText":  "LwM2M (Lightweight M2M) es un protocolo de gestiÃn de dispositivos IoT desarrollado por Open Mobile Alliance, especÃficamente diseÃado para dispositivos con recursos limitados.",
+        "Description":  "Tarea 1.3: Cita en descripción LwM2M",
+        "NewText":  "LwM2M (Lightweight M2M) es un protocolo de gestiÃn de dispositivos IoT desarrollado por Open Mobile Alliance, especÃficamente diseÃado para dispositivos con recursos limitados \\cite{oma-lwm2m-v1.2,iot-comprehensive}.",
+        "File":  "02MarcoTeorico.tex"
+    },
+    {
+        "OldText":  "6LoWPAN permite la transmisiÃn de paquetes IPv6 sobre redes IEEE 802.15.4, facilitando la integraciÃn de dispositivos IoT de baja potencia en Internet.",
+        "Description":  "Tarea 1.4: Cita en descripción 6LoWPAN",
+        "NewText":  "6LoWPAN permite la transmisiÃn de paquetes IPv6 sobre redes IEEE 802.15.4, facilitando la integraciÃn de dispositivos IoT de baja potencia en Internet \\cite{gunjal2023iot-theory,iot-comprehensive}.",
+        "File":  "02MarcoTeorico.tex"
+    },
+    {
+        "OldText":  "La arquitectura CoAP utiliza el modelo cliente-servidor con mÃtodos REST (GET, POST, PUT, DELETE) sobre UDP, reduciendo considerablemente la sobrecarga del protocolo.",
+        "Description":  "Tarea 1.5: Cita en arquitectura CoAP",
+        "NewText":  "La arquitectura CoAP utiliza el modelo cliente-servidor con mÃtodos REST (GET, POST, PUT, DELETE) sobre UDP, reduciendo considerablemente la sobrecarga del protocolo \\cite{herrero2023iot-networking}.",
+        "File":  "02MarcoTeorico.tex"
+    }
+]
