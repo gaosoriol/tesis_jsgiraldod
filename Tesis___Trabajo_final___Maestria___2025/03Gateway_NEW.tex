@@ -1854,20 +1854,31 @@ POTENCIAL PEAK SHAVING:
 
 \begin{table}[h]
 \centering
+\small
 \caption{Comparativa IA Local (Gateway Ollama) vs IA Cloud (GPT-4/Claude)}
-\begin{tabular}{|l|l|l|}
+\label{tab:ia-local-vs-cloud}
+\begin{tabular}{|p{3.5cm}|p{5.5cm}|p{5.5cm}|}
 \hline
-\textbf{Característica} & \textbf{IA Local (Ollama)} & \textbf{IA Cloud (GPT-4)} \\
+\rowcolor{gray!20}
+\textbf{Característica} & \textbf{IA Local (Gateway Ollama)} & \textbf{IA Cloud (GPT-4/Claude)} \\
 \hline
-Latencia & <500 ms & 2-5 segundos \\
-Privacidad & Alta (datos locales) & Baja (envío cloud) \\
-Costo operativo & \$0 (hardware local) & \$0.01-0.10/consulta \\
-Disponibilidad offline & 100\% & 0\% (requiere WAN) \\
-Modelos disponibles & Open-source (Llama, Phi-3) & Propietarios (GPT-4) \\
-Capacidad análisis & Media (3B-7B params) & Alta (100B+ params) \\
-Consumo energético & +5W CPU / +15W GPU & N/A (cloud) \\
-Escalabilidad & Distribuida (por gateway) & Centralizada (cloud) \\
-Cumplimiento normativo & Total (datos no salen) & Parcial (DPA agreements) \\
+\textbf{Latencia} & \textcolor{blue}{$<$500 ms} & 2-5 segundos \\
+\hline
+\textbf{Privacidad} & \textcolor{blue}{Alta} (datos locales) & \textcolor{red}{Baja} (envío cloud) \\
+\hline
+\textbf{Costo operativo} & \textcolor{blue}{\$0} (hardware local) & \textcolor{red}{\$0.01-0.10/consulta} \\
+\hline
+\textbf{Disponibilidad offline} & \textcolor{blue}{100\%} & \textcolor{red}{0\%} (requiere WAN) \\
+\hline
+\textbf{Modelos disponibles} & Open-source (Llama 3.2, Phi-3 mini) & Propietarios (GPT-4, Claude 3.5) \\
+\hline
+\textbf{Capacidad análisis} & Media (3B-7B parámetros) & \textcolor{blue}{Alta} (100B+ parámetros) \\
+\hline
+\textbf{Consumo energético} & +5W CPU / +15W GPU iGPU & N/A (infraestructura cloud) \\
+\hline
+\textbf{Escalabilidad} & Distribuida (por gateway) & Centralizada (API rate limits) \\
+\hline
+\textbf{Cumplimiento normativo} & \textcolor{blue}{Total} (datos no salen) & Parcial (DPA agreements req.) \\
 \hline
 \end{tabular}
 \end{table}
