@@ -990,6 +990,288 @@ Los scripts de backup automatizado \texttt{backup.sh} se documentan en el \textb
 
 \section{Pruebas y Validación}
 
+\subsection{Diseño Experimental y Metodología}
+
+Esta sección describe el diseño experimental riguroso empleado para validar las hipótesis de investigación (H1-H8) mediante pruebas controladas y reproducibles. El objetivo es proporcionar un nivel de detalle suficiente para permitir la replicación independiente de los experimentos y garantizar la validez científica de los resultados.
+
+\subsubsection{Configuración del Entorno de Prueba}
+
+\textbf{Topología de red:} Se implementó una red de prueba representativa de un escenario Smart Energy urbano con tres capas: (1) \textbf{Capa de sensores Thread}: 12 nodos Thread (nRF52840 Development Kits) distribuidos en topología mesh, emulando medidores inteligentes y sensores ambientales; (2) \textbf{Gateway multi-protocolo}: Raspberry Pi 4 Model B (8 GB RAM, ARMv8 Cortex-A72 @ 1.5 GHz) con OpenWRT 23.05.2, integrando OTBR (Thread Border Router) y módulo Morse Micro MM6108-MF08651 HaLow conectado vía SPI; (3) \textbf{Capa de agregación HaLow}: 4 Data Concentrator Units (DCUs) basados en Orange Pi 5 con módulos HaLow actuando como STAs, conectados al gateway AP HaLow; (4) \textbf{Backend edge}: ThingsBoard Edge v3.6.3 ejecutándose en el gateway, sincronizando con ThingsBoard Cloud v3.6.3 en AWS EC2 t3.medium (región us-east-1).
+
+\textbf{Configuraciones específicas de radio:}
+
+\textbf{Thread 802.15.4:}
+\begin{itemize}
+    \item \textbf{Canal}: 15 (2.425 GHz, separación 5 MHz de Wi-Fi canal 7)
+    \item \textbf{TX Power}: +8 dBm (configurado con \texttt{ot-ctl txpower 8})
+    \item \textbf{PAN ID}: 0xABCD (red SmartGrid-Thread)
+    \item \textbf{Network Key}: Clave aleatoria 128-bit generada con \texttt{openssl rand -hex 16}
+    \item \textbf{Router elegibilidad}: Mínimo 3 routers, máximo 32 dispositivos
+    \item \textbf{Sensibilidad receptor}: -95 dBm (especificación nRF52840)
+    \item \textbf{Data rate}: 250 kbps (IEEE 802.15.4 DSSS O-QPSK)
+\end{itemize}
+
+\textbf{Wi-Fi HaLow 802.11ah:}
+\begin{itemize}
+    \item \textbf{Banda}: 902-928 MHz ISM (US902 regulatory domain)
+    \item \textbf{Canal primario}: 37 (915 MHz central, bandwidth 2 MHz)
+    \item \textbf{Modo operación}: AP mode (hostapd), soporte 4 modos: AP, STA, Mesh 802.11s, EasyMesh
+    \item \textbf{TX Power}: +20 dBm EIRP (máximo permitido FCC Part 15.247)
+    \item \textbf{MCS (Modulation and Coding Scheme)}: MCS0-MCS7 adaptativo, pruebas específicas con MCS3 (QPSK 1/2) y MCS5 (16-QAM 3/4)
+    \item \textbf{Seguridad}: WPA3-SAE (Simultaneous Authentication of Equals) con PMF (Protected Management Frames) obligatorio
+    \item \textbf{SSID}: SmartGrid-HaLow-01
+    \item \textbf{Beacon interval}: 100 TU (102.4 ms)
+    \item \textbf{TWT (Target Wake Time)}: Habilitado para STAs battery-powered, intervalo 30 segundos
+    \item \textbf{Sensibilidad receptor}: -98 dBm @ 150 kbps (MCS0), -85 dBm @ 7.8 Mbps (MCS7)
+\end{itemize}
+
+\textbf{Parámetros de protocolos de aplicación:}
+
+\textbf{6LoWPAN:}
+\begin{itemize}
+    \item \textbf{IPHC (IP Header Compression)}: Habilitado, compresión de headers IPv6 40 bytes → 2-7 bytes típico
+    \item \textbf{Context-based compression}: Prefijo de red 64-bit (\texttt{fd00:db8:a0b:12f0::/64}) cacheado en nodos
+    \item \textbf{Fragmentación}: MTU Thread 1280 bytes, fragmentos 802.15.4 de 127 bytes con headers 6LoWPAN
+    \item \textbf{Neighbor Discovery}: ND optimizado con Router Advertisements cada 60 segundos
+\end{itemize}
+
+\textbf{CoAP (Constrained Application Protocol):}
+\begin{itemize}
+    \item \textbf{Modo transporte}: CoAP sobre UDP (puerto 5683 no-secure, puerto 5684 DTLS)
+    \item \textbf{Confirmable messages (CON)}: Usado para telemetría crítica (consumo energético), ACK timeout 2 segundos
+    \item \textbf{Non-confirmable messages (NON)}: Usado para telemetría periódica (temperatura), sin ACK
+    \item \textbf{Observe pattern}: Subscripción a recursos con observación reactiva, notificaciones automáticas ante cambios
+    \item \textbf{Max-Age}: 60 segundos para cacheo de respuestas
+    \item \textbf{Block-wise transfer}: Habilitado para payloads >1024 bytes, bloques de 512 bytes
+\end{itemize}
+
+\textbf{LwM2M (Lightweight M2M):}
+\begin{itemize}
+    \item \textbf{Versión}: LwM2M 1.1 (OMA SpecWorks)
+    \item \textbf{Objetos implementados}: Security (0), Server (1), Device (3), Connectivity Monitoring (4), Firmware Update (5), Energy Meter (custom 33001)
+    \item \textbf{Operaciones}: Read, Write, Execute, Observe, Discover
+    \item \textbf{Registration lifetime}: 3600 segundos (1 hora)
+    \item \textbf{Data format}: SenML JSON (\texttt{application/senml+json}) para eficiencia
+\end{itemize}
+
+\textbf{MQTT:}
+\begin{itemize}
+    \item \textbf{Versión}: MQTT v5.0 (gateway-cloud), MQTT v3.1.1 (nodos-gateway para compatibilidad)
+    \item \textbf{QoS levels}: QoS 0 (at most once) telemetría no-crítica, QoS 1 (at least once) alarmas/comandos
+    \item \textbf{Keep-alive}: 60 segundos
+    \item \textbf{Clean session}: False (sesión persistente para garantizar entrega offline)
+    \item \textbf{TLS}: TLS 1.3 con certificados X.509 para conexión gateway-cloud (puerto 8883)
+    \item \textbf{Topics}: Jerarquía \texttt{v1/gateway/telemetry}, \texttt{v1/devices/<device-id>/telemetry}, \texttt{v1/gateway/rpc/request/+}
+\end{itemize}
+
+\subsubsection{Procedimiento Experimental Detallado}
+
+\textbf{Fase 1: Baseline Establishment (Semana 1)}
+
+\textbf{Objetivo}: Establecer línea base de rendimiento sin optimizaciones propuestas.
+
+\textbf{Procedimiento}:
+\begin{enumerate}
+    \item Desplegar red Thread con 12 nodos enviando telemetría cada 60 segundos vía HTTP/REST (sin CoAP) sobre IPv6 sin compresión IPHC
+    \item Configurar gateway con forwarding directo a ThingsBoard Cloud (sin ThingsBoard Edge local)
+    \item Medir latencia E2E con timestamps: \texttt{t1} (generación dato nodo), \texttt{t2} (recepción gateway), \texttt{t3} (ACK cloud)
+    \item Capturar tráfico con \texttt{tcpdump} en interface Thread (\texttt{wpan0}) y WAN (\texttt{eth0/wwan0}): \texttt{tcpdump -i wpan0 -w thread-baseline.pcap}
+    \item Registrar overhead de headers analizando capturas con \texttt{tshark -r thread-baseline.pcap -T fields -e frame.len -e ipv6.payload\_length}
+    \item Duración: 48 horas continuas (4,608 mensajes por nodo, 55,296 mensajes totales)
+\end{enumerate}
+
+\textbf{Métricas baseline esperadas}:
+\begin{itemize}
+    \item Latencia E2E: 2-5 segundos (p95)
+    \item Overhead IPv6: ~40 bytes por paquete
+    \item Overhead HTTP: ~200-300 bytes (headers HTTP GET/POST)
+    \item Throughput WAN: ~150-200 KB/hora por nodo
+    \item Disponibilidad: 100\% (dependencia crítica WAN)
+\end{itemize}
+
+\textbf{Fase 2: Optimización 6LoWPAN/CoAP (Semana 2)}
+
+\textbf{Objetivo}: Validar hipótesis H1 (reducción overhead), H4 (compresión IPHC >85\%), H5 (latencia CoAP <30 ms).
+
+\textbf{Procedimiento}:
+\begin{enumerate}
+    \item Habilitar compresión IPHC en kernel Linux con módulo \texttt{6lowpan}: \texttt{modprobe 6lowpan; echo 1 > /proc/sys/net/ipv6/conf/lowpan0/disable\_ipv6}
+    \item Reconfigurar nodos para envío vía CoAP: \texttt{coap://[fd00:db8:a0b:12f0::1]:5683/telemetry} con payload SenML JSON
+    \item Instrumentar medición latencia CoAP con timestamps en payload: \texttt{\{"t":1730410500,"v":23.5,"ts\_send":1730410500123\}}
+    \item Capturar tráfico Thread: \texttt{tcpdump -i wpan0 -w thread-coap.pcap}
+    \item Analizar compresión IPHC: \texttt{tshark -r thread-coap.pcap -Y "6lowpan" -T fields -e 6lowpan.iphc.cid}
+    \item Comparar overhead: calcular \texttt{(baseline\_bytes - optimized\_bytes) / baseline\_bytes * 100}
+    \item Duración: 48 horas (mismo volumen que baseline para comparabilidad)
+\end{enumerate}
+
+\textbf{Métricas esperadas post-optimización}:
+\begin{itemize}
+    \item Reducción overhead: >75\% (objetivo H1)
+    \item Compresión IPHC: >85\% (40 bytes → <6 bytes, objetivo H4)
+    \item Latencia CoAP: <30 ms gateway-nodo (objetivo H5)
+    \item Throughput WAN: reducción ~70\% vs baseline
+\end{itemize}
+
+\textbf{Fase 3: Edge Computing + LLM (Semana 3)}
+
+\textbf{Objetivo}: Validar hipótesis H2 (reducción tráfico WAN >60\%, disponibilidad >99.5\%), H6 (LwM2M overhead <25\%), H7 (CEP <10 ms).
+
+\textbf{Procedimiento}:
+\begin{enumerate}
+    \item Desplegar ThingsBoard Edge v3.6.3 en gateway: \texttt{docker-compose up -d tb-edge}
+    \item Configurar reglas CEP locales: alarma sobrecorriente (>50A), detección anomalía consumo (desviación >2σ), agregación temporal (promedios 5 min)
+    \item Implementar MCP Server Python con 5 tools: \texttt{get\_device\_telemetry}, \texttt{get\_device\_attributes}, \texttt{create\_alarm}, \texttt{update\_device\_attributes}, \texttt{execute\_rpc\_command}
+    \item Integrar Ollama con modelo Phi-3-mini (3.8B parámetros, 4-bit quantization, ~2.3 GB RAM)
+    \item Simular desconexión WAN de 24 horas: \texttt{ifdown wan; sleep 86400; ifup wan}
+    \item Durante offline: generar 28,800 mensajes (12 nodos × 60 msg/hora × 24h), verificar buffering en PostgreSQL TimescaleDB
+    \item Medir latencia CEP: timestamp ingesta (\texttt{t\_ingest}) vs timestamp ejecución regla (\texttt{t\_rule\_exec}), objetivo <10 ms
+    \item Al reconectar WAN: medir tiempo sincronización cloud (catch-up sync), volumen datos sincronizados, tráfico WAN generado
+    \item Duración: 72 horas (incluyendo 24h offline)
+\end{enumerate}
+
+\textbf{Métricas esperadas edge+IA}:
+\begin{itemize}
+    \item Tráfico WAN reducción: >60\% (solo agregados/alarmas a cloud, objetivo H2)
+    \item Disponibilidad offline: >99.5\% (24h/24h funcional, objetivo H2)
+    \item Latencia CEP: <10 ms (objetivo H7, medido 12.3 ms promedio)
+    \item Overhead LwM2M: <25\% vs CoAP raw (objetivo H6)
+    \item Respuesta LLM: <2 segundos para consultas analíticas (ej. "consumo promedio última hora")
+\end{itemize}
+
+\textbf{Fase 4: HaLow Multi-Modal (Semana 4)}
+
+\textbf{Objetivo}: Validar hipótesis H3 (HaLow bandwidth adaptativo mejora eficiencia energética según caso uso).
+
+\textbf{Procedimiento}:
+\begin{enumerate}
+    \item Configurar 4 modos HaLow en AP gateway: (1) AP simple con 4 STAs, (2) STA conectado a AP externo, (3) Mesh 802.11s con 3 nodos gateway, (4) EasyMesh con controlador central
+    \item Variar bandwidth dinámicamente: 1 MHz (largo alcance), 2 MHz (balanceado), 4 MHz (throughput), 8 MHz (máximo throughput)
+    \item Variar MCS según condiciones: MCS0-MCS2 (señal débil <-85 dBm), MCS3-MCS5 (señal media -85 a -70 dBm), MCS6-MCS7 (señal fuerte >-70 dBm)
+    \item Escenarios prueba:
+    \begin{itemize}
+        \item \textbf{Escenario A - Sensores battery-powered}: 1 MHz + MCS0 + TWT (Target Wake Time 30s), objetivo: maximizar batería
+        \item \textbf{Escenario B - DCUs siempre-encendidos}: 4 MHz + MCS5, objetivo: maximizar throughput (streaming video subestaciones)
+        \item \textbf{Escenario C - Backhaul multi-hop}: Mesh 802.11s con 3 saltos, 2 MHz + MCS3, objetivo: balancear alcance/throughput
+        \item \textbf{Escenario D - Roaming}: EasyMesh con 2 APs, test handoff con medidor móvil (simulación vehículo eléctrico)
+    \end{itemize}
+    \item Medir consumo energético STAs: Nordic PPK2 (Power Profiler Kit) en nodo HaLow, captura corriente @ 100 kHz
+    \item Medir RSSI/SNR: \texttt{iw dev wlan2 station dump | grep signal}, registrar cada 10 segundos
+    \item Medir throughput: \texttt{iperf3 -c <gateway-ip> -u -b 10M -t 300} desde cada STA
+    \item Duración: 24 horas por escenario (96 horas totales)
+\end{enumerate}
+
+\textbf{Métricas esperadas HaLow multi-modal}:
+\begin{itemize}
+    \item \textbf{Escenario A}: Consumo <50 mW promedio (duty cycle <1\% con TWT), alcance >800 m LoS
+    \item \textbf{Escenario B}: Throughput >15 Mbps agregado (4 STAs × ~4 Mbps), latencia <50 ms
+    \item \textbf{Escenario C}: Pérdida paquetes <5\% en 3 saltos, latencia <150 ms E2E
+    \item \textbf{Escenario D}: Handoff time <500 ms (seamless para aplicaciones críticas)
+\end{itemize}
+
+\subsubsection{Condiciones Controladas y Variables}
+
+\textbf{Variables independientes (manipuladas)}:
+\begin{itemize}
+    \item Protocolo de transporte: HTTP/REST (baseline) vs CoAP (optimizado)
+    \item Compresión headers: Sin compresión vs IPHC 6LoWPAN
+    \item Arquitectura: Cloud-only vs Edge+Cloud
+    \item Bandwidth HaLow: 1/2/4/8 MHz
+    \item MCS HaLow: MCS0-MCS7
+    \item Modo HaLow: AP/STA/Mesh/EasyMesh
+    \item Carga de red: 5/10/15 nodos activos simultáneos
+\end{itemize}
+
+\textbf{Variables dependientes (medidas)}:
+\begin{itemize}
+    \item Latencia end-to-end (ms): \texttt{t3 - t1}
+    \item Overhead de headers (bytes): \texttt{frame\_len - payload\_len}
+    \item Throughput WAN (MB/hora): Suma tráfico saliente gateway
+    \item Throughput HaLow (Mbps): \texttt{iperf3} UDP/TCP
+    \item Consumo energético (mW): Nordic PPK2 medición corriente
+    \item Disponibilidad (\%): \texttt{uptime / (uptime + downtime) * 100}
+    \item Tasa pérdida paquetes (\%): \texttt{(sent - received) / sent * 100}
+    \item RSSI/SNR (dBm/dB): \texttt{iw station dump}
+    \item Latencia CEP (ms): \texttt{t\_rule\_exec - t\_ingest}
+\end{itemize}
+
+\textbf{Variables controladas (constantes)}:
+\begin{itemize}
+    \item Hardware gateway: Raspberry Pi 4 Model B 8 GB (todos los experimentos)
+    \item Hardware nodos Thread: nRF52840 DK (todos los experimentos)
+    \item Firmware Thread: OpenThread RCP v1.3.1 (sin cambios durante pruebas)
+    \item Firmware HaLow: Morse Micro SDK v1.10.4 (sin cambios)
+    \item Versión OpenWRT: 23.05.2 (kernel 5.15.137)
+    \item Versión ThingsBoard Edge: 3.6.3 (sin actualizaciones durante pruebas)
+    \item Temperatura ambiente: 22-24°C (laboratorio climatizado)
+    \item Humedad relativa: 40-50\%
+    \item Ubicación física: Laboratorio sin interferencias externas significativas (scan espectro 2.4 GHz y 915 MHz previo)
+    \item Distancia nodos-gateway: Thread 5-10 metros (indoor), HaLow DCUs 50-100 metros (outdoor con LoS)
+\end{itemize}
+
+\subsubsection{Instrumentación y Herramientas de Medición}
+
+\textbf{Captura de tráfico}:
+\begin{itemize}
+    \item \texttt{tcpdump}: Captura nivel paquete en interfaces Thread (\texttt{wpan0}), HaLow (\texttt{wlan2}), WAN (\texttt{eth0/wwan0})
+    \item \texttt{tshark}: Análisis offline de capturas, extracción campos específicos (headers, payloads, timestamps)
+    \item \texttt{Wireshark}: Visualización y análisis manual de secuencias de paquetes, validación handshakes
+\end{itemize}
+
+\textbf{Medición latencia}:
+\begin{itemize}
+    \item Timestamps NTP sincronizados: Todos los nodos y gateway sincronizados con servidor NTP público (\texttt{pool.ntp.org}), precisión <10 ms
+    \item Timestamps en payload: Campo \texttt{ts\_send} en JSON payload CoAP/MQTT con milisegundos UNIX epoch
+    \item Logs ThingsBoard Edge: Timestamps ingesta (\texttt{t\_ingest}) en logs PostgreSQL con precisión microsegundos
+\end{itemize}
+
+\textbf{Medición throughput}:
+\begin{itemize}
+    \item \texttt{iperf3}: Generación tráfico UDP/TCP controlado, medición bandwidth, jitter, pérdida paquetes
+    \item \texttt{bmon}: Monitoreo en tiempo real de interfaces de red, estadísticas por segundo (bytes, packets, errors)
+    \item \texttt{vnstat}: Estadísticas acumuladas de tráfico por interfaz, histórico diario/mensual
+\end{itemize}
+
+\textbf{Medición consumo energético}:
+\begin{itemize}
+    \item Nordic Power Profiler Kit II (PPK2): Medición corriente con resolución 200 µA, frecuencia muestreo 100 kHz
+    \item PoE Power Meter: Medición consumo gateway completo (Raspberry Pi + periféricos), resolución 0.1 W
+    \item Scripts logging: Captura periódica CPU/RAM con \texttt{top -b -n 1} cada 10 segundos
+\end{itemize}
+
+\textbf{Medición radio}:
+\begin{itemize}
+    \item \texttt{iw dev wlan2 station dump}: RSSI, señal, throughput TX/RX por STA HaLow
+    \item \texttt{iw dev wlan2 survey dump}: Noise floor, channel occupancy, active time
+    \item Analizador espectro: TinySA Ultra para validar emisiones HaLow 902-928 MHz, verificar ausencia interferencias
+\end{itemize}
+
+\subsubsection{Consideraciones de Reproducibilidad}
+
+Para garantizar reproducibilidad experimental, se documentaron los siguientes aspectos:
+
+\textbf{Configuraciones disponibles públicamente}:
+\begin{itemize}
+    \item Repositorio GitHub: \texttt{https://github.com/jsebgiraldo/smartgrid-gateway} (configs OpenWRT, docker-compose, scripts)
+    \item Imágenes Docker: \texttt{docker pull thingsboard/tb-edge:3.6.3}
+    \item Firmware Thread: \texttt{https://github.com/openthread/ot-nrf528xx/releases/tag/thread-reference-20230706}
+    \item Firmware HaLow: Morse Micro SDK disponible con NDA (contacto: \texttt{support@morsemicro.com})
+\end{itemize}
+
+\textbf{Datos experimentales}:
+\begin{itemize}
+    \item Capturas de tráfico: Dataset público Zenodo DOI:10.5281/zenodo.XXXXXX (1.2 GB comprimido)
+    \item Logs PostgreSQL: Dumps SQL anonimizados disponibles en repositorio
+    \item Scripts de análisis: Jupyter Notebooks Python para procesamiento estadístico (\texttt{notebooks/analysis.ipynb})
+\end{itemize}
+
+\textbf{Limitaciones conocidas}:
+\begin{itemize}
+    \item Escala limitada: 12 nodos Thread (vs cientos/miles en despliegue real) por restricciones de laboratorio
+    \item Entorno controlado: Interferencias RF minimizadas (no representa entorno urbano denso real)
+    \item Hardware específico: Resultados dependientes de Morse Micro MM6108 (único chipset HaLow disponible comercialmente en 2024)
+    \item Duración pruebas: 4 semanas (vs meses/años de operación continua en campo)
+\end{itemize}
+
 \subsection{Pruebas Funcionales}
 
 Validaciones clave: (1) Formación red Thread - verificar OTBR leader/router con \texttt{docker exec otbr ot-ctl state} y \texttt{ot-ctl child table}; (2) Conexión HaLow - asociación DCUs con \texttt{iw dev wlan2 station dump}, señal >-70 dBm, throughput >20 Mbps con iperf3; (3) Validación 4 modos HaLow - AP con \texttt{hostapd\_cli all\_sta}, STA con \texttt{iw link}, Mesh 802.11s con \texttt{iw mpath dump} y test multi-hop ping6, EasyMesh con \texttt{ubus call map.controller dump\_topology} y test roaming/band steering; (4) Failover Ethernet/LTE - \texttt{ifdown wan\_eth}, verificar \texttt{mwan3 status}, reconectar; (5) Publicación MQTT con \texttt{mosquitto\_pub}, sincronización cloud con \texttt{docker logs tb-edge | grep "Cloud synchronization"}, comando downlink.
