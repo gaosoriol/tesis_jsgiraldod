@@ -1,16 +1,22 @@
 \chapter{Introducción}
 
+\textit{Este capítulo establece el contexto y la motivación de la investigación, presentando los desafíos actuales de las redes eléctricas inteligentes (Smart Energy) en la era de la transición energética. Se analizan las limitaciones de las arquitecturas tradicionales basadas en la nube, se comparan las principales tecnologías de comunicación IoT disponibles (Thread, Zigbee, Bluetooth Mesh, LoRaWAN, Wi-Fi HaLow), y se justifica la elección de la arquitectura propuesta. El capítulo plantea el problema de investigación, delimita el alcance del trabajo, formula las hipótesis a validar y establece los objetivos generales y específicos. Finalmente, se describe la estructura del documento y la metodología empleada para el desarrollo de la tesis.}
+
 \section{Contexto y Motivación}
 
 \subsection{El Desafío de las Redes Smart Energy}
 
-La transición energética global hacia sistemas descentralizados, con alta penetración de energías renovables distribuidas (DER) y gestión activa de la demanda (DSM), exige infraestructuras de medición inteligente (AMI - Advanced Metering Infrastructure) capaces de recolectar, transmitir y procesar datos de millones de puntos de consumo en tiempo cuasi-real. Según la Agencia Internacional de Energía (IEA), se proyecta la instalación de más de 1.300 millones de medidores inteligentes a nivel global para 2030, generando aproximadamente 15 petabytes de datos de telemetría diarios.
+La transición energética global hacia sistemas descentralizados, con alta penetración de energías renovables distribuidas (DER, por sus siglas en inglés \textit{Distributed Energy Resources}) y gestión activa de la demanda (DSM, \textit{Demand Side Management}), exige infraestructuras de medición inteligente robustas y escalables. Estas infraestructuras, conocidas como AMI (\textit{Advanced Metering Infrastructure}), deben ser capaces de recolectar, transmitir y procesar datos de millones de puntos de consumo en tiempo cuasi-real, proporcionando la información necesaria para optimizar la operación de la red eléctrica.
 
-Las arquitecturas tradicionales basadas en comunicación directa dispositivo-nube enfrentan limitaciones críticas: latencias elevadas (>200 ms), dependencia estricta de conectividad WAN continua, costos operacionales prohibitivos en escenarios de alta densidad de dispositivos, y dificultades para garantizar requisitos de tiempo real exigidos por aplicaciones de respuesta a la demanda (DR) y gestión de microrredes.
+Según proyecciones de la Agencia Internacional de Energía (IEA, \textit{International Energy Agency}), se anticipa la instalación de más de 1.300 millones de medidores inteligentes a nivel global para el año 2030. Este despliegue masivo generará aproximadamente 15 petabytes (PB) de datos de telemetría diarios, planteando desafíos significativos en términos de comunicación, almacenamiento y procesamiento de información.
+
+Sin embargo, las arquitecturas tradicionales basadas en comunicación directa dispositivo-nube enfrentan limitaciones críticas que comprometen su viabilidad técnica y económica. En primer lugar, estas soluciones presentan latencias elevadas (superiores a 200 milisegundos), lo que dificulta aplicaciones de tiempo real como la respuesta a la demanda. Además, exhiben una dependencia estricta de conectividad WAN (\textit{Wide Area Network}) continua, generando vulnerabilidad ante interrupciones del servicio de internet. Por otra parte, los costos operacionales se vuelven prohibitivos en escenarios de alta densidad de dispositivos, debido al alto consumo de ancho de banda y los cargos por transferencia de datos a la nube. Finalmente, estas arquitecturas presentan dificultades para garantizar los requisitos de tiempo real exigidos por aplicaciones críticas como la gestión de microrredes y la respuesta automatizada a la demanda (DR, \textit{Demand Response}).
 
 \subsection{Estado Actual de las Tecnologías de Comunicación IoT}
 
-El ecosistema IoT para aplicaciones industriales y de infraestructura crítica se caracteriza por una heterogeneidad de tecnologías de comunicación, cada una optimizada para rangos específicos de alcance, throughput, latencia y consumo energético.
+Para abordar los desafíos planteados en la sección anterior, es fundamental comprender el panorama actual de las tecnologías de comunicación disponibles para aplicaciones IoT (\textit{Internet of Things}) en el sector energético. El ecosistema IoT para aplicaciones industriales y de infraestructura crítica se caracteriza por una heterogeneidad de tecnologías de comunicación, cada una optimizada para rangos específicos de alcance, throughput (capacidad de transmisión), latencia y consumo energético. Esta diversidad tecnológica permite seleccionar la combinación más adecuada según los requisitos específicos de cada aplicación y escenario de despliegue.
+
+A continuación, se presenta una comparativa técnica de las principales tecnologías de comunicación relevantes para redes de medición inteligente, agrupadas en tres categorías: protocolos mesh de corto alcance (2.4 GHz), plataformas de procesamiento en el borde (edge computing), y tecnologías de última milla para conectividad de área amplia.
 
 \subsubsection{Comparativa Técnica de Protocolos Mesh 2.4 GHz}
 
@@ -45,7 +51,9 @@ El ecosistema IoT para aplicaciones industriales y de infraestructura crítica s
 \end{tabular}
 \end{table}
 
-Thread emerge como protocolo preferencial para redes de campo en Smart Energy debido a su routing IPv6 nativo, que facilita integración con infraestructuras IP existentes, estandarización completa bajo Thread Group (miembro de Connectivity Standards Alliance), y soporte multi-vendor garantizado mediante certificación Thread 1.3.1.
+Como se observa en la Tabla \ref{tab:mesh-comparison}, Thread emerge como el protocolo preferencial para redes de campo en aplicaciones de Smart Energy debido a tres ventajas fundamentales. En primer lugar, su routing IPv6 nativo facilita la integración con infraestructuras IP existentes, eliminando la necesidad de gateways de traducción de protocolo propietarios. En segundo lugar, cuenta con una estandarización completa bajo Thread Group (miembro de la Connectivity Standards Alliance), lo que garantiza interoperabilidad entre fabricantes. Finalmente, ofrece soporte multi-vendor certificado mediante el programa de certificación Thread 1.3.1, reduciendo el riesgo de vendor lock-in en proyectos de largo plazo.
+
+Además, Thread presenta latencias significativamente menores (40-60 ms en tres saltos) comparado con Zigbee (80-120 ms) y Bluetooth Mesh (100-200 ms), lo cual resulta crítico para aplicaciones que requieren respuesta en tiempo real, como la detección de anomalías en el consumo eléctrico o la coordinación de microrredes.
 
 \subsubsection{Plataformas de Edge Computing - Análisis Comparativo}
 
@@ -78,7 +86,9 @@ Thread emerge como protocolo preferencial para redes de campo en Smart Energy de
 \end{tabular}
 \end{table}
 
-ThingsBoard Edge se posiciona como solución robusta para aplicaciones industriales que requieren continuidad operacional durante particiones WAN prolongadas, con capacidades completas de rule engine, dashboards interactivos y sincronización bidireccional de configuraciones y datos históricos.
+Del análisis comparativo presentado en la Tabla \ref{tab:edge-platforms}, ThingsBoard Edge se posiciona como la solución más robusta para aplicaciones industriales que requieren continuidad operacional durante particiones WAN prolongadas. A diferencia de las alternativas comerciales propietarias (AWS IoT Greengrass, Azure IoT Edge), ThingsBoard Edge proporciona capacidades completas de procesamiento de reglas (rule engine), dashboards interactivos accesibles localmente y sincronización bidireccional de configuraciones y datos históricos. 
+
+Esta autonomía offline ilimitada resulta especialmente relevante en el contexto latinoamericano, donde las infraestructuras de telecomunicaciones pueden presentar interrupciones frecuentes, particularmente en zonas rurales y semi-urbanas. Adicionalmente, su licenciamiento Apache 2.0 elimina costos recurrentes de suscripción y permite personalización del código fuente según requisitos específicos del proyecto.
 
 \subsubsection{HaLow - Posicionamiento frente a Alternativas de Última Milla}
 
@@ -113,11 +123,13 @@ ThingsBoard Edge se posiciona como solución robusta para aplicaciones industria
 \end{tabular}
 \end{table}
 
-Wi-Fi HaLow combina throughput superior a LoRaWAN (40 Mbps vs 50 kbps), latencia determinística (<30 ms vs 1-5 seg), y ausencia de costos recurrentes de conectividad frente a LTE Cat-M1, posicionándose como tecnología óptima para backhaul de gateways Smart Energy en zonas urbanas y suburbanas densas.
+Como se evidencia en la Tabla \ref{tab:lastmile-comparison}, Wi-Fi HaLow (IEEE 802.11ah) combina las ventajas de diferentes tecnologías de última milla en un único estándar. Frente a LoRaWAN, ofrece un throughput superior (40 Mbps vs 50 kbps), lo que permite la transmisión de datos agregados de múltiples medidores sin congestión. Comparado con LTE Cat-M1, proporciona latencia determinística menor (10-30 ms vs 50-100 ms) y elimina los costos recurrentes de suscripción a operadores móviles (MVNO, \textit{Mobile Virtual Network Operator}). Por otra parte, supera significativamente al Wi-Fi 6 convencional en alcance (1-2 km vs 50-100 m) gracias a su operación en bandas sub-GHz con mayor capacidad de penetración en edificaciones.
+
+Adicionalmente, HaLow opera en espectro no licenciado ISM (\textit{Industrial, Scientific and Medical}), permitiendo despliegues privados controlados por el operador de la red eléctrica sin dependencia de infraestructura de terceros. Esta característica posiciona a Wi-Fi HaLow como la tecnología óptima para el backhaul de gateways Smart Energy en zonas urbanas y suburbanas de densidad media-alta, donde se requiere un balance entre alcance, capacidad y autonomía operativa.
 
 \subsection{Brechas en Arquitecturas IoT Existentes}
 
-El análisis del estado del arte revela limitaciones estructurales en arquitecturas IoT contemporáneas:
+A pesar de los avances tecnológicos descritos en las secciones anteriores, el análisis crítico del estado del arte revela limitaciones estructurales en las arquitecturas IoT contemporáneas que impiden su adopción masiva en aplicaciones de infraestructura crítica como las redes eléctricas inteligentes. Estas brechas se manifiestan en tres dimensiones principales: dependencia excesiva de conectividad cloud, ineficiencias en la utilización del ancho de banda y ausencia de capacidades de procesamiento inteligente distribuido.
 
 \begin{itemize}
 \item \textbf{Dependencia cloud-centric}: Las arquitecturas tradicionales dispositivo → cloud presentan Single Points of Failure (SPOF) en enlaces WAN. Estudios empíricos en despliegues urbanos reportan disponibilidades de 94-96\% en conectividad celular LTE (downtimes acumulados 18-25 días/año), insuficientes para aplicaciones críticas.
@@ -505,3 +517,13 @@ El presente documento se estructura en los siguientes capítulos:
 \textbf{Capítulo 5 - Conclusiones y Trabajo Futuro}: Síntesis de la investigación, cumplimiento de objetivos, validación de hipótesis, contribuciones académicas y técnicas, lecciones aprendidas, limitaciones del trabajo, y recomendaciones para trabajo futuro.
 
 \textbf{Anexos}: Instalación OpenWRT y configuración HaLow (Anexo A), Docker Compose y servicios (Anexo B), Scripts de integración (Anexo C), Especificaciones IEEE 2030.5 (Anexo D), Implementación nodo IoT ESP32-C6 (Anexo E), Configuraciones OpenWRT UCI completas (Anexo F).
+
+\section{Resumen del Capítulo}
+
+Este capítulo ha establecido el contexto y la justificación de la investigación, identificando las limitaciones críticas de las arquitecturas IoT tradicionales centradas en la nube para aplicaciones de infraestructura crítica en el sector energético. Se presentó un análisis comparativo exhaustivo de las tecnologías de comunicación disponibles (Thread, Zigbee, Bluetooth Mesh para redes de campo; LoRaWAN, LTE Cat-M1, Wi-Fi HaLow para conectividad de última milla), justificando la selección de Thread y HaLow como base de la arquitectura propuesta debido a sus ventajas en términos de interoperabilidad, latencia, throughput y costos operacionales.
+
+Se formularon cinco hipótesis cuantificables que serán validadas experimentalmente en los capítulos posteriores, abarcando aspectos de eficiencia de protocolos (H1), procesamiento edge (H2), disponibilidad operacional (H3), eficiencia energética (H4) y costo-efectividad (H5). Los objetivos específicos plantean el diseño, implementación, validación experimental y evaluación comparativa de una arquitectura IoT jerárquica de tres niveles (nodos, routers, gateways) con cumplimiento de estándares internacionales IEEE 2030.5 e ISO/IEC 30141.
+
+Las contribuciones esperadas del trabajo abarcan tres dimensiones: académicas (caracterización empírica Thread-HaLow, benchmarking de arquitecturas edge), técnicas (implementaciones open-source, configuraciones OpenWRT, firmware IoT) e industriales (reducción de costos operacionales, guías de implementación práctica, casos de negocio para adopción de HaLow).
+
+El siguiente capítulo (Marco Teórico) profundiza en los fundamentos teóricos de las tecnologías seleccionadas, presentando el estado del arte de los protocolos de comunicación IoT, los estándares de interoperabilidad para Smart Energy y las plataformas de procesamiento en el borde, estableciendo las bases conceptuales para el diseño de la arquitectura propuesta que se detalla en el Capítulo 3.
