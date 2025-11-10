@@ -380,29 +380,31 @@ CoAP (Constrained Application Protocol, RFC 7252) es un protocolo web RESTful op
 
 \begin{table}[h]
 \centering
-\caption{Comparación CoAP vs HTTP}
+\small
+\caption{Comparación CoAP vs HTTP para dispositivos constrained}
 \label{tab:coap-vs-http}
-\begin{tabular}{|p{4cm}|p{4.5cm}|p{4.5cm}|}
+\begin{tabular}{|p{3.5cm}|p{4cm}|p{4cm}|}
 \hline
+\rowcolor{gray!20}
 \textbf{Característica} & \textbf{CoAP/UDP} & \textbf{HTTP/TCP} \\
 \hline
-\textbf{Header mínimo} & 4 bytes & 100+ bytes (típico 200-500) \\
+\textbf{Header mínimo} & \textcolor{blue}{4 bytes} & \textcolor{red}{100+ bytes (típico 200-500)} \\
 \hline
-\textbf{Transporte} & UDP (8 bytes) & TCP (20 bytes + handshake) \\
+\textbf{Transporte} & \textcolor{blue}{UDP (8 bytes)} & \textcolor{red}{TCP (20 bytes + handshake)} \\
 \hline
-\textbf{Overhead total} & 12-30 bytes & 120-520 bytes \\
+\textbf{Overhead total} & \textcolor{blue}{12-30 bytes} & \textcolor{red}{120-520 bytes} \\
 \hline
-\textbf{Latencia conexión} & 0 ms (stateless) & 50-150 ms (3-way handshake) \\
+\textbf{Latencia conexión} & \textcolor{green}{0 ms (stateless)} & \textcolor{red}{50-150 ms (3-way handshake)} \\
 \hline
-\textbf{Formato} & Binario (parsing rápido) & Texto (parsing lento) \\
+\textbf{Formato} & \textcolor{blue}{Binario (parsing rápido)} & \textcolor{red}{Texto (parsing lento)} \\
 \hline
-\textbf{Subscripciones} & Observe (push nativo) & Polling o WebSocket \\
+\textbf{Subscripciones} & \textcolor{blue}{Observe (push nativo)} & \textcolor{red}{Polling o WebSocket} \\
 \hline
-\textbf{Fragmentación} & Block-wise (CoAP-aware) & TCP segmentation (opaco) \\
+\textbf{Fragmentación} & \textcolor{blue}{Block-wise (CoAP-aware)} & \textcolor{red}{TCP segmentation (opaco)} \\
 \hline
-\textbf{Multicast} & Sí (UDP nativo) & No (TCP unicast only) \\
+\textbf{Multicast} & \textcolor{blue}{Sí (UDP nativo)} & \textcolor{red}{No (TCP unicast only)} \\
 \hline
-\textbf{Seguridad} & DTLS (menor overhead) & TLS (mayor overhead) \\
+\textbf{Seguridad} & \textcolor{blue}{DTLS (menor overhead)} & \textcolor{red}{TLS (mayor overhead)} \\
 \hline
 \end{tabular}
 \end{table}
@@ -521,27 +523,29 @@ Ejemplo: /3303/0/5700 = Temperature Sensor (3303) / Instance 0 / Sensor Value (5
 
 \begin{table}[h]
 \centering
-\caption{Objetos LwM2M Relevantes para Smart Energy}
+\small
+\caption{Objetos LwM2M relevantes para Smart Energy IoT}
 \label{tab:lwm2m-objects}
-\begin{tabular}{|c|p{4cm}|p{7cm}|}
+\begin{tabular}{|p{1.5cm}|p{3.5cm}|p{7cm}|}
 \hline
+\rowcolor{gray!20}
 \textbf{Object ID} & \textbf{Nombre} & \textbf{Recursos Clave} \\
 \hline
-0 & Security & Server URI (0), Bootstrap (1), Security Mode (2), Public Key (3), Server Public Key (4), Secret Key (5) \\
+\textcolor{blue}{0} & \textcolor{blue}{Security} & Server URI (0), Bootstrap (1), Security Mode (2), Public Key (3), Secret Key (5) \\
 \hline
-1 & Server & Lifetime (1), Min Period (2), Max Period (3), Disable (4), Notification Storing (6) \\
+\textcolor{blue}{1} & \textcolor{blue}{Server} & Lifetime (1), Min Period (2), Max Period (3), Disable (4), Notification Storing (6) \\
 \hline
-3 & Device & Manufacturer (0), Model (1), Serial Number (2), Firmware Ver (3), Reboot (4), Factory Reset (5), Battery Level (9) \\
+3 & Device & Manufacturer (0), Model (1), Serial Number (2), Firmware Ver (3), Reboot (4), Battery Level (9) \\
 \hline
-4 & Connectivity Monitoring & Network Bearer (0), Available Network Bearer (1), Radio Signal Strength (2), Link Quality (3), IP Addresses (4) \\
+4 & Connectivity Monitoring & Network Bearer (0), Radio Signal Strength (2), Link Quality (3), IP Addresses (4) \\
 \hline
 5 & Firmware Update & Package (0), Package URI (1), Update (2), State (3), Update Result (5) \\
 \hline
-3303 & Temperature & Sensor Value (5700), Units (5701), Min/Max (5601/5602) \\
+\textcolor{green}{3303} & \textcolor{green}{Temperature} & Sensor Value (5700), Units (5701), Min/Max (5601/5602) \\
 \hline
-3305 & Power Measurement & Instantaneous Active Power (5800), Active Energy (5805), Reactive Energy (5810) \\
+\textcolor{green}{3305} & \textcolor{green}{Power Measurement} & Instantaneous Active Power (5800), Active Energy (5805), Reactive Energy (5810) \\
 \hline
-3331 & Voltage Measurement & Sensor Value (5700), Min/Max (5601/5602), Application Type (5750) \\
+\textcolor{green}{3331} & \textcolor{green}{Voltage Measurement} & Sensor Value (5700), Min/Max (5601/5602), Application Type (5750) \\
 \hline
 \end{tabular}
 \end{table}
@@ -804,24 +808,37 @@ Tabla completa de MCS para 1 MHz channel width (caso típico Smart Energy):
 
 \begin{table}[h]
 \centering
-\caption{MCS HaLow para 1 MHz Channel Width}
+\small
+\caption{MCS HaLow para 1 MHz channel width en Smart Energy}
 \label{tab:halow-mcs}
-\begin{tabular}{|c|c|c|c|c|}
+\begin{tabular}{|p{1.5cm}|p{2.2cm}|p{1.8cm}|p{2.5cm}|p{2.5cm}|}
 \hline
+\rowcolor{gray!20}
 \textbf{MCS} & \textbf{Modulation} & \textbf{Code Rate} & \textbf{Data Rate (Mbps)} & \textbf{Sensitivity (dBm)} \\
 \hline
-0 & BPSK & 1/2 & 0.150 & -99 \\
-1 & QPSK & 1/2 & 0.300 & -96 \\
-2 & QPSK & 3/4 & 0.450 & -94 \\
-3 & 16-QAM & 1/2 & 0.600 & -91 \\
-4 & 16-QAM & 3/4 & 0.900 & -88 \\
+\textcolor{green}{0} & BPSK & 1/2 & \textcolor{green}{0.150} & \textcolor{blue}{-99} \\
+\hline
+\textcolor{green}{1} & QPSK & 1/2 & \textcolor{green}{0.300} & \textcolor{blue}{-96} \\
+\hline
+\textcolor{green}{2} & QPSK & 3/4 & \textcolor{green}{0.450} & \textcolor{blue}{-94} \\
+\hline
+\textcolor{blue}{3} & 16-QAM & 1/2 & \textcolor{blue}{0.600} & -91 \\
+\hline
+\textcolor{blue}{4} & 16-QAM & 3/4 & \textcolor{blue}{0.900} & -88 \\
+\hline
 5 & 64-QAM & 2/3 & 1.200 & -85 \\
+\hline
 6 & 64-QAM & 3/4 & 1.350 & -82 \\
+\hline
 7 & 64-QAM & 5/6 & 1.500 & -80 \\
-8 & 256-QAM & 3/4 & 1.800 & -77 \\
-9 & 256-QAM & 5/6 & 2.000 & -75 \\
+\hline
+8 & 256-QAM & 3/4 & 1.800 & \textcolor{red}{-77} \\
+\hline
+9 & 256-QAM & 5/6 & 2.000 & \textcolor{red}{-75} \\
+\hline
 10 & — & — & (Reservado) & — \\
 \hline
+\end{tabular}
 \end{tabular}
 \end{table}
 
