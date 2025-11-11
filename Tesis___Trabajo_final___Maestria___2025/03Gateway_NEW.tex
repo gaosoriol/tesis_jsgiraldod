@@ -152,9 +152,9 @@ La arquitectura ARM de 64 bits permite ejecutar contenedores Docker con ThingsBo
 
 \subsection{Visión General: Edge-First Architecture}
 
-El gateway implementa una arquitectura centrada en **ThingsBoard Edge**, que actúa como plataforma de procesamiento edge completa, proporcionando capacidades de ingesta, transformación, almacenamiento, procesamiento de reglas (rule engine) y sincronización bidireccional con ThingsBoard Server en la nube. Esta arquitectura edge-first permite operación autónoma durante desconexiones WAN prolongadas (>72 horas) mientras mantiene funcionalidad completa de dashboards locales, alarmas y análisis en tiempo real.
+El gateway implementa una arquitectura centrada en **ThingsBoard Edge**, que actúa como plataforma de procesamiento edge completa, proporcionando capacidades de ingesta, transformación, almacenamiento, procesamiento de reglas (rule engine) y sincronización bidireccional con ThingsBoard Server en la nube~\cite{liangReviewEdgeComputing2024}. Esta arquitectura edge-first permite operación autónoma durante desconexiones WAN prolongadas (>72 horas) mientras mantiene funcionalidad completa de dashboards locales, alarmas y análisis en tiempo real~\cite{makayaEdgeSphereThreeTierArchitecture}.
 
-ThingsBoard Edge cumple un rol fundamental en la arquitectura al actuar como middleware de integración entre los protocolos IoT de campo (CoAP, LwM2M, MQTT) y las aplicaciones de Smart Energy en la nube, implementando transformaciones de datos, procesamiento de eventos complejos (CEP) y almacenamiento persistente con TimescaleDB optimizado para series temporales.
+ThingsBoard Edge cumple un rol fundamental en la arquitectura al actuar como middleware de integración entre los protocolos IoT de campo (CoAP, LwM2M, MQTT) y las aplicaciones de Smart Energy en la nube~\cite{amiriDeploymentArchitecturesMQTT2024}, implementando transformaciones de datos, procesamiento de eventos complejos (CEP) y almacenamiento persistente con TimescaleDB optimizado para series temporales~\cite{chintaEdgeAIRealTime2024}.
 
 \textbf{Flujo de Datos Multi-Protocolo:}
 
