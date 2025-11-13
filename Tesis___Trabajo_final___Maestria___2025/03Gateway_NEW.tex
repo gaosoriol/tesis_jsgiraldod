@@ -96,17 +96,21 @@ Routers IoT que extienden el alcance de redes HaLow o Thread mediante mesh 802.1
 
 \textbf{Hardware:}
 \begin{itemize}
-    \item SoC: MM8108 (HaLow) o nRF52840 (Thread)
-    \item MPU: MIPS/ARM Cortex-A7 single-core para OpenWRT minimal
-    \item RAM: 128-256 MB DDR3
-    \item Flash: 32-64 MB NOR/NAND
-    \item PoE: 802.3af/at (12.95W - 25.5W)
+    \item SoC: MediaTek MT7628AN (MIPS 24KEc @ 580 MHz) para routers HaLow
+    \item Alternativa Thread: nRF52840 (ARM Cortex-M4 @ 64 MHz) como Thread Router
+    \item RAM: 128 MB DDR2 (MT7628), 256 KB (nRF52840)
+    \item Flash: 16-32 MB NOR (MT7628), 1 MB (nRF52840)
+    \item WiFi integrado: 802.11n 2.4 GHz 2T2R en MT7628 (300 Mbps máx)
+    \item Ethernet: 5× Fast Ethernet 10/100 Mbps en MT7628
+    \item PoE: 802.3af/at (12.95W - 25.5W) en modelos comerciales
     \item Topología: Mesh 802.11s (HaLow) o Thread Router
 \end{itemize}
 
 \textbf{Software:}
 \begin{itemize}
-    \item Sistema operativo: OpenWRT 23.05 minimal (sin Docker)
+    \item Sistema operativo: OpenWRT 23.05 minimal (target ramips/mt76x8)~\cite{morsemicroOpenWRT2024}
+    \item Kernel: Linux 5.15 LTS con soporte MIPS 24KEc
+    \item Módulos WiFi: kmod-mt7603 (built-in 2.4 GHz), wpad-basic-mbedtls, swconfig
     \item Funciones: Layer-2/Layer-3 forwarding, mesh path selection (HWMP), autenticación SAE
     \item Configuración: Remota mediante UCI batch o NETCONF
 \end{itemize}
@@ -138,12 +142,15 @@ Autenticación mutua TLS 1.2/1.3, certificados X.509 con renovación automática
 \textbf{Especificaciones:}
 \begin{itemize}
     \item Plataforma: Raspberry Pi 4 Model B (4 GB RAM)
-    \item CPU: ARM Cortex-A72 quad-core @ 1.5 GHz (ARMv8-A 64-bit)
+    \item SoC: Broadcom BCM2711 (quad-core Cortex-A72 @ 1.5 GHz, ARMv8-A 64-bit)
+    \item GPU: VideoCore VI @ 500 MHz (H.264/H.265 hardware decode)
+    \item RAM: 4 GB LPDDR4-3200 SDRAM
     \item Almacenamiento: NVMe SSD 128 GB (vía USB 3.0 bridge)
-    \item Conectividad Thread: nRF52840 USB Dongle (RCP mode)
-    \item Conectividad HaLow: Morse Micro MM6108 + MMP8000 + EVK (PCIe via USB)
-    \item WAN: Gigabit Ethernet + Quectel RM502Q-AE LTE Cat-20 M.2
-    \item Sistema operativo: OpenWRT 23.05.3 con kernel 5.15 LTS
+    \item Conectividad Thread: nRF52840 USB Dongle (RCP mode, IEEE 802.15.4)
+    \item Conectividad HaLow: Morse Micro MM6108 (IEEE 802.11ah, 2x2 MIMO, 902-928 MHz)
+    \item WAN: Gigabit Ethernet (BCM54213PE PHY) + Quectel RM502Q-AE LTE Cat-20 M.2
+    \item Sistema operativo: OpenWRT 23.05.3 (target bcm27xx/bcm2711) con kernel Linux 5.15 LTS
+    \item OpenWRT build: Morse Micro fork basado en backports mac80211 6.1.110-1~\cite{morsemicroOpenWRT2024}
 \end{itemize}
 
 La arquitectura ARM de 64 bits permite ejecutar contenedores Docker con ThingsBoard Edge, bases de datos TimescaleDB, brokers MQTT y modelos LLM locales (Ollama) con rendimiento adecuado para procesamiento edge en tiempo real.

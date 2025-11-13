@@ -8,21 +8,137 @@ Este anexo detalla los procedimientos técnicos de instalación y configuración
 \subsection{Especificaciones de la Versión}
 
 \begin{itemize}
-    \item \textbf{Versión OpenWRT}: 23.05.0 (released 2023-10)
-    \item \textbf{Target}: \texttt{bcm27xx/bcm2711} (Raspberry Pi 4 specific)
-    \item \textbf{Subtarget}: \texttt{rpi-4} (64-bit ARMv8 kernel)
-    \item \textbf{Kernel}: Linux 5.15.134 (LTS kernel con patches Raspberry Pi Foundation)
-    \item \textbf{Arquitectura binarios}: \texttt{aarch64\_cortex-a72} (ARM64v8)
+    \item \textbf{Versión OpenWRT}: 23.05 (custom build desde Morse Micro fork)~\cite{morsemicroOpenWRT2024}
+    \item \textbf{Repositorio fuente}: \texttt{https://github.com/MorseMicro/openwrt}
+    \item \textbf{Base upstream}: Backports mac80211 6.1.110-1 (inalámbrico) + OpenWRT 23.05 (core)
+    \item \textbf{Target}: \texttt{bcm27xx/bcm2711} (Raspberry Pi 4 specific, 64-bit ARMv8)
+    \item \textbf{Subtarget device}: \texttt{rpi-4-mmeval} (Morse Micro evaluation configuration)
+    \item \textbf{Kernel}: Linux 5.15 LTS (con patches BCM2711 y driver Morse Micro)
+    \item \textbf{Arquitectura binarios}: \texttt{aarch64\_cortex-a72} (ARM64v8, optimizado para Cortex-A72)
     \item \textbf{Libc}: musl 1.2.4 (lightweight C library)
-    \item \textbf{Bootloader}: Raspberry Pi firmware (start4.elf, bootcode.bin en FAT32 boot partition)
+    \item \textbf{Bootloader}: Raspberry Pi firmware (start4.elf en FAT32 boot partition)
+    \item \textbf{Device tree overlays}: \texttt{mm610x-spi}, \texttt{mm810x-spi}, \texttt{mm\_wlan}, \texttt{morse-ps}
 \end{itemize}
+
+\subsection{Build desde Repositorio Morse Micro (Opcional Avanzado)}
+
+Esta sección documenta el proceso de compilación desde el fork oficial de Morse Micro, necesario únicamente si se requiere soporte nativo para chipsets MM6108/MM8108 o personalización avanzada del firmware.
+
+\textbf{NOTA}: Para despliegues estándares se recomienda usar las imágenes pre-compiladas oficiales de Morse Micro disponibles en su portal de desarrolladores.
+
+\subsubsection{Requisitos del Sistema de Compilación}
+
+\textbf{Hardware mínimo recomendado}:
+\begin{itemize}
+    \item CPU: x86\_64 con 4+ cores (compilación multi-thread)
+    \item RAM: 16 GB mínimo (se requieren >8 GB durante linking)
+    \item Almacenamiento: 60 GB libres (sources + build artifacts)
+    \item Sistema operativo: Ubuntu 20.04 LTS o superior
+\end{itemize}
+
+\textbf{Instalación de dependencias en Ubuntu}:
+\begin{verbatim}
+# Actualizar repositorios
+sudo apt update
+sudo apt upgrade
+
+# Instalar toolchain y dependencias OpenWRT
+sudo apt install build-essential clang flex g++ gawk gcc-multilib \
+  git gettext libncurses5-dev libssl-dev python3-distutils rsync \
+  unzip zlib1g-dev swig file wget
+\end{verbatim}
+
+\subsubsection{Clonación y Configuración del Repositorio}
+
+\begin{verbatim}
+# Clonar repositorio Morse Micro OpenWRT
+git clone https://github.com/MorseMicro/openwrt.git
+cd openwrt
+
+# Actualizar feeds (paquetes adicionales)
+./scripts/feeds update -a
+./scripts/feeds install -a
+
+# Configurar build para Raspberry Pi 4 con soporte HaLow
+./scripts/morse_setup.sh -i -b mm6108-ekh01-spi
+
+# Alternativamente, configuración manual con menuconfig
+make menuconfig
+# Navegar a:
+# Target System → Broadcom BCM27xx
+# Subtarget → BCM2711 boards (64 bit)
+# Target Profile → Raspberry Pi 4B/400/CM4
+# Target Images → ext4
+\end{verbatim}
+
+\subsubsection{Compilación del Firmware}
+
+\begin{verbatim}
+# Descargar paquetes fuente (puede tomar 30-60 minutos)
+make download
+
+# Compilación completa (4-8 horas en hardware moderno)
+make -j$(nproc) V=s
+# -j$(nproc): usa todos los cores disponibles
+# V=s: verbose output para depuración
+
+# La imagen resultante estará en:
+# bin/targets/bcm27xx/bcm2711/openwrt-bcm27xx-bcm2711-rpi-4-mmeval-\
+#   ext4-factory.img.gz
+\end{verbatim}
+
+\subsubsection{Paquetes Específicos HaLow Incluidos en el Build}
+
+El build de Morse Micro incluye automáticamente los siguientes paquetes propietarios no disponibles en OpenWRT upstream:
+
+\begin{itemize}
+    \item \texttt{kmod-morse}: Módulo kernel driver para chipsets MM6108/MM8108 (802.11ah PHY/MAC)
+    \item \texttt{morse-fw-6108}: Firmware binario para MM6108 (versión 2x2 MIMO)
+    \item \texttt{morse-fw-8108}: Firmware binario para MM8108 (versión 8x8 MIMO, enterprise)
+    \item \texttt{netifd-morse}: Integración con netifd para configuración UCI nativa
+    \item \texttt{morse-utils}: Herramientas de línea de comandos para diagnóstico HaLow
+    \item \texttt{morse-hwsim}: Simulador de hardware HaLow para testing sin módulo físico
+\end{itemize}
+
+Device tree overlays cargados en \texttt{/boot/distroconfig.txt}:
+\begin{verbatim}
+# HaLow MM6108 via SPI (40 MHz bus clock)
+dtoverlay=morse-ps          # Power sequencing para MM6108
+dtparam=spi=on              # Habilitar SPI bus
+dtoverlay=mm610x-spi        # Driver SPI para MM6108
+
+# Configuración SDIO (alternativa a SPI, no usado en implementación)
+# dtoverlay=sdio,poll_once=on
+# dtparam=sdio_overclock=42
+# dtoverlay=mm_wlan
+\end{verbatim}
 
 \subsection{Procedimiento de Instalación}
 
 \subsubsection{Descarga de Imagen Oficial}
 
+\textbf{Opción 1: Imagen pre-compilada Morse Micro (Recomendado)}:
 \begin{verbatim}
-# Descargar imagen oficial desde OpenWRT
+# Descargar desde portal de desarrolladores Morse Micro
+# (requiere registro en developer.morsemicro.com)
+wget https://developer.morsemicro.com/downloads/openwrt-bcm27xx-\
+bcm2711-rpi-4-mmeval-ext4-factory.img.gz
+
+# Verificar checksum SHA256
+sha256sum openwrt-bcm27xx-bcm2711-rpi-4-mmeval-ext4-factory.img.gz
+\end{verbatim}
+
+\textbf{Opción 2: Build personalizado desde código fuente}:
+Si compilaste el firmware en la sección anterior, la imagen estará en:
+\begin{verbatim}
+cd openwrt
+ls -lh bin/targets/bcm27xx/bcm2711/
+# Usar archivo: openwrt-*-rpi-4-mmeval-ext4-factory.img.gz
+\end{verbatim}
+
+\textbf{Opción 3: Imagen estándar OpenWRT (sin soporte HaLow nativo)}:
+\begin{verbatim}
+# Solo para testing sin módulos Morse Micro
 wget https://downloads.openwrt.org/releases/23.05.0/targets/\
 bcm27xx/bcm2711/openwrt-23.05.0-bcm27xx-bcm2711-rpi-4-\
 ext4-factory.img.gz

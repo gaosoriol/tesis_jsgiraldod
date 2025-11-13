@@ -1,9 +1,9 @@
 \chapter{Configuraciones OpenWRT del Gateway}
 \label{anexo:openwrt}
 
-Este anexo documenta las configuraciones completas del sistema operativo OpenWRT en el gateway IoT, incluyendo archivos UCI, reglas de firewall nftables, configuración OpenVPN, despliegue de OpenWISP, y políticas de failover con mwan3.
+Este anexo documenta las configuraciones completas del sistema operativo OpenWRT en el gateway IoT y routers MT7628, incluyendo archivos UCI, reglas de firewall nftables, configuración OpenVPN, despliegue de OpenWISP, y políticas de failover con mwan3.
 
-\section{Configuraciones UCI Base}
+\section{Configuraciones UCI Base del Gateway (BCM2711)}
 
 \subsection{Network (/etc/config/network)}
 
@@ -1099,12 +1099,257 @@ else
 fi
 \end{verbatim}
 
+\section{Configuraciones Router MT7628 (Routers Intermedios)}
+
+Esta sección documenta las configuraciones UCI para routers basados en SoC MediaTek MT7628AN (MIPS 24KEc @ 580 MHz) utilizados como extensores de red mesh~\cite{morsemicroOpenWRT2024}. Estos routers implementan el target \texttt{ramips/mt76x8} de OpenWRT y funcionan exclusivamente como Layer-2/Layer-3 forwarding devices sin capacidades de edge computing.
+
+\subsection{Especificaciones Hardware del Router MT7628}
+
+\textbf{Modelos comerciales compatibles}:
+\begin{itemize}
+    \item GL.iNet GL-MT300N-V2 (128 MB RAM, 16 MB Flash, PoE opcional)
+    \item HiLink HLK-7628N (128 MB RAM, 32 MB Flash, industrial)
+    \item Widora NEO (256 MB RAM, 32 MB Flash, dev board)
+\end{itemize}
+
+\textbf{Características integradas}:
+\begin{itemize}
+    \item CPU: MIPS 24KEc single-core @ 580 MHz
+    \item RAM: 128-256 MB DDR2
+    \item Flash: 16-32 MB NOR (SPI)
+    \item WiFi: 802.11n 2.4 GHz 2T2R integrado (kmod-mt7603)
+    \item Ethernet: 5× Fast Ethernet 10/100 Mbps (switch integrado)
+    \item PoE: 802.3af (12.95W) en modelos compatibles
+\end{itemize}
+
+\subsection{Network Configuration (/etc/config/network) - Router MT7628}
+
+\begin{verbatim}
+config interface 'loopback'
+    option device 'lo'
+    option proto 'static'
+    option ipaddr '127.0.0.1'
+    option netmask '255.0.0.0'
+
+config globals 'globals'
+    option ula_prefix 'fd00::/48'
+
+# Bridge LAN con puertos Ethernet y WiFi
+config device
+    option name 'br-lan'
+    option type 'bridge'
+    list ports 'eth0.1'
+    list ports 'wlan0'
+
+config interface 'lan'
+    option device 'br-lan'
+    option proto 'static'
+    option ipaddr '192.168.1.2'  # IP estática en red gateway
+    option netmask '255.255.255.0'
+    option gateway '192.168.1.1'  # Gateway principal (BCM2711)
+    option dns '192.168.1.1'
+
+# WAN (uplink a gateway principal)
+config interface 'wan'
+    option device 'eth0.2'
+    option proto 'dhcp'
+    option peerdns '0'
+    option dns '192.168.1.1'
+    option metric '10'
+
+# VLAN tagging para separación LAN/WAN en switch
+config switch
+    option name 'switch0'
+    option ports '0 1 2 3 6'
+    option blinkrate '2'
+
+config switch_vlan
+    option device 'switch0'
+    option vlan '1'
+    option ports '0 1 2 3 6t'  # Puertos LAN (0-3) + CPU (6 tagged)
+
+config switch_vlan
+    option device 'switch0'
+    option vlan '2'
+    option ports '4 6t'  # Puerto WAN (4) + CPU (6 tagged)
+\end{verbatim}
+
+\subsection{Wireless Configuration (/etc/config/wireless) - Router MT7628}
+
+\begin{verbatim}
+# WiFi 2.4 GHz integrado MT7628 (kmod-mt7603)
+config wifi-device 'radio0'
+    option type 'mac80211'
+    option path 'platform/10300000.wmac'
+    option channel '6'
+    option band '2g'
+    option htmode 'HT40'
+    option country 'CO'
+    option txpower '20'
+    option legacy_rates '0'
+    option noscan '1'
+    option disabled '0'
+
+# Modo AP para extender cobertura (bridge a LAN)
+config wifi-iface 'default_radio0'
+    option device 'radio0'
+    option mode 'ap'
+    option network 'lan'
+    option ssid 'SmartGrid-Mesh-Ext'
+    option encryption 'sae-mixed'
+    option key '<WIFI-MESH-KEY>'
+    option ieee80211w '1'
+    option wpa_disable_eapol_key_retries '1'
+    option max_inactivity '300'
+    option dtim_period '3'
+    option disassoc_low_ack '1'
+
+# Alternativamente: Modo Mesh 802.11s (para topología mesh)
+# Descomentar solo si se usa mesh nativo en lugar de WDS
+# config wifi-iface 'mesh0'
+#     option device 'radio0'
+#     option mode 'mesh'
+#     option mesh_id 'smartgrid-mesh'
+#     option network 'lan'
+#     option encryption 'sae'
+#     option key '<MESH-SAE-KEY>'
+#     option mesh_fwding '1'
+#     option mesh_ttl '31'
+#     option mesh_hwmp_rootmode '4'  # Root with RANN
+\end{verbatim}
+
+\subsection{DHCP and DNS (/etc/config/dhcp) - Router MT7628}
+
+\begin{verbatim}
+config dnsmasq
+    option domainneeded '1'
+    option boguspriv '1'
+    option filterwin2k '0'
+    option localise_queries '1'
+    option rebind_protection '1'
+    option rebind_localhost '1'
+    option local '/lan/'
+    option domain 'lan'
+    option expandhosts '1'
+    option nonegcache '0'
+    option cachesize '150'
+    option authoritative '1'
+    option readethers '1'
+    option leasefile '/tmp/dhcp.leases'
+    option resolvfile '/tmp/resolv.conf.d/resolv.conf.auto'
+    option localservice '1'
+    option ednspacket_max '1232'
+
+# DHCP relay mode - no server local, relay a gateway principal
+config dhcp 'lan'
+    option interface 'lan'
+    option ignore '1'  # Deshabilitar DHCP server local
+    # El gateway BCM2711 (192.168.1.1) provee DHCP
+
+config dhcp 'wan'
+    option interface 'wan'
+    option ignore '1'
+
+# DNS forwarder al gateway
+config dnsmasq
+    option noresolv '1'
+    list server '192.168.1.1'
+\end{verbatim}
+
+\subsection{Firewall Simplificado (/etc/config/firewall) - Router MT7628}
+
+\begin{verbatim}
+config defaults
+    option input 'ACCEPT'
+    option output 'ACCEPT'
+    option forward 'REJECT'
+    option synflood_protect '1'
+
+config zone
+    option name 'lan'
+    list network 'lan'
+    option input 'ACCEPT'
+    option output 'ACCEPT'
+    option forward 'ACCEPT'
+
+config zone
+    option name 'wan'
+    list network 'wan'
+    option input 'REJECT'
+    option output 'ACCEPT'
+    option forward 'REJECT'
+    option masq '1'
+    option mtu_fix '1'
+
+config forwarding
+    option src 'lan'
+    option dest 'wan'
+
+# Permitir SSH desde LAN
+config rule
+    option name 'Allow-SSH'
+    option src 'lan'
+    option proto 'tcp'
+    option dest_port '22'
+    option target 'ACCEPT'
+
+# Permitir ICMP echo (ping) desde WAN para diagnostics
+config rule
+    option name 'Allow-Ping'
+    option src 'wan'
+    option proto 'icmp'
+    option icmp_type 'echo-request'
+    option family 'ipv4'
+    option target 'ACCEPT'
+    option limit '1000/sec'
+\end{verbatim}
+
+\subsection{System Configuration (/etc/config/system) - Router MT7628}
+
+\begin{verbatim}
+config system
+    option hostname 'smartgrid-router-mt7628-001'
+    option timezone 'CST6CDT,M3.2.0,M11.1.0'
+    option zonename 'America/Bogota'
+    option ttylogin '0'
+    option log_size '64'
+    option urandom_seed '0'
+    option compat_version '1.1'
+
+config timeserver 'ntp'
+    list server '192.168.1.1'  # Gateway como NTP server local
+    list server '0.co.pool.ntp.org'
+    list server 'time.google.com'
+    option enable_server '0'
+\end{verbatim}
+
+\subsection{Optimizaciones de Performance para MT7628}
+
+Debido a las limitaciones del hardware MIPS 24KEc @ 580 MHz, se implementan las siguientes optimizaciones:
+
+\begin{verbatim}
+# /etc/sysctl.conf - Optimizaciones kernel
+net.core.default_qdisc=fq_codel
+net.ipv4.tcp_congestion_control=bbr
+net.ipv4.tcp_fastopen=3
+net.core.netdev_max_backlog=2500
+net.ipv4.tcp_max_syn_backlog=2048
+
+# Deshabilitar servicios innecesarios para liberar RAM
+/etc/init.d/uhttpd disable  # LuCI web interface (gestión por CLI)
+/etc/init.d/odhcpd disable  # IPv6 DHCPv6 server (no necesario en mesh)
+
+# Limitar logs para preservar Flash NOR
+logread -f -e dnsmasq -e dropbear > /dev/null 2>&1 &
+\end{verbatim}
+
 \section{Resumen}
 
-Este anexo ha documentado las configuraciones completas de OpenWRT para el gateway IoT SmartGrid, incluyendo:
+Este anexo ha documentado las configuraciones completas de OpenWRT para el gateway IoT SmartGrid y routers MT7628, incluyendo:
 
 \begin{itemize}
-    \item \textbf{UCI}: Configuraciones de red, wireless, DHCP/DNS, firewall
+    \item \textbf{Gateway BCM2711}: Configuraciones UCI de red, wireless HaLow, DHCP/DNS, firewall avanzado
+    \item \textbf{Router MT7628}: Configuraciones UCI optimizadas para mesh forwarding con MT7603 WiFi
     \item \textbf{nftables}: Reglas de firewall personalizadas con protección DDoS
     \item \textbf{OpenVPN}: Servidor VPN con PKI Easy-RSA para acceso remoto seguro
     \item \textbf{OpenWISP}: Plataforma de gestión centralizada basada en Docker
@@ -1112,7 +1357,7 @@ Este anexo ha documentado las configuraciones completas de OpenWRT para el gatew
     \item \textbf{Scripts}: Automatización de backups, monitoreo de cuota LTE, alertas
 \end{itemize}
 
-Todas las configuraciones están optimizadas para el hardware Raspberry Pi 4 con OpenWRT 23.05 y soportan los requisitos de resiliencia y seguridad del sistema de telemetría Smart Energy.
+Todas las configuraciones están optimizadas para el hardware Raspberry Pi 4 (bcm27xx/bcm2711) y MediaTek MT7628 (ramips/mt76x8) con OpenWRT 23.05 basado en el repositorio oficial Morse Micro~\cite{morsemicroOpenWRT2024}, soportando los requisitos de resiliencia y seguridad del sistema de telemetría Smart Energy.
 
 \end{antml:parameter>
 </invoke>
