@@ -51,7 +51,7 @@
 %\DisableLigatures{encoding = *, family = *}
 
 % Otros paquetes de tablas y colores avanzados
-\usepackage{amsmath,graphicx,rotating,float,multirow}
+\usepackage{amsmath,amssymb,graphicx,rotating,float,multirow}
 \usepackage{longtable}
 \setlength{\LTcapwidth}{6in}
 \usepackage[utf8]{inputenc}
@@ -107,12 +107,12 @@
 \renewcommand{\directortitle}{Indicar si es Profesor Titular/Asociado}
 \renewcommand{\codirector}{Prof. Dr. Co director}
 \renewcommand{\codirectortitle}{Indicar si es Profesor Titular/Asociado}
-\renewcommand{\academictitle}{Magíster en Ingeniería - Ingeniería Electrónica}
+\renewcommand{\academictitle}{Magíster en Ingeniería / Automatización Industrial}
 \renewcommand{\resgroupone}{Grupo A (Sigla Grupo Investigación 01) }
 \renewcommand{\resgrouptwo}{Grupo B (Sigla Grupo Investigación 02) }
 \renewcommand{\researchtopic}{Línea}
 \renewcommand{\sede}{Sede Manizales} 
-\renewcommand{\department}{Departamento de Ingeniería Eléctrica y Electrónica}
+\renewcommand{\department}{Departamento de Automatización Industrial}
 \renewcommand{\departmenttwo}{Departamento 2} %Usar solo si es necesario
 \renewcommand{\faculty}{Facultad de Ingeniería y Arquitectura}
 
@@ -127,7 +127,7 @@
 \usepackage{fancyhdr}
 \fancyhf{}%
 \pagestyle{fancyplain}
-\textheight22.5cm \topmargin0cm \textwidth16.5cm \headheight22pt
+\textheight22.5cm \topmargin0cm \textwidth16.5cm \headheight30pt
 \oddsidemargin0.5cm \evensidemargin-0.5cm%
 \fancypagestyle{plain}{
 \fancyhead[RO,LE]{}
@@ -161,7 +161,7 @@
 % Permite ver y configurar los parámetros de la página
 \setlength{\voffset}{-0.25in}
 \setlength{\headwidth}{467pt}
-\setlength{\headheight}{22pt}
+\setlength{\headheight}{30pt}
 \setlength{\oddsidemargin}{0pt}
 \setlength{\evensidemargin}{0pt}
 \setlength{\marginparwidth}{0pt}
@@ -343,14 +343,14 @@ Albert Einstein
 \include{00Abreviaturas}
 \include{00ResumenAbstract}
 % Dejar esta parte así para que genere correctamente la página de la tabla de contenido
-\addcontentsline{toc}{chapter}{Lista de figuras}
 \listoffigures
+\addcontentsline{toc}{chapter}{Lista de figuras}
 \clearpage
-\addcontentsline{toc}{chapter}{Lista de tablas}
 \listoftables
+\addcontentsline{toc}{chapter}{Lista de tablas}
 \clearpage
-\addcontentsline{toc}{chapter}{Contenido}
 \tableofcontents
+\addcontentsline{toc}{chapter}{Contenido}
 \clearpage
 }
 
