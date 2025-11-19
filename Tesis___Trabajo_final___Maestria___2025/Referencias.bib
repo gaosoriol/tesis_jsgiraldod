@@ -3669,3 +3669,36 @@
   note = {Analyzes Matter (Connectivity Standards Alliance) adoption of Thread as mandatory transport layer. Thread Group membership growth 300+ (Google, Apple, Amazon, Siemens, Schneider Electric). Certification program with 200+ Thread Certified devices. Industry trend validates Thread selection over Zigbee for future-proofing. Supports thesis decision Thread for AMI.}
 }
 
+@online{vantronRAH305WiFiHaLow2024,
+  title = {{{RAH305 Industrial Wi-Fi HaLow Router}}},
+  author = {{Vantron Technology}},
+  year = {2024},
+  url = {https://www.vantrontech.com/products/industrial-halow-router-rah305},
+  urldate = {2025-11-19},
+  organization = {Vantron Technology Co., Ltd.},
+  location = {Shenzhen, China},
+  note = {Industrial multi-radio router integrating Wi-Fi HaLow 802.11ah (Morse Micro MM6108 chipset, same as thesis baseline) with Wi-Fi 6, LTE Cat-4, Bluetooth 5.3, and GNSS. Specifications: TI AM64x Cortex-A53 @ 1 GHz, 1 GB RAM, 5× Gigabit Ethernet, RS485/232/422 serial interfaces for Modbus/SCADA legacy integration. Target applications: industrial automation, smart agriculture, remote surveillance. Cost estimated $600-800 USD volume production. Validates commercial viability of MM6108 chipset and multi-radio architecture for industrial IoT deployments. Thesis gateway ($295 BOM) offers 60-70\% cost savings by eliminating unnecessary features (Wi-Fi 6, GNSS, analog I/O) while adding Smart Energy-specific capabilities (Thread 802.15.4, IEEE 2030.5 CSIP, edge LLM inference) absent in commercial routers.}
+}
+
+@online{gateworksGW16167HaLow2025,
+  title = {{{GW16167}} 802.11ah {{Wi-Fi HaLow M}}.2 {{Radio}}},
+  author = {{Gateworks Corporation}},
+  year = {2025},
+  url = {https://www.gateworks.com/products/wireless-options/gw16167-mm8108-802-11ah-halow-wifi-m2-card/},
+  urldate = {2025-11-19},
+  organization = {Gateworks Corporation},
+  location = {San Luis Obispo, CA, USA},
+  note = {M.2 2230 E-Key form factor HaLow module with Morse Micro MM8108 next-generation chipset. Key specifications: 850-950 MHz global bands (FCC + CE + IC certified), +26 dBm TX power (+3 dB vs MM6108 baseline), 43.3 Mbps peak throughput (+33\% vs MM6108), -101 dBm RX sensitivity (+3 dB vs MM6108), USB 2.0 primary interface (standard Linux cfg80211/mac80211 stack, no proprietary drivers), extended industrial temperature range -40°C to +85°C. M.2 E-Key standardization enables hot-swap upgrades in deployed gateways without PCB redesign. Link budget improvement +6 dB total (TX+RX) extends theoretical range from 1-2 km (MM6108 urban) to 2-3 km (MM8108), reducing gateway count in utility-scale deployments. Modular architecture validates thesis design decision prioritizing standard interfaces (USB 2.0, M.2 slots) over monolithic SoC integration for long-term sustainability and upgrade path. Cost ~$150 USD module volume pricing. Made in USA with 1-year warranty. Relevant for thesis Cap 4 TCO analysis (modular upgrade $175 vs $295 complete gateway replacement = 41\% savings) and Cap 5 future work roadmap (L6 hardware evolution research line).}
+}
+
+@techreport{morsemicroMM8108ProductBrief2025,
+  title = {{{MM8108 Wi-Fi HaLow SoC Product Brief}}},
+  author = {{Morse Micro}},
+  year = {2025},
+  institution = {Morse Micro Pty Ltd},
+  type = {Product Brief},
+  location = {Sydney, Australia},
+  url = {https://www.morsemicro.com/resources/product_brief/MM8108-Product-Brief.pdf},
+  note = {Next-generation IEEE 802.11ah system-on-chip successor to MM6108 with enhanced specifications for extended range and throughput. Technical improvements: (1) TX power +26 dBm vs +23 dBm MM6108 (+3 dB = 2× radiated power), (2) Peak throughput 43.3 Mbps vs 32.5 Mbps MM6108 (+33\% speed), (3) RX sensitivity -101 dBm vs -98 dBm MM6108 (+3 dB = extended link budget), (4) Power consumption marginally higher ~900 mW TX vs 800 mW (+12\%), ~130 mW RX vs 120 mW (+8\%). Supports 1/2/4/8 MHz channel bandwidths, WPA3-SAE security, global frequency bands 850-950 MHz (US FCC 902-928 MHz, EU 863-868 MHz, Australia 915-928 MHz). Reference design includes USB 2.0, SDIO, SPI host interfaces for flexible SBC integration. Link budget improvement +6 dB total enables range extension from 1-2 km (MM6108 urban NLOS) to 2-3 km (MM8108 urban), 3-4 km (MM6108 rural LOS) to 5-7 km (MM8108 rural), reducing infrastructure CAPEX by decreasing gateway density requirements in utility-scale AMI deployments. Relevant for thesis as upgrade path in modular gateway architecture: M.2 E-Key swap MM6108→MM8108 costs $175 (module + labor) vs $295 complete gateway replacement, enabling 10-year lifecycle sustainability with incremental technology refreshes. Validates thesis design philosophy prioritizing standard interfaces and commoditization over vendor lock-in proprietary solutions.}
+}
+

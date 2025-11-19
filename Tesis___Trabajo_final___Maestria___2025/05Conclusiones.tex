@@ -1063,10 +1063,97 @@ L5.3 - 5G RedCap WAN & & & & \cellcolor{green!30}{\textbf{Spec}} & \cellcolor{ye
     \item L3: 3 PA (1 PA blockchain, 1 PA Zero Trust, 1 PA PQC roadmap)
     \item L4: 2.5 PA (1 PA legacy, 1.5 PA federación)
     \item L5: 2 PA (0.5 PA Matter, 0.5 PA Wi-Fi 7, 1 PA 5G RedCap)
-    \item \textbf{Total: 15 PA} → equipo sostenido 3 investigadores × 5 años
+    \item \textbf{L6: 1.5 PA} (0.5 PA evaluación MM8108, 0.5 PA validación campo, 0.5 PA piloto upgrade)
+    \item \textbf{Total: 16.5 PA} → equipo sostenido 3 investigadores × 5.5 años
 \end{itemize}
 
 \textbf{Financiamiento potencial:} Convocatorias Minciencias (Investigación Aplicada), Fondo Energético Nacional FENOGE (Smart Grids), colaboración industrial utilities colombianas (EPM, Codensa, CHEC), European Horizon Europe calls (si partnership internacional).
+
+\subsection{Línea 6 - Evolución Hardware Modular: Upgrade a Chipsets Next-Gen}
+
+\textbf{Motivación:} Como documentado en Cap 2 (análisis productos comerciales) y Cap 4 (TCO upgrade modular), la arquitectura propuesta basada en interfaces estándar (USB 2.0, M.2 E-Key) facilita actualizaciones incrementales de componentes wireless sin reemplazo completo del gateway. Esta línea investiga validación técnica y económica de upgrades a chipsets HaLow de siguiente generación.
+
+\subsubsection{L6.1 - Evaluación Morse Micro MM8108 en Testbed}
+
+\textbf{Objetivo:} Caracterizar mejoras reales de MM8108 vs MM6108 baseline en escenario AMI controlado.
+
+\textbf{Metodología propuesta:}
+\begin{itemize}
+    \item Adquisición de 3 módulos Gateworks GW16167 (MM8108 M.2 E-Key) para integración en gateways prototipo existentes.
+    \item Pruebas comparativas lado-a-lado: Gateway A (MM6108) vs Gateway B (MM8108) en testbed universitario con 50 nodos Thread simulados.
+    \item Métricas de evaluación:
+    \begin{itemize}
+        \item \textbf{Link budget:} Medición RSSI/SNR a distancias 500m, 1km, 1.5km, 2km, 2.5km (campus abierto + entorno urbano con obstáculos)
+        \item \textbf{Throughput real:} iperf3 TCP/UDP con cargas 1 Mbps, 5 Mbps, 10 Mbps, 20 Mbps
+        \item \textbf{Latencia:} Ping round-trip time bajo carga (background traffic)
+        \item \textbf{Consumo energético:} Medición con multímetro high-side shunt en modos TX (+26 dBm), RX, idle, TWT sleep
+    \end{itemize}
+    \item Análisis comparativo: ¿Mejoras teóricas (+3 dB TX, +3 dB RX, +33\% throughput) se materializan en despliegue real? ¿Trade-offs consumo energético (+12\% TX) impactan autonomía gateway con respaldo batería?
+\end{itemize}
+
+\textbf{Resultados esperados:} Reporte técnico validando o refutando mejoras especificadas en datasheet MM8108. Identificación de escenarios donde upgrade es justificado (e.g., zonas rurales con alcance >1.5 km crítico) vs innecesario (urbano denso <1 km suficiente con MM6108).
+
+\textbf{Timeline:} Q2 2026 (2 meses). \textbf{TRL objetivo:} 5-6 (componente validado en entorno relevante).
+
+\textbf{Recursos:} 0.5 PA investigador junior + \$1.5K hardware (3× GW16167 @ \$150 + antennas + instrumentación).
+
+\subsubsection{L6.2 - Validación Alcance Extendido 4-5 km}
+
+\textbf{Objetivo:} Verificar alcance máximo operacional MM8108 en condiciones reales (no anechoic chamber) para optimizar topología red en despliegues utility-scale.
+
+\textbf{Metodología propuesta:}
+\begin{itemize}
+    \item Pruebas de campo en zona rural (Manizales-Villamaría corredor): Gateway MM8108 fijo (coordenadas GPS registradas) + nodo móvil en vehículo con datalogger GPS/RSSI.
+    \item Medición continua RSSI, packet loss rate (%), throughput disponible vs distancia (increments 500m hasta pérdida completa de enlace).
+    \item Variación condiciones: (1) Line-of-sight (LoS) en campo abierto, (2) Non-line-of-sight (NLoS) con vegetación densa + topografía montañosa, (3) Interferencia controlada (co-channel 900 MHz ISM band).
+    \item Comparación con modelo teórico Friis + corrección Okumura-Hata para 900 MHz: ¿Alcance medido coincide con predicción +6 dB link budget?
+\end{itemize}
+
+\textbf{Resultados esperados:} Mapas de cobertura (heatmaps RSSI) validando alcance 2-3 km urbano NLoS, 4-5 km rural LoS con MM8108. Guidelines de diseño de red: "Con MM8108, reducir gateways de 50 a 35 en despliegue 1000 medidores (30\% savings infraestructura)".
+
+\textbf{Timeline:} Q4 2026 (3 meses tras completar L6.1). \textbf{TRL objetivo:} 7 (prototipo demostrado en entorno operacional real).
+
+\textbf{Recursos:} 0.5 PA investigador senior + \$2K logística campo (vehículo, datalogger, permisos acceso predios rurales).
+
+\subsubsection{L6.3 - Piloto Upgrade Modular en 10 Gateways Deployed}
+
+\textbf{Objetivo:} Validar procedimiento de upgrade modular M.2 swap en gateways ya desplegados con medidores activos (prueba de concepto operacional).
+
+\textbf{Metodología propuesta:}
+\begin{itemize}
+    \item Selección de 10 gateways piloto en despliegue L1.1 (1000+ dispositivos) con criterios: (1) 5 gateways en zonas urbanas densas (baseline, upgrade no crítico), (2) 5 gateways en zonas rurales/periurbanas (alcance extendido beneficioso).
+    \item Procedimiento estandarizado de upgrade:
+    \begin{enumerate}
+        \item Pre-upgrade: Backup configuración gateway (network settings, TLS certificates, device registry)
+        \item Shutdown graceful: Flush buffers MQTT/PostgreSQL, notificar ThingsBoard mantenimiento programado
+        \item Swap físico: Remover módulo MM6108, insertar GW16167 (MM8108) en slot M.2, verificar conexión mecánica/eléctrica
+        \item Post-upgrade: Boot gateway, verificar reconocimiento USB lsusb, cargar firmware MM8108, test conectividad HaLow
+        \item Validación operacional: Reconexión DCUs (expected <5 min), throughput test, monitoreo 72h estabilidad
+    \end{enumerate}
+    \item Métricas éxito: (1) Tiempo downtime <30 min por gateway, (2) 0\% data loss (buffering durante upgrade funcional), (3) Mejoras post-upgrade: RSSI +3-6 dB en DCUs lejanos, reducción packet retransmissions.
+\end{itemize}
+
+\textbf{Resultados esperados:} Procedimiento documentado de upgrade field-proven, incluyendo: (1) Checklist técnico paso-a-paso, (2) Troubleshooting guide (e.g., módulo no detectado, driver conflicts), (3) ROI medido: \$175 upgrade cost vs beneficios (extender cobertura sin gateway adicional = savings \$295 CAPEX + \$50/año OPEX).
+
+\textbf{Timeline:} Q2 2027 (6 meses, tras completar L6.2 + L1.1 scale validation). \textbf{TRL objetivo:} 8-9 (sistema completo calificado y demostrado en entorno operacional).
+
+\textbf{Recursos:} 0.5 PA ingeniero de campo + \$3.5K (10× módulos GW16167 @ \$150 + labor on-site 10× \$25 + contingencia).
+
+\textbf{Dependencias críticas L6:}
+\begin{itemize}
+    \item \textbf{L6.1 → L6.2:} Validación testbed debe confirmar viabilidad técnica antes de pruebas campo costosas.
+    \item \textbf{L6.2 → L6.3:} Mapas cobertura identifican gateways candidatos prioritarios para upgrade (máximo beneficio alcance).
+    \item \textbf{L1.1 → L6.3:} Piloto upgrade requiere despliegue operacional 1000+ dispositivos como baseline (L1.1 completado Q4 2027).
+\end{itemize}
+
+\textbf{Riesgos y mitigaciones:}
+\begin{itemize}
+    \item \textbf{Riesgo 1 - Incompatibilidad driver MM8108:} Módulo GW16167 requiere kernel Linux >5.10 para full support cfg80211. \textit{Mitigación:} Validar compatibilidad en L6.1, upgrade Raspberry Pi OS Bookworm (kernel 6.1) si necesario.
+    \item \textbf{Riesgo 2 - ROI insuficiente en zonas urbanas:} Mejoras alcance MM8108 (+40\%) no justifican upgrade si densidad medidores permite <1 km spacing. \textit{Mitigación:} Upgrade selectivo solo rural/periurbano (50\% gateways), mantener MM6108 en urbano denso.
+    \item \textbf{Riesgo 3 - Disponibilidad GW16167:} Módulo Gateworks depende supply chain Morse Micro + fabricación USA. \textit{Mitigación:} Orden anticipada 20-30 unidades Q1 2026, evaluar alternativas M.2 HaLow (NewRadek, AsiaRF) como backup suppliers.
+\end{itemize}
+
+\textbf{Conclusión L6:} Línea de investigación valida promesa de arquitectura modular: upgrades incrementales de componentes críticos (radio HaLow) extienden vida útil gateway de 5 años (HW monolítico obsoleto) a 10+ años con refreshes tecnológicos económicos (\$175 vs \$445 reemplazo completo). \textbf{Si L6.3 demuestra upgrade field-proven con <30 min downtime y ROI positivo, arquitectura propuesta no solo es óptima para 2025, sino sostenible para 2030-2035.}
 
 \subsection{Línea 1 - Escalabilidad y Performance}
 
