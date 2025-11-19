@@ -1,0 +1,66 @@
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#E8F4F8','primaryTextColor':'#1a1a1a','primaryBorderColor':'#0066cc','lineColor':'#0066cc','secondaryColor':'#FFF4E6','fontSize':'13px'}}}%%
+
+flowchart TB
+    subgraph medidores["📊 MEDIDORES (Campo)"]
+        M[Medidores DLMS/COSEM<br/>Perfiles de carga 15 min<br/>Eventos + Alarmas]
+    end
+
+    subgraph nodos["📡 NODOS IoT (Thread)"]
+        N[Nodos Adaptadores<br/>CoAP/LwM2M Client<br/>6LoWPAN/IPHC Compression]
+    end
+
+    subgraph otbr["🌐 OTBR"]
+        O[OpenThread Border Router<br/>IPv6 Translation<br/>CoAP → LwM2M]
+    end
+
+    subgraph edge["⚡ EDGE PROCESSING (Gateway)"]
+        direction TB
+        E1[ThingsBoard Edge<br/>Local Dashboards]
+        E2[Rule Engine<br/>IF-THEN Logic]
+        E3[CEP Engine<br/>Complex Event Processing]
+        E4[Local Storage<br/>TimescaleDB Replica]
+        
+        E1 --> E2
+        E2 --> E3
+        E3 --> E4
+    end
+
+    subgraph cloud["☁️ CLOUD (ThingsBoard)"]
+        direction TB
+        C1[MQTT Broker<br/>Port 8883/TLS]
+        C2[TimescaleDB<br/>Time-series Data]
+        C3[Analytics Engine<br/>Historical Analysis]
+        C4[Dashboards<br/>Web + Mobile]
+        
+        C1 --> C2
+        C2 --> C3
+        C3 --> C4
+    end
+
+    %% Flujo principal
+    M -->|RS-485<br/>DLMS Request<br/>24.6 GB/día baseline| N
+    N -->|CoAP/UDP<br/>Compressed<br/>4.2±1.1 B headers| O
+    O -->|LwM2M/IPv6<br/>78% overhead reduction| E1
+
+    %% Decisión Edge
+    E3 -->|Local Events<br/>8±2 ms latency| E4
+    E4 -.->|Only aggregated data<br/>6.9 GB/día<br/>72% WAN reduction| C1
+
+    %% Procesamiento Cloud
+    C1 -->|Persistent Storage| C2
+
+    %% Estilos y anotaciones
+    classDef devices fill:#FFE6E6,stroke:#CC0000,stroke-width:2px,color:#000
+    classDef field fill:#E6F3FF,stroke:#0066CC,stroke-width:2px,color:#000
+    classDef edge fill:#FFF4E6,stroke:#FF8C00,stroke-width:3px,color:#000
+    classDef cloud fill:#E8F5E8,stroke:#2E7D32,stroke-width:2px,color:#000
+
+    class M devices
+    class N,O field
+    class E1,E2,E3,E4 edge
+    class C1,C2,C3,C4 cloud
+
+    %% Anotaciones de métricas
+    note1["💡 MEJORAS ARQUITECTURA:<br/>• Overhead: -78% (22B vs 100B)<br/>• Tráfico WAN: -72% (6.9 vs 24.6 GB/día)<br/>• Latencia Edge: 8±2 ms<br/>• Compresión IPHC: 48B → 4.2B<br/>• Alcance HaLow: >1 km"]
+    
+    note1 -.->|Métricas Validadas<br/>Capítulo 4| edge

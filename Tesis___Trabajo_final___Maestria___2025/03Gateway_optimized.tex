@@ -1,4 +1,4 @@
-\chapter{Gateway de Telemetría para Smart Energy}
+﻿\chapter{Gateway de Telemetría para Smart Energy}
 
 \section{Introducción}
 
@@ -133,7 +133,7 @@ La arquitectura propuesta sigue un modelo de tres niveles (capas) que separa res
     \item Módulo LTE/4G (Huawei E3372h-320)
 \end{itemize}
 
-\textbf{Protocolos}: Thread ↔ MQTT, CoAP ↔ HTTP, HaLow, LTE
+\textbf{Protocolos}: Thread $\leftrightarrow$ MQTT, CoAP $\leftrightarrow$ HTTP, HaLow, LTE
 
 \textbf{Funciones}: Agregación de datos, protocol translation, buffering, edge analytics, API IEEE 2030.5
 
@@ -197,7 +197,7 @@ ThingsBoard Edge & 3.8.1 & Plataforma IoT local \\ \hline
 PostgreSQL + TimescaleDB & 16.4 + 2.17.2 & Base de datos de series temporales \\ \hline
 Apache Kafka & 3.8.0 & Message broker para integración \\ \hline
 IEEE 2030.5 Server & Custom & API REST IEEE 2030.5 (Python/Flask) \\ \hline
-IEEE 2030.5 Bridge & Custom & Protocol translator CoAP ↔ MQTT (Python) \\ \hline
+IEEE 2030.5 Bridge & Custom & Protocol translator CoAP $\leftrightarrow$ MQTT (Python) \\ \hline
 \end{tabular}
 \end{table}
 
@@ -403,7 +403,7 @@ Con esta configuración, mwan3 monitorea continuamente la conectividad de HaLow 
 
 \subsection{MQTT (Message Queuing Telemetry Transport)}
 
-MQTT es el protocolo principal para comunicación gateway ↔ cloud. Características:
+MQTT es el protocolo principal para comunicación gateway $\leftrightarrow$ cloud. Características:
 
 \begin{itemize}
     \item \textbf{Modelo publish/subscribe}: Desacoplamiento entre productores y consumidores de datos.
@@ -422,7 +422,7 @@ MQTT es el protocolo principal para comunicación gateway ↔ cloud. Caracterís
 
 \subsection{CoAP (Constrained Application Protocol)}
 
-CoAP es un protocolo REST sobre UDP optimizado para dispositivos con recursos limitados (RFC 7252). Usado en la comunicación medidores Thread ↔ gateway.
+CoAP es un protocolo REST sobre UDP optimizado para dispositivos con recursos limitados (RFC 7252). Usado en la comunicación medidores Thread $\leftrightarrow$ gateway.
 
 \textbf{Características}:
 \begin{itemize}

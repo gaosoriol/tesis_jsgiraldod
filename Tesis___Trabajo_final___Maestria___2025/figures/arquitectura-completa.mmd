@@ -1,0 +1,81 @@
+%%{init: {'theme':'base', 'themeVariables': { 'primaryColor':'#E8F4F8','primaryTextColor':'#1a1a1a','primaryBorderColor':'#0066cc','lineColor':'#0066cc','secondaryColor':'#FFF4E6','tertiaryColor':'#F0F8FF','fontSize':'14px'}}}%%
+
+graph TB
+    subgraph capa1["🔌 CAPA DE DISPOSITIVOS (Field Devices)"]
+        direction LR
+        M1[Medidor 1<br/>DLMS/COSEM<br/>IEC 62056]
+        M2[Medidor 2<br/>DLMS/COSEM<br/>IEC 62056]
+        M3[Medidor 3<br/>DLMS/COSEM<br/>IEC 62056]
+        M4[Medidor N<br/>...]
+    end
+
+    subgraph capa2["📡 CAPA DE CAMPO (Field Network - Thread Mesh)"]
+        direction TB
+        subgraph nodos["Nodos Adaptadores Thread"]
+            N1[Nodo IoT 1<br/>ESP32 + nRF52840<br/>Thread 1.3.0]
+            N2[Nodo IoT 2<br/>ESP32 + nRF52840<br/>Thread 1.3.0]
+            N3[Nodo IoT 3<br/>ESP32 + nRF52840<br/>Thread 1.3.0]
+        end
+        OTBR[🌐 OTBR<br/>OpenThread Border Router<br/>nRF52840 RCP<br/>6LoWPAN/IPv6]
+    end
+
+    subgraph capa3["🚀 CAPA DE AGREGACIÓN (Gateway/Backhaul)"]
+        direction TB
+        GW[Gateway Multi-Protocolo<br/>Raspberry Pi 4B]
+        
+        subgraph gw_components["Componentes Gateway"]
+            HaLow[Wi-Fi HaLow 802.11ah<br/>Sub-1 GHz<br/>Morse Micro MM6108]
+            WiFi[Wi-Fi 2.4/5 GHz<br/>802.11ac]
+            EdgeProc[Edge Processing<br/>ThingsBoard Edge<br/>Rule Engine + CEP]
+        end
+        
+        GW --- gw_components
+    end
+
+    subgraph capa4["☁️ CAPA DE APLICACIÓN (Cloud)"]
+        direction TB
+        TB[ThingsBoard IoT Platform<br/>TimescaleDB<br/>Analytics + Dashboards]
+        DER[DERMS<br/>DER Management<br/>IEEE 2030.5]
+        AMI[AMI Head-End<br/>Advanced Metering]
+    end
+
+    %% Conexiones Capa 1 -> Capa 2
+    M1 -->|RS-485<br/>DLMS| N1
+    M2 -->|RS-485<br/>DLMS| N2
+    M3 -->|RS-485<br/>DLMS| N3
+    M4 -.->|RS-485| N3
+
+    %% Conexiones Mesh Thread
+    N1 <-->|Thread Mesh<br/>802.15.4<br/>2.4 GHz| N2
+    N2 <-->|Thread Mesh<br/>802.15.4| N3
+    N1 <-->|Thread Mesh| N3
+
+    %% Conexiones Capa 2 -> Gateway
+    N1 -->|CoAP/UDP<br/>6LoWPAN/IPHC<br/>IPv6| OTBR
+    N2 -->|CoAP/UDP<br/>6LoWPAN| OTBR
+    N3 -->|CoAP/UDP| OTBR
+    OTBR -->|IPv6 Native<br/>LwM2M| GW
+
+    %% Conexiones Gateway -> Cloud
+    GW -->|MQTT/TLS<br/>HaLow Uplink<br/>902-928 MHz<br/>>1 km range| TB
+    GW -.->|WiFi 2.4 GHz<br/>Backup Link| TB
+    
+    %% Procesamiento Edge
+    EdgeProc -.->|Local Analytics<br/>72% WAN reduction| GW
+
+    %% Conexiones Cloud
+    TB -->|IEEE 2030.5<br/>REST API| DER
+    TB -->|Telemetry Data<br/>15-min intervals| AMI
+
+    %% Estilos
+    classDef devices fill:#FFE6E6,stroke:#CC0000,stroke-width:2px,color:#000
+    classDef field fill:#E6F3FF,stroke:#0066CC,stroke-width:2px,color:#000
+    classDef gateway fill:#FFF4E6,stroke:#FF8C00,stroke-width:3px,color:#000
+    classDef cloud fill:#E8F5E8,stroke:#2E7D32,stroke-width:2px,color:#000
+    classDef processing fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px,color:#000
+
+    class M1,M2,M3,M4 devices
+    class N1,N2,N3,OTBR field
+    class GW,HaLow,WiFi gateway
+    class EdgeProc processing
+    class TB,DER,AMI cloud

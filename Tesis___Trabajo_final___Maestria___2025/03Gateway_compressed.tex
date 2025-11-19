@@ -1,4 +1,4 @@
-\chapter{Gateway de Telemetría para Smart Energy}
+﻿\chapter{Gateway de Telemetría para Smart Energy}
 
 \section{Introducción}
 
@@ -47,7 +47,7 @@ El proceso completo de instalación de OpenWRT en Raspberry Pi 4, incluyendo par
 
 \subsection{Servicios Containerizados (Docker)}
 
-La plataforma se despliega con seis servicios Docker: OpenThread Border Router (OTBR), ThingsBoard Edge 3.6.0, PostgreSQL 15 + TimescaleDB, IEEE 2030.5 Server (Python/Flask), Bridge Thread↔ThingsBoard (Python/MQTT), y Apache Kafka 7.5.0. Los archivos \texttt{docker-compose.yml} completos se presentan en el Anexo B.
+La plataforma se despliega con seis servicios Docker: OpenThread Border Router (OTBR), ThingsBoard Edge 3.6.0, PostgreSQL 15 + TimescaleDB, IEEE 2030.5 Server (Python/Flask), Bridge Thread$\leftrightarrow$ThingsBoard (Python/MQTT), y Apache Kafka 7.5.0. Los archivos \texttt{docker-compose.yml} completos se presentan en el Anexo B.
 
 \section{Conectividad y Protocolos}
 
@@ -119,7 +119,7 @@ OpenWRT nftables con cuatro zonas: \texttt{wan} (Ethernet/LTE, default REJECT), 
 
 Todos los datos críticos en SSD: PostgreSQL/TimescaleDB (80 GB), ThingsBoard Edge data (20 GB), Docker volumes (30 GB), backups diarios (50 GB). Backup automático vía \texttt{cron}: PostgreSQL dump diario, TB Edge config export, certificados y claves.
 
-\subsection{Failover WAN (Ethernet ↔ LTE)}
+\subsection{Failover WAN (Ethernet $\leftrightarrow$ LTE)}
 
 Configuración mwan3 con dos interfaces: \texttt{wan} (Ethernet, peso 10, check \texttt{ping 8.8.8.8}), \texttt{wwan} (LTE, peso 5, backup). Conmutación automática en <10 segundos.
 
@@ -131,7 +131,7 @@ En caso de desconexión cloud, ThingsBoard Edge bufferiza: (1) telemetría hasta
 
 \subsection{Preprocesamiento de Datos}
 
-Operaciones locales: (1) filtrado de outliers (límites ±3σ), (2) agregación temporal (promedios 15-min), (3) compresión gzip antes de transmisión cloud, y (4) detección de anomalías con reglas (voltaje <200V o >250V).
+Operaciones locales: (1) filtrado de outliers (límites ±3$\sigma$), (2) agregación temporal (promedios 15-min), (3) compresión gzip antes de transmisión cloud, y (4) detección de anomalías con reglas (voltaje <200V o >250V).
 
 \subsection{Ollama LLM Local (Opcional)}
 

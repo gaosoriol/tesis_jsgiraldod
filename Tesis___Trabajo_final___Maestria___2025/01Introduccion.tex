@@ -1,12 +1,12 @@
-\chapter{Introducción}
+﻿\chapter{Introducción}
 
-\textit{Este capítulo establece el contexto y la motivación de la investigación, presentando los desafíos actuales de las redes eléctricas inteligentes (Smart Energy) en la era de la transición energética. Se analizan las limitaciones de las arquitecturas tradicionales basadas en la nube, se comparan las principales tecnologías de comunicación IoT disponibles (Thread, Zigbee, Bluetooth Mesh, LoRaWAN, Wi-Fi HaLow), y se justifica la elección de la arquitectura propuesta. El capítulo plantea el problema de investigación, delimita el alcance del trabajo, formula las hipótesis a validar y establece los objetivos generales y específicos. Finalmente, se describe la estructura del documento y la metodología empleada para el desarrollo de la tesis.}
+\textit{Este capítulo establece el contexto y la motivación de la investigación, presentando los desafíos actuales de las redes eléctricas inteligentes (Energía Inteligente o \textit{Smart Energy}) en la era de la transición energética. Se analizan las limitaciones de las arquitecturas tradicionales basadas en la nube, se comparan las principales tecnologías de comunicación IoT disponibles (Thread, Zigbee, Bluetooth Mesh, LoRaWAN, Wi-Fi HaLow), y se justifica la elección de la arquitectura propuesta. El capítulo plantea el problema de investigación, delimita el alcance del trabajo, formula las hipótesis a validar y establece los objetivos generales y específicos. Finalmente, se describe la estructura del documento y la metodología empleada para el desarrollo de la tesis.}
 
 \section{Contexto y Motivación}
 
-\subsection{El Desafío de las Redes Smart Energy}
+\subsection{El Desafío de las Redes de Energía Inteligente (\textit{Smart Energy Networks})}
 
-La transición energética global hacia sistemas descentralizados, con alta penetración de energías renovables distribuidas (DER, por sus siglas en inglés \textit{Distributed Energy Resources}) y gestión activa de la demanda (DSM, \textit{Demand Side Management}), exige infraestructuras de medición inteligente robustas y escalables~\cite{velasquezSmartGridsEmpowered2024,SmartHomeEnergy2024}. Estas infraestructuras, conocidas como AMI (\textit{Advanced Metering Infrastructure}), deben ser capaces de recolectar, transmitir y procesar datos de millones de puntos de consumo en tiempo cuasi-real, proporcionando la información necesaria para optimizar la operación de la red eléctrica~\cite{alsafranChallengesImplementingIoT2025}.
+La transición energética global hacia sistemas descentralizados, con alta penetración de energías renovables distribuidas (DER, por sus siglas en inglés \textit{Distributed Energy Resources}) y gestión activa de la demanda (DSM, \textit{Demand Side Management}), exige infraestructuras de medición inteligente robustas y escalables~\cite{velasquezSmartGridsEmpowered2024,SmartHomeEnergy2024}. Estas infraestructuras, conocidas como Infraestructura Avanzada de Medición (AMI o \textit{Advanced Metering Infrastructure}), deben ser capaces de recolectar, transmitir y procesar datos de millones de puntos de consumo en tiempo cuasi-real, proporcionando la información necesaria para optimizar la operación de la red eléctrica~\cite{alsafranChallengesImplementingIoT2025}.
 
 Según proyecciones de la Agencia Internacional de Energía (IEA, \textit{International Energy Agency}), se anticipa la instalación de más de 1.300 millones de medidores inteligentes a nivel global para el año 2030. Este despliegue masivo generará aproximadamente 15 petabytes (PB) de datos de telemetría diarios, planteando desafíos significativos en términos de comunicación, almacenamiento y procesamiento de información~\cite{dianeSystematicComprehensiveReview2025}.
 
@@ -14,16 +14,16 @@ Sin embargo, las arquitecturas tradicionales basadas en comunicación directa di
 
 \subsection{Estado Actual de las Tecnologías de Comunicación IoT}
 
-Para abordar los desafíos planteados en la sección anterior, es fundamental comprender el panorama actual de las tecnologías de comunicación disponibles para aplicaciones IoT (\textit{Internet of Things}) en el sector energético~\cite{abdulsalamOverviewRecentWireless2024,choudharyInternetThingsComprehensive2024}. El ecosistema IoT para aplicaciones industriales y de infraestructura crítica se caracteriza por una heterogeneidad de tecnologías de comunicación, cada una optimizada para rangos específicos de alcance, throughput (capacidad de transmisión), latencia y consumo energético~\cite{ashfaqIoTSensorNetworks2024}. Esta diversidad tecnológica permite seleccionar la combinación más adecuada según los requisitos específicos de cada aplicación y escenario de despliegue.
+Para abordar los desafíos planteados en la sección anterior, es fundamental comprender el panorama actual de las tecnologías de comunicación disponibles para aplicaciones de Internet de las Cosas (IoT o \textit{Internet of Things}) en el sector energético~\cite{abdulsalamOverviewRecentWireless2024,choudharyInternetThingsComprehensive2024}. El ecosistema IoT para aplicaciones industriales y de infraestructura crítica se caracteriza por una heterogeneidad de tecnologías de comunicación, cada una optimizada para rangos específicos de alcance, rendimiento (\textit{throughput} o capacidad de transmisión), latencia y consumo energético~\cite{ashfaqIoTSensorNetworks2024}. Esta diversidad tecnológica permite seleccionar la combinación más adecuada según los requisitos específicos de cada aplicación y escenario de despliegue (\textit{deployment}).
 
-A continuación, se presenta una comparativa técnica de las principales tecnologías de comunicación relevantes para redes de medición inteligente, agrupadas en tres categorías: protocolos mesh de corto alcance (2.4 GHz), plataformas de procesamiento en el borde (edge computing), y tecnologías de última milla para conectividad de área amplia.
+A continuación, se presenta una comparativa técnica de las principales tecnologías de comunicación relevantes para redes de medición inteligente, agrupadas en tres categorías: protocolos en malla de corto alcance (\textit{mesh protocols}, 2.4 GHz), plataformas de procesamiento en el borde (\textit{edge computing}), y tecnologías de última milla para conectividad de área amplia.
 
 \subsubsection{Comparativa Técnica de Protocolos Mesh 2.4 GHz}
 
 \begin{table}[h]
 \centering
 \small
-\caption{Comparación de protocolos mesh 2.4 GHz para IoT (Thread, Zigbee, Bluetooth Mesh)}
+\caption{Comparación de protocolos en malla (\textit{mesh}) 2.4 GHz para IoT (Thread, Zigbee, Bluetooth Mesh)}
 \label{tab:mesh-comparison}
 \begin{tabular}{|p{3.2cm}|p{3.5cm}|p{3.5cm}|p{3.5cm}|}
 \hline
@@ -53,16 +53,16 @@ A continuación, se presenta una comparativa técnica de las principales tecnolo
 \end{tabular}
 \end{table}
 
-Como se observa en la Tabla \ref{tab:mesh-comparison}, Thread emerge como el protocolo preferencial para redes de campo en aplicaciones de Smart Energy debido a tres ventajas fundamentales. En primer lugar, su routing IPv6 nativo facilita la integración con infraestructuras IP existentes, eliminando la necesidad de gateways de traducción de protocolo propietarios. En segundo lugar, cuenta con una estandarización completa bajo Thread Group (miembro de la Connectivity Standards Alliance), lo que garantiza interoperabilidad entre fabricantes. Finalmente, ofrece soporte multi-vendor certificado mediante el programa de certificación Thread 1.3.1, reduciendo el riesgo de vendor lock-in en proyectos de largo plazo.
+Como se observa en la Tabla \ref{tab:mesh-comparison}, Thread emerge como el protocolo preferencial para redes de campo en aplicaciones de Energía Inteligente (\textit{Smart Energy}) debido a tres ventajas fundamentales. En primer lugar, su enrutamiento IPv6 nativo (\textit{native IPv6 routing}) facilita la integración con infraestructuras IP existentes, eliminando la necesidad de pasarelas de traducción (\textit{gateways}) de protocolo propietarios. En segundo lugar, cuenta con una estandarización completa bajo Thread Group (miembro de la Connectivity Standards Alliance), lo que garantiza interoperabilidad entre fabricantes. Finalmente, ofrece soporte multi-proveedor certificado (\textit{multi-vendor}) mediante el programa de certificación Thread 1.3.1, reduciendo el riesgo de dependencia de proveedor (\textit{vendor lock-in}) en proyectos de largo plazo.
 
 Además, Thread presenta latencias significativamente menores (40-60 ms en tres saltos) comparado con Zigbee (80-120 ms) y Bluetooth Mesh (100-200 ms), lo cual resulta crítico para aplicaciones que requieren respuesta en tiempo real, como la detección de anomalías en el consumo eléctrico o la coordinación de microrredes.
 
-\subsubsection{Plataformas de Edge Computing - Análisis Comparativo}
+\subsubsection{Plataformas de Computación en el Borde (\textit{Edge Computing Platforms}) - Análisis Comparativo}
 
 \begin{table}[h]
 \centering
 \small
-\caption{Comparación de plataformas edge IoT para procesamiento distribuido}
+\caption{Comparación de plataformas IoT en el borde (\textit{edge}) para procesamiento distribuido}
 \label{tab:edge-platforms}
 \begin{tabular}{|p{2.8cm}|p{2.8cm}|p{2.8cm}|p{2.8cm}|p{2.8cm}|}
 \hline
@@ -77,7 +77,7 @@ Además, Thread presenta latencias significativamente menores (40-60 ms en tres 
 \hline
 \textbf{Almacenamiento} & PostgreSQL/Cassandra & DynamoDB local & SQLite/Custom & Context store \\
 \hline
-\textbf{Dashboard local} & \textcolor{blue}{Sí} (full featured) & \textcolor{red}{No} (CloudWatch) & \textcolor{red}{No} (portal cloud) & \textcolor{blue}{UI integrado} \\
+\textbf{Panel de control local (\textit{Dashboard})} & \textcolor{blue}{Sí} (completo) & \textcolor{red}{No} (CloudWatch) & \textcolor{red}{No} (portal nube) & \textcolor{blue}{UI integrado} \\
 \hline
 \textbf{Autonomía offline} & \textcolor{blue}{Ilimitada} & Limitada & Limitada & \textcolor{blue}{Ilimitada} \\
 \hline
@@ -90,7 +90,7 @@ Además, Thread presenta latencias significativamente menores (40-60 ms en tres 
 \end{tabular}
 \end{table}
 
-Del análisis comparativo presentado en la Tabla \ref{tab:edge-platforms}, ThingsBoard Edge se posiciona como la solución más robusta para aplicaciones industriales que requieren continuidad operacional durante particiones WAN prolongadas. A diferencia de las alternativas comerciales propietarias (AWS IoT Greengrass, Azure IoT Edge), ThingsBoard Edge proporciona capacidades completas de procesamiento de reglas (rule engine), dashboards interactivos accesibles localmente y sincronización bidireccional de configuraciones y datos históricos. 
+Del análisis comparativo presentado en la Tabla \ref{tab:edge-platforms}, ThingsBoard Edge se posiciona como la solución más robusta para aplicaciones industriales que requieren continuidad operacional durante particiones WAN prolongadas. A diferencia de las alternativas comerciales propietarias (AWS IoT Greengrass, Azure IoT Edge), ThingsBoard Edge proporciona capacidades completas de procesamiento de reglas (\textit{rule engine}), paneles de control interactivos (\textit{dashboards}) accesibles localmente y sincronización bidireccional de configuraciones y datos históricos. 
 
 Esta autonomía offline ilimitada resulta especialmente relevante en el contexto latinoamericano, donde las infraestructuras de telecomunicaciones pueden presentar interrupciones frecuentes, particularmente en zonas rurales y semi-urbanas. Adicionalmente, su licenciamiento Apache 2.0 elimina costos recurrentes de suscripción y permite personalización del código fuente según requisitos específicos del proyecto.
 
@@ -99,7 +99,7 @@ Esta autonomía offline ilimitada resulta especialmente relevante en el contexto
 \begin{table}[h]
 \centering
 \small
-\caption{Comparación de tecnologías última milla para Smart Energy}
+\caption{Comparación de tecnologías de enlace troncal (\textit{backhaul}) para Energía Inteligente (\textit{Smart Energy}) IoT: Wi-Fi HaLow (IEEE 802.11ah), LoRaWAN, NB-IoT (LTE Cat-NB1), LTE Cat-M1. Criterios: alcance típico (km), rendimiento (\textit{throughput}, kbps), latencia (ms), espectro (licenciado/no licenciado), costos OPEX mensuales por dispositivo, y adecuación para actualizaciones de código remoto (\textit{firmware OTA}).}
 \label{tab:lastmile-comparison}
 \begin{tabular}{|p{3.2cm}|p{2.8cm}|p{2.5cm}|p{2.5cm}|p{2.5cm}|}
 \hline
@@ -152,7 +152,7 @@ A pesar de los avances tecnológicos descritos en las secciones anteriores, el a
 \begin{table}[h]
 \centering
 \small
-\caption{Latencia end-to-end por arquitectura (device → cloud storage)}
+\caption{Latencia end-to-end medida desde nodo Thread hasta almacenamiento cloud/edge (dispositivo IoT → gateway → storage). Comparación entre arquitecturas: Cloud-Centric (AWS IoT Core + RDS), Edge-Lite (Node-RED local + cloud DB), y propuesta Edge Full (ThingsBoard Edge + TimescaleDB local). Metodología: n=1000 muestras por arquitectura, intervalo de confianza 95\%, timestamp NTP sincronizado.}
 \label{tab:latency-overhead}
 \begin{tabular}{|p{3.8cm}|p{3.2cm}|p{3.2cm}|p{3.2cm}|}
 \hline
@@ -272,7 +272,7 @@ Análisis de TCO (Total Cost of Ownership) para despliegue de 1,000 puntos de me
 La investigación contribuye al cuerpo de conocimiento en arquitecturas IoT heterogéneas mediante:
 \begin{itemize}
 \item Diseño de arquitectura de referencia para gateways multi-PHY conformes con ISO/IEC 30141.
-\item Caracterización empírica de latencias en integración Thread ↔ HaLow.
+\item Caracterización empírica de latencias en integración Thread $\leftrightarrow$ HaLow.
 \item Metodología de implementación de IEEE 2030.5 Function Sets sobre plataformas embebidas Linux.
 \item Evaluación comparativa de estrategias de failover multi-WAN en gateways IoT.
 \end{itemize}
@@ -291,7 +291,7 @@ La investigación sigue un enfoque mixto que combina Design Science Research (DS
 \item Análisis comparativo de tecnologías de comunicación (Thread, Zigbee, BLE Mesh, HaLow, LoRaWAN, LTE Cat-M1).
 \item Diseño de arquitectura de 4 capas: Conectividad, Orquestación, Procesamiento, Aplicación.
 \item Especificación de interfaces: OTBR APIs, MQTT topics, IEEE 2030.5 REST endpoints.
-\item Modelado de latencias mediante teoría de colas (M/M/1 para gateway, M/G/∞ para cloud).
+\item Modelado de latencias mediante teoría de colas (M/M/1 para gateway, M/G/$\infty$ para cloud).
 \end{enumerate}
 
 \textbf{Entregables:} Diagrama de arquitectura (Capítulo 3), especificación de requisitos (Capítulo 3.3), diseño de base de datos TimescaleDB (Anexo B).
@@ -307,7 +307,7 @@ La investigación sigue un enfoque mixto que combina Design Science Research (DS
 \item Despliegue stack Docker Compose: ThingsBoard Edge 3.6.0, PostgreSQL 15 + TimescaleDB 2.13, Apache Kafka 7.5.0, IEEE 2030.5 Server (Python/Flask), Ollama LLM (Llama 3.2 3B).
 \item Implementación IEEE 2030.5 Function Sets: DCAP, Time, EndDevice, MirrorUsagePoint, MirrorMeterReading, Messaging (XML schemas según estándar).
 \item Configuración mwan3 para failover multi-WAN (Ethernet métrica 10, HaLow STA métrica 15, LTE métrica 20).
-\item Desarrollo nodos IoT: ESP32-C6 Thread LwM2M + sensor BME280 (temperatura/humedad/presión).
+\item Desarrollo nodos IoT: ESP32-C6 Thread LwM2M + adaptador RS-485 DLMS/COSEM para lectura de medidores inteligentes.
 \end{enumerate}
 
 \textbf{Entregables:} Documentación de instalación (Anexo A), archivos docker-compose.yml (Anexo B), scripts de integración (Anexo C), código fuente nodos IoT (Anexo E).
@@ -342,15 +342,7 @@ La investigación sigue un enfoque mixto que combina Design Science Research (DS
 
 \textbf{Baseline 2 - Edge-Lite:} Nodos Thread → OTBR → Node-RED (local) → AWS IoT Core (sync).
 
-\textbf{Criterios de comparación:}
-\begin{itemize}
-\item Latencia P50/P99 device → storage
-\item Disponibilidad durante partición WAN 48h
-\item Throughput máximo (mensajes/seg)
-\item Consumo energético gateway (Watts)
-\item Costos OPEX (USD/mes para 100 dispositivos)
-\item Complejidad de deployment (horas-persona)
-\end{itemize}
+\textbf{Criterios de comparación:} Latencia, disponibilidad durante partición WAN, throughput máximo, consumo energético, costos operacionales y complejidad de deployment (ver Capítulo 2 para análisis detallado de trade-offs).
 
 \textbf{Entregables:} Tabla comparativa (Capítulo 4), análisis de trade-offs, recomendaciones de uso.
 
@@ -445,7 +437,7 @@ Diseñar, implementar y validar una arquitectura IoT centrada en edge gateways p
 
 \item \textbf{Conformidad estándares}: Implementación de IEEE 2030.5-2023 Function Sets (DCAP, Time, EndDevice, MirrorUsagePoint, MirrorMeterReading, Messaging) y mapeo ISO/IEC 30141:2024.
 
-\item \textbf{Nodos IoT}: Desarrollo de nodos ESP32-C6 Thread con cliente LwM2M, sensores BME280 y firmware actualizable OTA.
+\item \textbf{Nodos IoT}: Desarrollo de nodos ESP32-C6 Thread con cliente LwM2M, interfaz RS-485 para medidores DLMS/COSEM y firmware actualizable OTA.
 
 \item \textbf{Validación experimental}: Medición empírica de latencia, throughput, disponibilidad, failover y overhead en condiciones controladas de laboratorio y despliegue piloto urbano.
 
@@ -481,7 +473,7 @@ Diseñar, implementar y validar una arquitectura IoT centrada en edge gateways p
 \begin{enumerate}
 \item \textbf{Arquitectura de referencia IoT heterogénea}: Especificación de arquitectura multi-capa para gateways edge que integra múltiples PHYs (802.15.4, 802.11ah, LTE), conforme con ISO/IEC 30141:2024, documentando patrones de diseño, trade-offs arquitectónicos y decisiones de ingeniería.
 
-\item \textbf{Caracterización empírica Thread ↔ HaLow}: Primera caracterización publicada de latencias, throughput y reliability en integración Thread-HaLow mediante bridge Ethernet transparente, incluyendo análisis de overhead de OTBR y impacto de topologías mesh.
+\item \textbf{Caracterización empírica Thread $\leftrightarrow$ HaLow}: Primera caracterización publicada de latencias, throughput y reliability en integración Thread-HaLow mediante bridge Ethernet transparente, incluyendo análisis de overhead de OTBR y impacto de topologías mesh.
 
 \item \textbf{Metodología IEEE 2030.5 sobre Linux embebido}: Documentación de estrategias de implementación de Function Sets IEEE 2030.5 sobre plataformas resource-constrained (ARMv8, 4 GB RAM), incluyendo optimizaciones de XML parsing, caching y gestión de certificados.
 
@@ -497,7 +489,7 @@ Diseñar, implementar y validar una arquitectura IoT centrada en edge gateways p
 
 \item \textbf{Stack Docker Compose optimizado}: Composición de servicios edge (ThingsBoard, TimescaleDB, Kafka, IEEE 2030.5, Ollama) con resource management, health checks y restart policies, optimizado para hardware Cortex-A53.
 
-\item \textbf{Firmware nodos IoT Thread LwM2M}: Implementación ESP-IDF para ESP32-C6 con cliente LwM2M (Wakaama), driver BME280, Deep Sleep scheduling y OTA segura.
+\item \textbf{Firmware nodos IoT Thread LwM2M}: Implementación ESP-IDF para ESP32-C6 con cliente LwM2M (Wakaama), driver RS-485 DLMS/COSEM, Deep Sleep scheduling y OTA segura.
 \end{enumerate}
 
 \subsection{Contribuciones a la Industria}
@@ -536,4 +528,15 @@ Se formularon cinco hipótesis cuantificables que serán validadas experimentalm
 
 Las contribuciones esperadas del trabajo abarcan tres dimensiones: académicas (caracterización empírica Thread-HaLow, benchmarking de arquitecturas edge), técnicas (implementaciones open-source, configuraciones OpenWRT, firmware IoT) e industriales (reducción de costos operacionales, guías de implementación práctica, casos de negocio para adopción de HaLow).
 
-El siguiente capítulo (Marco Teórico) profundiza en los fundamentos teóricos de las tecnologías seleccionadas, presentando el estado del arte de los protocolos de comunicación IoT, los estándares de interoperabilidad para Smart Energy y las plataformas de procesamiento en el borde, estableciendo las bases conceptuales para el diseño de la arquitectura propuesta que se detalla en el Capítulo 3.
+\subsection{Transición al Marco Teórico}
+
+El siguiente capítulo (Marco Teórico) proporciona los fundamentos teóricos necesarios para comprender el diseño propuesto, estructurado en las siguientes áreas:
+
+\begin{itemize}
+\item \textbf{Protocolos de comunicación IoT}: Análisis detallado de Thread, 6LoWPAN, CoAP, LwM2M y Wi-Fi HaLow (IEEE 802.11ah), incluyendo especificaciones técnicas, ventajas comparativas y casos de uso óptimos para cada tecnología.
+\item \textbf{Estándares de interoperabilidad}: Revisión exhaustiva de IEEE 2030.5-2023 (Smart Energy Profile 2.0) e ISO/IEC 30141:2024 (IoT Reference Architecture), estableciendo los requisitos de conformidad para el gateway propuesto.
+\item \textbf{Arquitecturas de Edge Computing}: Estado del arte en plataformas de procesamiento edge (ThingsBoard Edge, Azure IoT Edge, AWS IoT Greengrass), bases de datos time-series (TimescaleDB, InfluxDB) y sistemas de mensajería (Kafka, MQTT).
+\item \textbf{Trabajos relacionados}: Comparativa crítica con soluciones académicas y comerciales existentes, identificando brechas específicas que motivan esta investigación.
+\end{itemize}
+
+Este marco conceptual establece las bases para el diseño arquitectónico del gateway multi-protocolo que se presenta en el Capítulo 3.
