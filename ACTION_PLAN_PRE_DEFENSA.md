@@ -4,7 +4,8 @@
 **Fecha inicio:** 19 de noviembre de 2025  
 **Fecha defensa estimada:** 4 de diciembre de 2025  
 **Días disponibles:** 15 días  
-**Estado inicial:** 95% completo, 303 páginas
+**Estado inicial:** 95% completo, 303 páginas  
+**Estado actual (19 nov 16:00):** 337 páginas, 2.40 MB PDF, 5 tareas P1/P2 completadas
 
 ---
 
@@ -12,6 +13,20 @@
 
 ### 🚨 **PRIORIDAD 1 - CRÍTICAS** (Días 1-5, 14 horas)
 **Impacto en defensa:** ALTO - El comité preguntará sobre estos puntos
+
+- [x] **P1.0** - Agregar análisis Wi-SUN FAN como alternativa descartada (2h)
+  - **Archivo:** `02MarcoTeorico.tex` ✅
+  - **Ubicación:** Después de Thread/Zigbee comparison (~línea 360)
+  - **Entregable:** Subsección "Wi-SUN FAN - Análisis de Descarte Técnico" (2.5 páginas)
+  - **Output:** 
+    * Tabla comparativa Thread 1.3.1 vs Wi-SUN FAN 1.2 vs HaLow 802.11ah (10 criterios)
+    * TI CC1312R chipset specifications como Wi-SUN reference
+    * 4 razones técnicas descarte: (1) Conflicto espectral Sub-1 GHz, (2) Throughput 133× inferior, (3) Complexity routing RPL, (4) Ecosystem Matter convergence
+    * Cross-reference a Radiocrafts migration validation (líneas 1002-1064)
+    * Bibliografia: +1 entry tiCC1312RWiSUN2024
+    * PDF: 334 → 337 páginas
+  - **Documento defensa:** `DEFENSA_PREGUNTAS_WISUN.md` (preparación Q&A comité)
+  - **Status:** ✅ Completado (Día 1 - 16:00, 1.5h real vs 2h estimado)
 
 - [ ] **P1.1** - Agregar tabla comparativa HaLow vs LoRaWAN (2h)
   - **Archivo:** `02MarcoTeorico.tex`
@@ -24,6 +39,7 @@
   - **Ubicación:** Sección 2.2 (después de descripción Thread)
   - **Entregable:** Tabla con 8 criterios + justificación 1 párrafo
   - **Status:** ⏳ PENDIENTE
+  - **Nota:** ⚠️ Thread vs Zigbee YA EXISTE tabla líneas 307-351 con 10 criterios completa → **REVISAR SI NECESARIA**
 
 - [ ] **P1.3** - Agregar diagrama de secuencia temporal end-to-end (3h)
   - **Archivo:** `04Arquitectura_NEW.tex`
