@@ -355,6 +355,65 @@ La compresión 6LoWPAN reduce latencia en topologías mesh multi-hop >70\%~\cite
 
 \textbf{Conclusión:} Aceptamos trade-off menor madurez + consumo marginal superior a cambio de architecture simplicity (IPv6 native, no translation layer) + IEEE 2030.5 seamless integration + Matter future-proofing. Decisión validada por industry trend: utilities modernizando hacia IPv6-based AMI (Pacific Gas \& Electric, Duke Energy pilots Thread 2023-2024).
 
+\subsection{Wi-SUN FAN - Análisis de Descarte Técnico}
+
+Wi-SUN (Wireless Smart Utility Network) FAN (Field Area Network) es un estándar de comunicación inalámbrico IEEE 802.15.4g específicamente diseñado para redes de servicios públicos inteligentes (smart grid, smart metering), operando en bandas Sub-1 GHz (868/915 MHz) con topología mesh IPv6 sobre 6LoWPAN y routing RPL (IPv6 Routing Protocol for Low-Power and Lossy Networks, RFC 6550)~\cite{tiCC1312RWiSUN2024}. Wi-SUN Alliance lanzó especificación FAN 1.0 en 2017, actualizada a FAN 1.1 (2019) y FAN 1.2 (2020) con mejoras en efficiency, security y multicast support.
+
+\textbf{Diferencias clave FAN 1.1 → 1.2:} (1) Mejora efficiency routing RPL con Destination Oriented Directed Acyclic Graph (DODAG) optimization reduciendo control overhead 20-30\%, (2) Security enhancements con multicast key management mejorado para OTA firmware distribution, (3) Soporte para frequency hopping avanzado (channel sequences más complejas) aumentando resiliencia ante interferencia, (4) Improved neighbor discovery reduciendo latencia de join de 30-60 s (FAN 1.1) a 10-20 s (FAN 1.2).
+
+\textbf{Physical Layer IEEE 802.15.4g:} A diferencia del Thread (IEEE 802.15.4 estándar @ 2.4 GHz), Wi-SUN utiliza IEEE 802.15.4g Sun (Smart Utility Networks) PHY que opera en bandas Sub-1 GHz (863-870 MHz Europa, 902-928 MHz Américas, 915-928 MHz Japón) con modulaciones MR-FSK (Multi-Rate Frequency Shift Keying) permitiendo data rates configurables 50 kbps, 100 kbps, 150 kbps, 200 kbps, 300 kbps según sensibilidad vs throughput trade-off. Banda Sub-1 GHz ofrece mejor propagación (free-space path loss 15-20 dB menor vs 2.4 GHz) y penetración (atenuación paredes concreto 8-12 dB menor), ideal para utility outdoor deployments~\cite{tiCC1312RWiSUN2024}.
+
+\textbf{Chipset Ecosystem:} Texas Instruments CC1312R representa chipset líder Wi-SUN certificado: ARM Cortex-M4F @ 48 MHz, 352 KB Flash, 88 KB RAM, radio Sub-1 GHz multibanda (143-1315 MHz ranges) con +14 dBm TX power y -121 dBm sensitivity (50 kbps mode). Protocolo support incluye Wi-SUN FAN Stack (TI SimpleLink SDK SWRU615), 6LoWPAN, IEEE 802.15.4g, con precio \$2.70-4.35 USD (1ku quantities), 25\% más barato que Thread nRF52840 (\$4-5 USD)~\cite{tiCC1312RWiSUN2024}. Silicon Labs históricamente ofreció EFR32FG Series 1 para Wi-SUN, pero esta línea fue transferida a Skyworks Solutions como parte de divestiture de negocio Infrastructure \& Automotive (2024), quedando TI como principal vendor activo.
+
+\textbf{Development Ecosystem:} TI provee LAUNCHXL-CC1312R1 LaunchPad kit (\$39.99 USD) con Wi-SUN FAN Stack SDK completo incluyendo ejemplos de border router, node join, RPL routing, y TI-RTOS integration. Certificación Wi-SUN Alliance disponible mediante compliance testing (PHY/MAC/RPL conformance tests).
+
+A pesar de ventajas de Wi-SUN (propagación Sub-1 GHz superior, ecosystem maduro con deployments utilities globales, costo chipset menor), esta arquitectura descartó Wi-SUN FAN por cuatro razones técnicas críticas:
+
+\begin{table}[h]
+\centering
+\small
+\caption{Comparación Thread 1.3.1 vs Wi-SUN FAN 1.2 vs HaLow 802.11ah para infraestructura Smart Energy AMI. Análisis técnico justifica selección Thread (mesh local @ 2.4 GHz) + HaLow (backhaul @ 900 MHz) sobre Wi-SUN por: (1) Conflicto espectral Sub-1 GHz (Wi-SUN 868/915 MHz vs HaLow 902-928 MHz), (2) Throughput insuficiente Wi-SUN (300 kbps vs 40 Mbps HaLow = 133× diferencia) para agregación DCU backhaul, (3) Complexity routing RPL vs MLE Thread, (4) Ecosystem convergencia Matter (Thread mandatory, Wi-SUN no soportado).}
+\label{tab:thread-wisun-halow}
+\begin{tabular}{|p{2.8cm}|p{3.2cm}|p{3.2cm}|p{3.2cm}|p{3cm}|}
+\hline
+\rowcolor{gray!20}
+\textbf{Criterio} & \textbf{Thread 1.3.1} & \textbf{Wi-SUN FAN 1.2} & \textbf{HaLow 802.11ah} & \textbf{Justificación} \\
+\hline
+\textbf{PHY Layer} & \textcolor{blue}{802.15.4 @ 2.4 GHz} & 802.15.4g Sub-1 GHz & \textcolor{blue}{802.11ah @ 900 MHz} & Thread/HaLow \textit{separación espectral} \\
+\hline
+\textbf{Banda frecuencia} & 2400-2483 MHz & \textcolor{red}{868/915 MHz} & \textcolor{red}{902-928 MHz} & Wi-SUN/HaLow \textit{mismo espectro} \\
+\hline
+\textbf{Throughput máx.} & 250 kbps & \textcolor{red}{50-300 kbps} & \textcolor{green}{40 Mbps (4 MHz)} & HaLow 133× Wi-SUN \\
+\hline
+\textbf{IPv6 support} & \textcolor{green}{Nativo 6LoWPAN} & \textcolor{green}{6LoWPAN RPL} & \textcolor{green}{IP nativo} & Empate (todos IPv6) \\
+\hline
+\textbf{Mesh routing} & \textcolor{green}{MLE proactive} & \textcolor{blue}{RPL DODAG} & 802.11s HWMP & Thread: menor complexity \\
+\hline
+\textbf{Chipset ref.} & nRF52840 (\$4) & \textcolor{green}{CC1312R (\$2.70)} & MM6108 (\$12) & Wi-SUN: más barato \\
+\hline
+\textbf{Propagación} & Media (2.4 GHz) & \textcolor{green}{Excelente (Sub-1)} & \textcolor{green}{Excelente (Sub-1)} & Wi-SUN/HaLow empate \\
+\hline
+\textbf{Ecosistema} & \textcolor{green}{Matter, IoT} & \textcolor{blue}{Utilities legacy} & Emergente (Wi-Fi) & Thread: futuro \\
+\hline
+\textbf{Border Router} & \textcolor{green}{OTBR OSS} & Vendor routers & \textcolor{green}{AP estándar} & Thread/HaLow open \\
+\hline
+\textbf{Decisión} & \textcolor{green}{\textbf{ELEGIDO}} & \textcolor{red}{\textbf{DESCARTADO}} & \textcolor{green}{\textbf{ELEGIDO}} & Thread + HaLow \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{Razón 1 - Conflicto Espectral Sub-1 GHz con HaLow:} Wi-SUN opera en 868 MHz (Europa) y 915 MHz (Américas), mientras HaLow utiliza 902-928 MHz (ITU Region 2). Implementar Wi-SUN local mesh + HaLow backhaul resultaría en overlapping espectral Sub-1 GHz causando interferencia mutua (ambos protocolos compitiendo por mismo recurso frecuencial). Thread @ 2.4 GHz + HaLow @ 900 MHz provee \textbf{separación espectral clara} eliminando interferencia: mesh local opera en banda ISM 2.4 GHz (ya saturada en entornos urbanos, pero aceptable para 250 m range), backhaul usa 900 MHz con propagación superior y sin conflicto.
+
+\textbf{Razón 2 - Throughput Insuficiente para Agregación DCU:} Wi-SUN FAN throughput máximo 300 kbps (IEEE 802.15.4g MR-FSK, mejor mode) es \textbf{133× inferior} a HaLow 40 Mbps (802.11ah, 4 MHz channel, MCS10). Para DCU agregando 100-300 smart meters con reportes 15-minuto interval, throughput requerido: 300 meters × 2 KB/report × 8 bits/byte / (15 min × 60 s) = 5.3 kbps promedio, pero \textbf{picos de tráfico} ocurren durante time-sync events o demand response broadcasts donde 50-100 meters responden simultáneamente: 100 meters × 10 KB response × 8 / 10 s = \textbf{800 kbps burst}, excediendo capacidad Wi-SUN 300 kbps. HaLow 40 Mbps provee \textbf{50× headroom} para picos, critical Quality-of-Service (QoS) para AMI~\cite{gharbiehStrategicBandwidthAllocation2016}.
+
+\textbf{Razón 3 - Complexity Routing RPL vs MLE:} Wi-SUN FAN utiliza RPL (RFC 6550) con DODAG (Destination Oriented Directed Acyclic Graph) construction mediante DIO (DODAG Information Object) messages periódicos, DAO (Destination Advertisement Object) para upward routes, y DIS (DODAG Information Solicitation) para discovery. RPL mantiene \textit{separate downward/upward routing tables}, aumentando RAM usage (estimado 4-8 KB adicionales vs Thread MLE) y complexity debugging (route loops, rank inconsistencies)~\cite{rfc6550}. Thread MLE (Mesh Link Establishment) utiliza \textit{unified routing table} proactiva con advertisements cada 32 s, path selection basado en single metric ETX (Expected Transmission Count), simplificando gateway integration con OTBR (OpenThread Border Router). Para arquitectura con gateway DCU ejecutando Linux, OTBR integración es \textbf{Docker container nativo} (docker-compose), mientras Wi-SUN requiere vendor SDK propietario (TI border router binary con kernel drivers específicos).
+
+\textbf{Razón 4 - Ecosystem Direction y Matter Convergence:} Matter specification (Connectivity Standards Alliance, 2022) adoptó Thread como \textit{mandatory transport layer} para smart home/building automation, señalando convergencia industry hacia IPv6-native mesh @ 2.4 GHz. Wi-SUN FAN no forma parte de Matter roadmap (Matter 1.0/1.1/1.2 no incluyen 802.15.4g support), limitando interoperabilidad futura con ecosistema IoT moderno (Google Home, Apple HomeKit, Amazon Alexa utilizan Thread/Matter). Aunque AMI utilities no requieren Matter compliance actualmente, arquitectura debe considerar evolution path hacia smart grid + smart building integration (demand response coordinado, vehicle-to-grid V2G, distributed energy resources DER management)~\cite{threadMatterConvergence2024}.
+
+\textbf{Validación Industria - Migración DESDE Wi-SUN:} Decisión descarte Wi-SUN validada por reportes industry: Radiocrafts (vendor noruego de módulos RF) documenta migración activa de clientes DESDE ZigBee/Wi-SUN/LoRa HACIA RIIM (Radiocrafts Intelligent IoT Mesh) para aplicaciones solar tracking y renewable energy monitoring, citando limitaciones throughput y latency Wi-SUN (típicamente 1000-2000 nodos antes de fragmentación network) vs alternativas mesh más eficientes~\cite{radiocraftsCommissioningLargeSolar2025}. Este pattern replica tendencia utilities modernizando hacia higher-throughput mesh (Thread, propietarios) o backhauls RF de mayor capacidad (HaLow, LTE-M).
+
+\textbf{Conclusión Análisis Wi-SUN:} A pesar de ventajas inherentes Wi-SUN (propagación Sub-1 GHz excelente, penetración superior, ecosystem utilities maduro con millones de meters deployed globalmente, costo chipset 25\% menor), arquitectura Thread + HaLow ofrece beneficios críticos: (1) \textbf{Separación espectral} 2.4 GHz (local) + 900 MHz (backhaul) vs conflicto Sub-1 GHz Wi-SUN/HaLow, (2) \textbf{Throughput agregación} 40 Mbps HaLow vs 300 kbps Wi-SUN (133× diferencia), (3) \textbf{Integration complexity} OTBR open-source vs vendor SDKs propietarios, (4) \textbf{Future-proofing} Matter convergence Thread vs Wi-SUN sin roadmap Matter. Trade-off aceptado explícitamente: renunciamos a propagación superior Sub-1 GHz de Wi-SUN para mesh local (Thread 2.4 GHz suficiente para 250 m DCU coverage), a cambio de throughput y separación espectral críticos para backhaul aggregation.
+
 \subsection{Capa de Aplicación: CoAP}
 
 CoAP (Constrained Application Protocol, RFC 7252) es un protocolo web RESTful optimizado para dispositivos IoT constrained, diseñado como alternativa ligera a HTTP~\cite{shahinzadehSmartHomeConnectivity2024,hossainComparativeStudyIoTCommunication2018}.
