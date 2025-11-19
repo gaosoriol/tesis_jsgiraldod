@@ -3725,3 +3725,46 @@
   note = {Case study documenting RIIM Sub-GHz mesh radio (868/915 MHz, similar frequency to 802.11ah HaLow 900 MHz) deployment for large-scale solar tracking control systems across India, Europe, and United States. Network architecture: Thousands of solar tracker actuators per gateway managed through multi-hop mesh topology with centralized control via Advantech ECU-150 industrial gateway platform. Performance metrics: (1) Reliability 99.99\% successful transmissions in dense coexisting network environments with multiple RIIM meshes operating simultaneously, (2) Latency <1 second for broadcast emergency safe mode commands requiring all panels to simultaneously move to horizontal position during hailstorms or high-wind events, (3) Coverage long-range with penetration through metal tracker beams and operation in uneven terrain without line-of-sight, (4) Scalability few thousand tracker nodes per gateway (vs Thread specification 250 nodes/border router, demonstrating superior mesh efficiency for utility-scale deployments). Technology migration trend: Leading solar tracker manufacturers transitioning from legacy ZigBee/Wi-SUN/LoRa solutions to RIIM mesh due to (a) greater range and coverage enabling fewer gateways, (b) fewer mesh hops reducing latency for time-critical control commands, (c) efficient downlink messaging for actuator commands vs sensor-centric uplink protocols optimized for telemetry. Gateway integration: Advantech ECU-150 ruggedized industrial platform provides RIIM mesh coordination with Ethernet backhaul, extended temperature operation -40°C to +85°C, IP67 environmental sealing for outdoor solar farm deployment conditions. Development resources: Wireless Technology Selection Guide white paper comparing RIIM vs LoRa/Wi-SUN/ZigBee for solar tracking applications available at Radiocrafts website. Next-Gen Solar Evaluation Kit enables rapid prototyping solar mesh networks. Contact: sales@radiocrafts.com. Relevance to thesis: Validates mesh networking architectures for renewable energy infrastructure at utility scale with real-time control requirements. If RIIM Sub-GHz mesh handles thousands of solar tracker actuators with <1 second latency for safety-critical broadcast commands (moving all panels simultaneously during weather emergencies), then Thread mesh (250 smart meters per DCU border router) + HaLow backhaul (10 DCUs per gateway aggregating 2500 meters) represents architecturally similar pattern scaled for AMI use case with lower throughput demands (1-10 kbps telemetry vs actuator position control commands). Demonstrates production viability of mesh Sub-GHz solutions for energy applications beyond smart metering, supporting thesis positioning as aligned with broader industry trends toward converged IoT infrastructure for multiple energy management functions (metering + distributed energy resource control + renewable generation monitoring). Sub-GHz frequency similarity (RIIM 868/915 MHz vs HaLow 900 MHz) suggests comparable propagation characteristics (building penetration, foliage attenuation, diffraction around obstacles) strengthening thesis range and coverage analysis validity.}
 }
 
+@techreport{NISTFramework2022,
+  title = {{NIST Framework and Roadmap for Smart Grid Interoperability Standards, Release 4.0}},
+  author = {{National Institute of Standards and Technology}},
+  institution = {U.S. Department of Commerce, National Institute of Standards and Technology},
+  year = {2022},
+  month = feb,
+  number = {NIST Special Publication 1108r4},
+  doi = {10.6028/NIST.SP.1108r4},
+  url = {https://www.nist.gov/publications/nist-framework-and-roadmap-smart-grid-interoperability-standards-release-40},
+  note = {Defines seven Smart Grid conceptual domains (Bulk Generation, Transmission, Distribution, Customer, Operations, Markets, Service Provider) establishing architecture for secure, interoperable energy systems. Updates Release 3.0 (2014) with post-2020 requirements: distributed energy resources (DER) integration, cybersecurity frameworks (NIST CSF 1.1), IoT device management, blockchain energy trading, 5G/Wi-Fi 6 communications. Key standards families: IEEE 2030.5 (Smart Energy Profile), IEC 61850 (substation automation), IEC 61968/61970 (utility integration), OpenADR 2.0b (demand response). Priority Action Plans include PAP 17 (SEP 2.0), PAP 09 (cybersecurity), PAP 02 (wireless communications). Accessed: 2025-11-19}
+}
+
+@standard{ISOIEC30141v2024,
+  title = {{ISO/IEC 30141:2024 - Internet of Things (IoT) - Reference Architecture}},
+  organization = {International Organization for Standardization / International Electrotechnical Commission},
+  type = {International Standard},
+  year = {2024},
+  month = jun,
+  edition = {Second},
+  note = {Second edition supersedes ISO/IEC 30141:2018. Defines standardized IoT system architecture through four complementary views: (1) Functional View - 8 functional entities (Sensing, Actuation, Processing, Storage, Communication, Security, Management, Application Support), (2) Information View - data models and metadata schemas, (3) Deployment View - physical mapping to hardware, (4) Operational View - workflows and lifecycle management. Complements ISO/IEC 29100 (Privacy Framework) and ISO/IEC 27001 (Security Management). Enables interoperability between heterogeneous IoT systems. Referenced for Smart Grid IoT conformity analysis. Standard available from ISO Store catalogue 11.020 (Healthcare informatics) / 35.020 (Information technology in general). Accessed: 2025-11-19}
+}
+
+@techreport{CaliforniaCPUC2023,
+  title = {{California Rule 21 Interconnection: Smart Inverter Requirements and IEEE 2030.5 Compliance}},
+  author = {{California Public Utilities Commission}},
+  institution = {California Public Utilities Commission, Energy Division},
+  year = {2023},
+  month = sep,
+  type = {Regulatory Decision},
+  number = {D.23-09-032},
+  url = {https://www.cpuc.ca.gov/industries-and-topics/electrical-energy/electric-rule-21-and-rule-24},
+  note = {Mandates IEEE 2030.5 (Smart Energy Profile 2.0) communication protocol for distributed energy resource (DER) grid interconnections under California Senate Bill 2030 (SB-2030). Requirements: (1) Smart inverters >250 kW must implement IEEE 2030.5 client with minimum Function Sets (Time, DER Control, Pricing, Metering), (2) Certified via SunSpec Alliance conformance testing for interoperability, (3) TLS 1.2+ mutual authentication with utility head-end systems. Applies to investor-owned utilities (PG&E, SCE, SDG&E) covering 75\% of California's 39M population. Compliance deadline phased: existing systems by Dec 2024, new installations by rule publication. Cited as regulatory driver for IEEE 2030.5 adoption in North American Smart Grid deployments. Related: Hawaii Rule 14H similar IEEE 2030.5 mandate. Accessed: 2025-11-19}
+}
+
+@standard{IEC62056-2021,
+  title = {{IEC 62056 - Electricity Metering Data Exchange - The DLMS/COSEM Suite}},
+  organization = {International Electrotechnical Commission},
+  type = {International Standard},
+  year = {2021},
+  edition = {Fourth},
+  note = {Comprehensive multi-part standard (Parts 1-1 through 8-10) defining DLMS/COSEM (Device Language Message Specification / Companion Specification for Energy Metering) protocols for smart meter communication. Part 1-0: Smart metering standardization framework. Part 4-1: COSEM interface classes and OBIS object identification system (e.g., 1-0:1.8.0*255 for active energy import). Part 5-3: DLMS/COSEM application layer. Part 6-2: COSEM transport layers (HDLC, TCP/UDP, M-Bus, IEC 62056-21 optical). Part 8-4: Security Suite 1 (AES-128-GCM). Widely deployed globally: European Union (IDIS standard profile), India (Bureau of Indian Standards IS 16444 adoption), China (GB/T 645 derivative). Enables multi-vendor interoperability for AMI. Referenced for OBIS code examples in IEEE 2030.5 metering integration. Standard available from IEC Webstore catalogue 91.120.10 (Tariff and load control). Accessed: 2025-11-19}
+}
+
