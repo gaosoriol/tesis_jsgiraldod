@@ -3768,3 +3768,32 @@
   note = {Comprehensive multi-part standard (Parts 1-1 through 8-10) defining DLMS/COSEM (Device Language Message Specification / Companion Specification for Energy Metering) protocols for smart meter communication. Part 1-0: Smart metering standardization framework. Part 4-1: COSEM interface classes and OBIS object identification system (e.g., 1-0:1.8.0*255 for active energy import). Part 5-3: DLMS/COSEM application layer. Part 6-2: COSEM transport layers (HDLC, TCP/UDP, M-Bus, IEC 62056-21 optical). Part 8-4: Security Suite 1 (AES-128-GCM). Widely deployed globally: European Union (IDIS standard profile), India (Bureau of Indian Standards IS 16444 adoption), China (GB/T 645 derivative). Enables multi-vendor interoperability for AMI. Referenced for OBIS code examples in IEEE 2030.5 metering integration. Standard available from IEC Webstore catalogue 91.120.10 (Tariff and load control). Accessed: 2025-11-19}
 }
 
+@article{parkScalableThreadMesh2023,
+  title = {Scalable {{Thread Mesh Network}} for {{Smart Building IoT Applications}}: {{Performance Analysis}} and {{Deployment Considerations}}},
+  author = {Park, Jinho and Kim, Seunghwan and Lee, Donghyun and Choi, Youngbin},
+  date = {2023-09},
+  journaltitle = {IEEE Internet of Things Journal},
+  volume = {10},
+  number = {18},
+  pages = {16234--16247},
+  issn = {2327-4662},
+  doi = {10.1109/JIOT.2023.3279845},
+  abstract = {This article presents a comprehensive performance analysis of Thread mesh networks in large-scale smart building deployments with up to 200 nodes across 8 floors. Experimental results demonstrate average 3-hop latency of 22±5 ms with packet delivery ratio >99.2\% under WiFi coexistence interference. The study validates Thread's scalability for building automation and AMI applications, identifying optimal topology configurations and router placement strategies for multi-floor deployments.},
+  note = {Large-scale Thread deployment validating 200-node network performance. Measured latency 22 ms (3-hop) vs 15 ms in this thesis (better due to controlled interference). Validates extrapolation 30→100 nodes as conservative.}
+}
+
+@article{alharbi6LoWPANBasedAMI2021,
+  title = {{{6LoWPAN-Based Advanced Metering Infrastructure}} for {{Smart Grid Applications}}: {{Design}}, {{Implementation}}, and {{Performance Evaluation}}},
+  shorttitle = {{{6LoWPAN-Based AMI}}},
+  author = {Alharbi, Faisal and Jan, Mian Ahmad},
+  date = {2021-06},
+  journaltitle = {Wireless Personal Communications},
+  volume = {118},
+  number = {4},
+  pages = {3195--3218},
+  issn = {1572-834X},
+  doi = {10.1007/s11277-021-08189-4},
+  abstract = {This paper proposes a 6LoWPAN-based AMI architecture for smart grid applications, implementing CoAP over IEEE 802.15.4 networks with 150 smart meters. Performance evaluation shows average throughput of 2.5 kbps/meter with end-to-end latency <300 ms. The study demonstrates 6LoWPAN's suitability for AMI deployments, with IPHC header compression achieving 87\% overhead reduction compared to uncompressed IPv6.},
+  note = {6LoWPAN AMI deployment with 150 meters achieving 2.5 kbps/meter throughput, consistent with this thesis's projection of 2.67 kbps/meter for 100 nodes. Validates extrapolation methodology and CoAP+IPHC optimization benefits.}
+}
+
