@@ -484,7 +484,9 @@ Discover/commissioning (global addresses) & 2.4\% & \textcolor{orange}{\textbf{1
 
 Esta sección profundiza en los medidores inteligentes como punto de origen de datos en la arquitectura AMI propuesta. Se comparan alternativas técnicas disponibles en el mercado, se analiza el protocolo DLMS/COSEM en detalle, y se justifica la selección de hardware para el despliegue piloto documentado en Capítulo 5.
 
-\subsection{Comparación Técnica de Medidores Inteligentes}
+\subsection{Comparación de Medidores Inteligentes}
+
+\subsubsection{Selección y Comparación Técnica}
 
 La selección del medidor inteligente impacta directamente la precisión de medición, interfaces de comunicación disponibles, capacidad de detección de eventos (tamper, cortes), y costo por unidad en despliegues masivos. La tabla~\ref{tab:meter-comparison} compara tres modelos representativos del mercado global de medidores monofásicos clase 1 (±1\% precisión según IEC 62053-21).
 
@@ -560,11 +562,15 @@ La arquitectura propuesta utiliza Itron SL7000 en despliegue piloto (30 unidades
     \item \textbf{Sin acelerómetro tamper}: Detección magnética + apertura caja suficiente para 98\% casos de fraude según estudios de pérdidas no técnicas. Acelerómetro útil en zonas con fraude sofisticado (inversión medidor).
 \end{itemize}
 
-\subsection{Protocolo DLMS/COSEM: Análisis Técnico}
+\subsection{Protocolo DLMS/COSEM}
+
+\subsubsection{Análisis Técnico del Protocolo}
 
 DLMS/COSEM (Device Language Message Specification / Companion Specification for Energy Metering, IEC 62056 series) es el protocolo dominante en medición inteligente global, estandarizado por IEC y DLMS User Association. Esta subsección documenta aspectos técnicos críticos del protocolo relevantes para la arquitectura propuesta.
 
-\subsubsection{Arquitectura COSEM: Objetos OBIS}
+\subsection{Códigos OBIS para Smart Energy}
+
+\subsubsection{Arquitectura de Objetos OBIS}
 
 COSEM modela el medidor como colección de objetos accesibles mediante códigos OBIS (Object Identification System, IEC 62056-61). Cada objeto representa un registro medible o configurable identificado por 6-tuple:
 
@@ -618,7 +624,7 @@ A-B:C.D.E.F
 \end{tabular}
 \end{table}
 
-\subsubsection{Trama DLMS/COSEM sobre HDLC}
+\subsubsection{Protocolo de Enlace HDLC}
 
 DLMS utiliza HDLC (High-Level Data Link Control, ISO/IEC 13239) como capa de enlace sobre RS-485. Ejemplo de trama GET request para lectura de energía activa (OBIS 1-0:1.8.0.255):
 
@@ -641,7 +647,9 @@ DLMS utiliza HDLC (High-Level Data Link Control, ISO/IEC 13239) como capa de enl
 
 \textbf{Overhead HDLC}: 9-11 bytes (flags 2B + length 2B + addresses 2-4B + control 1B + FCS 2B) + APDU 10-30 bytes = \textbf{20-40 bytes overhead total} por request/response.
 
-\subsubsection{Seguridad DLMS: HLS (High Level Security)}
+\subsection{Seguridad DLMS: High Level Security (HLS)}
+
+\subsubsection{Niveles de Autenticación}
 
 DLMS define Authentication Association (AA) con 5 niveles:
 
@@ -668,6 +676,8 @@ DLMS define Authentication Association (AA) con 5 niveles:
 \textbf{Justificación HLS vs TLS end-to-end}: DLMS/COSEM originalmente diseñado para enlaces punto-a-punto RS-485 sin IP, por lo que seguridad implementada en capa de aplicación. En arquitectura propuesta, HLS protege tramo Medidor↔Nodo, luego Thread/CoAP añade DTLS para protección E2E hasta Gateway (defensa en profundidad, ver sección 4.9 matriz de seguridad).
 
 \subsection{Interfaz de Lectura y Sincronización}
+
+\subsubsection{Tipos de Información y Frecuencias}
 
 Cada medidor expone tres tipos de información con frecuencias diferenciadas:
 
