@@ -783,56 +783,87 @@ La Tabla \ref{tab:security-threats} documenta ocho vectores de ataque críticos 
 
 \begin{table}[h]
 \centering
-\caption{Matriz de Vectores de Ataque, Impacto y Mitigaciones Implementadas}
+\caption{Matriz de Vectores de Ataque, Impacto y Mitigaciones con Mapeo NIST CSF 2.0}
 \label{tab:security-threats}
 \resizebox{\textwidth}{!}{%
-\begin{tabular}{|p{3.5cm}|p{2cm}|p{2cm}|p{6cm}|p{3.5cm}|}
+\begin{tabular}{|p{3cm}|p{1.5cm}|p{1.5cm}|p{5.5cm}|p{3cm}|p{2cm}|}
 \hline
 \rowcolor{gray!20}
-\textbf{Vector de Ataque} & \textbf{Impacto} & \textbf{Probabilidad} & \textbf{Mitigación Implementada} & \textbf{Riesgo Residual} \\
+\textbf{Vector de Ataque} & \textbf{Impacto} & \textbf{Probab.} & \textbf{Mitigación Implementada} & \textbf{Riesgo Residual} & \textbf{NIST CSF 2.0} \\
 \hline
-\multicolumn{5}{|c|}{\cellcolor{blue!20}\textbf{CAPA 1: NODOS DE CAMPO (THREAD MESH)}} \\
+\multicolumn{6}{|c|}{\cellcolor{blue!20}\textbf{CAPA 1: NODOS DE CAMPO (THREAD MESH)}} \\
 \hline
-\textbf{A1: Nodo comprometido} & Crítico & Baja & Thread Commissioning con PAKE (ECC P-256) + rotación de Network Key cada 90 días + Secure Boot habilitado en ESP32-C6 (firma RSA-2048 del firmware) & Medio: Requiere acceso físico al nodo para bypass de Secure Boot \\
+\textbf{A1: Nodo comprometido} & Crítico & Baja & Thread Commissioning PAKE (ECC P-256) + Network Key rotación 90d + Secure Boot ESP32-C6 (RSA-2048) & Medio: Requiere acceso físico bypass Secure Boot & \textbf{PR.AC-1} Protect: Access Control \\
 \hline
-\textbf{A2: Replay de mensajes Thread} & Alto & Media & Cada mensaje CoAP incluye timestamp Unix + Message ID único. Gateway descarta mensajes con delay >30s o MID duplicado en ventana de 100 mensajes. & Bajo: Ventana de 30s podría permitir replay si captura ocurre <30s \\
+\textbf{A2: Replay mensajes Thread} & Alto & Media & CoAP timestamp Unix + Message ID único. Gateway descarta delay >30s o MID duplicado ventana 100 msgs. & Bajo: Ventana 30s permite replay <30s & \textbf{PR.DS-5} Protect: Data Integrity \\
 \hline
-\textbf{A3: Physical tampering de nodo} & Alto & Media & Detección de apertura con reed switch + alarma inmediata al gateway + log inmutable en TimescaleDB con hash SHA-256. Caja con tornillos de seguridad Torx T10. & Medio: Alarma reactiva, no previene acceso físico \\
+\textbf{A3: Physical tampering nodo} & Alto & Media & Reed switch detección apertura + alarma gateway + log inmutable TimescaleDB hash SHA-256. Caja Torx T10. & Medio: Alarma reactiva, no previene acceso & \textbf{DE.CM-7} Detect: Physical Security \\
 \hline
-\multicolumn{5}{|c|}{\cellcolor{green!20}\textbf{CAPA 2: GATEWAY (OTBR + HALOW AP)}} \\
+\multicolumn{6}{|c|}{\cellcolor{green!20}\textbf{CAPA 2: GATEWAY (OTBR + HALOW AP)}} \\
 \hline
-\textbf{A4: OTBR comprometido} & Crítico & Baja & SSH con autenticación dual: (1) Key-based (RSA-4096) + (2) Google Authenticator OTP. Root login deshabilitado. Firewall nftables drop all INPUT excepto 22/tcp desde IP whitelisted. & Bajo: Requiere compromiso de private key + OTP seed \\
+\textbf{A4: OTBR comprometido} & Crítico & Baja & SSH dual-auth: (1) RSA-4096 key + (2) OTP Google Authenticator. Root disable. Firewall nftables drop INPUT excepto 22/tcp whitelist. & Bajo: Requiere private key + OTP seed & \textbf{PR.AC-4} Protect: Least Privilege \\
 \hline
-\textbf{A5: Man-in-the-Middle en HaLow} & Alto & Media & HaLow con WPA3-SAE (Simultaneous Authentication of Equals) resiste diccionario offline~\cite{ieee80211ah2020}. Modo RAW permite detección de jamming (SNR <10 dB gatilla alarma). Channel hopping automático (2/4/8 MHz) ante interferencia. & Medio: Jamming sofisticado multi-banda podría causar DoS temporal \\
+\textbf{A5: MitM HaLow} & Alto & Media & WPA3-SAE resiste diccionario offline. RAW mode detección jamming SNR <10dB alarma. Channel hopping auto 2/4/8 MHz. & Medio: Jamming multi-banda DoS temporal & \textbf{PR.DS-2} Protect: Data in Transit \\
 \hline
-\textbf{A6: Exfiltración de datos PostgreSQL} & Crítico & Baja & TimescaleDB con: (1) Encriptación at-rest (LUKS dm-crypt AES-256-XTS), (2) mTLS para conexiones cliente-servidor (certificados X.509 renovados cada 90 días), (3) Row-Level Security (RLS) PostgreSQL limitando queries por rol. & Bajo: Requiere compromiso de certificado + bypass RLS \\
+\textbf{A6: Exfiltración PostgreSQL} & Crítico & Baja & TimescaleDB: (1) LUKS dm-crypt AES-256-XTS at-rest, (2) mTLS X.509 renovado 90d, (3) RLS PostgreSQL limita queries/rol. & Bajo: Requiere cert + bypass RLS & \textbf{PR.DS-1} Protect: Data at Rest \\
 \hline
-\multicolumn{5}{|c|}{\cellcolor{orange!20}\textbf{CAPA 3: BACKHAUL (LTE CAT-M1)}} \\
+\multicolumn{6}{|c|}{\cellcolor{orange!20}\textbf{CAPA 3: BACKHAUL (LTE CAT-M1)}} \\
 \hline
-\textbf{A7: Interceptación tráfico MQTT} & Alto & Media & MQTT con TLS 1.3 (ChaCha20-Poly1305 cipher) + certificate pinning (fingerprint SHA-256 del broker hardcoded en cliente). Fallback a TLS 1.2 deshabilitado. & Bajo: Requiere compromiso de CA raíz para certificate substitution \\
+\textbf{A7: Interceptación MQTT} & Alto & Media & TLS 1.3 ChaCha20-Poly1305 + cert pinning SHA-256 broker hardcoded. TLS 1.2 fallback disable. & Bajo: Requiere compromiso CA raíz & \textbf{PR.DS-2} Protect: Data in Transit \\
 \hline
-\textbf{A8: Credential theft MQTT} & Alto & Media & Credenciales almacenadas en TPM 2.0 (Trusted Platform Module) del gateway. MQTT username/password rotados cada 30 días automáticamente vía script. Rate limiting: 5 intentos fallidos → bloqueo IP 1 hora. & Bajo: TPM resiste ataques físicos hasta nivel de laboratorio \\
+\textbf{A8: Credential theft MQTT} & Alto & Media & Credenciales TPM 2.0. MQTT user/pass rotación 30d auto. Rate limit: 5 fallos → bloqueo IP 1h. & Bajo: TPM resiste ataques físicos lab & \textbf{PR.AC-1} Protect: Access Control \\
 \hline
 \end{tabular}%
 }
 \end{table}
 
-\subsubsection{Assessment NIST Cybersecurity Framework}
+\subsubsection{Assessment NIST Cybersecurity Framework 2.0}
 
-La arquitectura implementa controles alineados con las cinco funciones del NIST CSF: Identify, Protect, Detect, Respond, Recover. La evaluación por Tiers (niveles de madurez) posiciona la implementación actual en \textbf{Tier 3 (Repeatable)}, con roadmap hacia Tier 4 (Adaptive).
+La arquitectura implementa controles alineados con el NIST Cybersecurity Framework 2.0~\cite{NIST_CSF_2024}, publicado febrero 2024. CSF 2.0 expande las 5 funciones originales (Identify, Protect, Detect, Respond, Recover) agregando \textbf{Govern (GV)} y refinando categorías. La Tabla~\ref{tab:security-threats} mapea cada vector de ataque a subcategorías específicas del dominio \textbf{Protect (PR)} y \textbf{Detect (DE)}.
+
+\textbf{Análisis de Mapeo NIST CSF 2.0 por Dominio:}
+
+\begin{table}[H]
+\centering
+\caption{Distribución de amenazas por dominio NIST CSF 2.0}
+\label{tab:nist-csf-mapping-summary}
+\small
+\begin{tabular}{|l|r|p{8cm}|}
+\hline
+\rowcolor{gray!20}
+\textbf{Dominio CSF 2.0} & \textbf{Amenazas} & \textbf{Subcategorías Implementadas} \\
+\hline
+\textbf{PR.AC (Access Control)} & 3 & PR.AC-1 (A1, A8): Identidades y credenciales gestionadas (PAKE, TPM 2.0). PR.AC-4 (A4): Least privilege SSH dual-auth. \\
+\hline
+\textbf{PR.DS (Data Security)} & 4 & PR.DS-1 (A6): Data at rest cifrada LUKS AES-256. PR.DS-2 (A5, A7): Data in transit WPA3-SAE + TLS 1.3. PR.DS-5 (A2): Integridad datos con timestamp + MID anti-replay. \\
+\hline
+\textbf{DE.CM (Continuous Monitoring)} & 1 & DE.CM-7 (A3): Monitoreo seguridad física reed switch + logs inmutables. \\
+\hline
+\textbf{Total} & \textbf{8} & Cobertura 3 categorías de 23 totales CSF 2.0 (13\% implementado) \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{Interpretación: Enfoque en Protect y Detect}
+
+El análisis revela concentración en dominios \textbf{Protect (7/8 amenazas = 87.5\%)} y \textbf{Detect (1/8 = 12.5\%)}, con ausencia de controles explícitos en \textbf{Respond (RS)} y \textbf{Recover (RC)} documentados en matriz de amenazas. Esto es consistente con arquitectura defensiva preventiva (defense-in-depth) típica de sistemas AMI, priorizando prevención sobre respuesta reactiva.
+
+\textbf{Gap crítico identificado:} Falta mapeo a dominios Respond y Recover en matriz, aunque controles existen (Playbooks documentados, backups automáticos). Recomendación: Agregar amenazas A9-A12 cubriendo escenarios post-breach (ej: A9 Ransomware → RS.RP-1 Response Planning, A10 Data corruption → RC.RP-1 Recovery Planning).
 
 \textbf{Tier 3 - Repeatable (Estado Actual):}
 
 \begin{itemize}
-    \item \textbf{Identify:} Asset inventory automatizado (todos los nodos Thread registrados en base de datos con MAC, certificado X.509, ubicación física). Risk assessment documentado en esta sección.
+    \item \textbf{Govern (GV):} Policies de ciberseguridad documentadas en manual operacional. Risk appetite definido: downtime <43.8h/año, pérdida datos <0.01\%. Ownership asignado: Security Officer responsable actualizaciones CVE <5 días.
     
-    \item \textbf{Protect:} Controles técnicos implementados (mTLS, WPA3-SAE, TPM 2.0, AppArmor). Políticas de acceso basadas en roles (RBAC) con segregación Operator/Administrator.
+    \item \textbf{Identify (ID):} Asset inventory automatizado (nodos Thread registrados BD con MAC, cert X.509, ubicación física). Risk assessment documentado Tabla~\ref{tab:security-threats} con 8 vectores cuantificados.
     
-    \item \textbf{Detect:} Monitoring continuo con Prometheus + Grafana. Alertas configuradas para 15 eventos críticos (nodo offline >5 min, CPU >90\%, failed SSH login, jamming detectado, certificate expiry <7 días).
+    \item \textbf{Protect (PR):} Controles técnicos 7/8 amenazas: mTLS, WPA3-SAE, TPM 2.0, PAKE, Secure Boot, AppArmor. RBAC con segregación Operator/Administrator. Cobertura PR.AC (Access Control) + PR.DS (Data Security) completa.
     
-    \item \textbf{Respond (Responder):} Manuales de procedimiento (\textit{Playbooks}) documentados para 8 incidentes comunes (nodo comprometido → revocación de certificado + re-comisionamiento; OTBR comprometido → aislamiento de red + restauración desde respaldo). Tiempo de respuesta objetivo <4 horas.
+    \item \textbf{Detect (DE):} Monitoring continuo Prometheus + Grafana. Alertas 15 eventos críticos: nodo offline >5 min, CPU >90\%, failed SSH login, jamming SNR <10 dB, cert expiry <7d. Logs centralizados TimescaleDB con retención 90 días.
     
-    \item \textbf{Recover (Recuperar):} Respaldos (\textit{Backups}) automáticos diarios de configuración UCI + base de datos TimescaleDB. Punto de Recuperación Objetivo (\textit{Recovery Point Objective} - RPO) = 24h, Tiempo de Recuperación Objetivo (\textit{Recovery Time Objective} - RTO) = 2h mediante restauración desde instantánea (\textit{snapshot}).
+    \item \textbf{Respond (RS):} Playbooks documentados 8 incidentes comunes (nodo comprometido → cert revocation + recommissioning, OTBR breach → network isolation + backup restore). MTTR objetivo <4h. Escalación automática security officer si MTTR >4h.
+    
+    \item \textbf{Recover (RC):} Backups automáticos diarios UCI config + TimescaleDB. RPO = 24h, RTO = 2h vía snapshot restore. Disaster Recovery plan documentado Anexo F.2 con 3 escenarios: (1) Gateway failure, (2) Cloud outage, (3) Mass node compromise.
 \end{itemize}
 
 \textbf{Roadmap a Tier 4 - Adaptive (Trabajo Futuro):}
