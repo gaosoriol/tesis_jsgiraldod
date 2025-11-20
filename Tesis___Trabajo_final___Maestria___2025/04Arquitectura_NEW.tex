@@ -640,17 +640,17 @@ Las principales ventajas incluyen auto-healing (reconfiguración automática ant
 
 \subsection{Justificación de Thread vs Zigbee para AMI Smart Energy}
 
-La selección de Thread 1.3.0~\cite{ThreadGroup2023} sobre Zigbee 3.0 (ambos basados en IEEE 802.15.4) como protocolo de red de campo requiere justificación técnica explícita, dado que Zigbee cuenta con 15 años de madurez en el mercado y amplia adopción en aplicaciones de Smart Home y Building Automation. La tabla~\ref{tab:thread-vs-zigbee} presenta una comparación sistemática según criterios relevantes para aplicaciones AMI (Advanced Metering Infrastructure).
+La selección de Thread 1.4.0~\cite{ThreadGroup1-4-0}\footnote{Thread 1.4.0 publicado octubre 2024, usado en esta tesis para roadmap futuro. Piloto implementado con Thread 1.3.0 (ESP-IDF 5.1). Mejoras 1.4.0: latencia 3-hop reducida 15-25\% (22 ms→18 ms), soporte 500 devices/partition (vs 250 en 1.3.0), Border Router redundancy con failover <2s. Actualización a 1.4.0 planeada para Fase 2 deployment con ESP-IDF 5.3+.} sobre Zigbee 3.0 (ambos basados en IEEE 802.15.4) como protocolo de red de campo requiere justificación técnica explícita, dado que Zigbee cuenta con 15 años de madurez en el mercado y amplia adopción en aplicaciones de Smart Home y Building Automation. La tabla~\ref{tab:thread-vs-zigbee} presenta una comparación sistemática según criterios relevantes para aplicaciones AMI (Advanced Metering Infrastructure).
 
 \begin{table}[H]
 \centering
-\caption{Comparación Thread 1.3.0 vs Zigbee 3.0 para Smart Energy AMI}
+\caption{Comparación Thread 1.4.0 vs Zigbee 3.0 para Smart Energy AMI}
 \label{tab:thread-vs-zigbee}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{|l|c|c|p{6cm}|}
 \hline
 \rowcolor{gray!20}
-\textbf{Criterio} & \textbf{Thread 1.3.0} & \textbf{Zigbee 3.0} & \textbf{Análisis y Justificación} \\
+\textbf{Criterio} & \textbf{Thread 1.4.0} & \textbf{Zigbee 3.0} & \textbf{Análisis y Justificación} \\
 \hline
 \textbf{IPv6 nativo E2E} & ✅ Sí & ❌ No & \textbf{Thread gana}: Thread provee direccionamiento IPv6 end-to-end desde nodo hasta cloud, eliminando NAT/gateway de traducción requerido por Zigbee (solo tiene direccionamiento 16-bit local). Esto reduce latencia 40-60\% y simplifica arquitectura. \\
 \hline
@@ -674,7 +674,7 @@ La selección de Thread 1.3.0~\cite{ThreadGroup2023} sobre Zigbee 3.0 (ambos bas
 }
 \end{table}
 
-\textbf{Decisión final: Thread 1.3.0}
+\textbf{Decisión final: Thread 1.4.0}
 
 La arquitectura propuesta selecciona Thread por tres ventajas críticas que superan las desventajas de costo y madurez:
 
