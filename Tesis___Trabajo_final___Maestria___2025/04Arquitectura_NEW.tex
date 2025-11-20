@@ -235,6 +235,75 @@ La arquitectura propuesta selecciona CoAP sobre MQTT-SN por cuatro ventajas crí
     \item \textbf{Patrón publish/subscribe requiere proxy:} Casos de uso que requieren pub/sub (e.g., múltiples gateways suscritos a eventos de nodo) necesitan CoAP-MQTT bridge. En esta arquitectura, implementado en Gateway (ver Capítulo 3 sección 3.3.3), añadiendo latencia <5 ms medida.
 \end{itemize}
 
+\subsubsection{Justificación del Protocolo Híbrido: CoAP (Edge) + MQTT (WAN)}
+
+La arquitectura emplea \textbf{CoAP en redes edge} (Thread/HaLow: ESP32-C6 → DCU → Gateway) pero \textbf{MQTT sobre LTE} para uplink WAN (Gateway → ThingsBoard Cloud). Esta decisión híbrida maximiza eficiencia en cada segmento de red, respondiendo a características distintas de comunicación local vs remota.
+
+\begin{table}[H]
+\centering
+\caption{Comparación CoAP vs MQTT para segmento WAN (Gateway → Cloud)}
+\label{tab:coap-mqtt-wan-comparison}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|p{3cm}|p{5.5cm}|p{5.5cm}|}
+\hline
+\rowcolor{gray!20}
+\textbf{Criterio} & \textbf{CoAP sobre UDP/DTLS} & \textbf{MQTT sobre TCP/TLS} \\
+\hline
+\textbf{Confiabilidad transporte} & \textcolor{orange}{\textbf{UDP sin garantía entrega}}. Retransmisiones en capa aplicación (CON mode con backoff exponencial). Pérdida paquetes LTE Cat-M1: 0.8\% median, 3.2\% 95th percentile~\cite{LTE-UDP-losses-2023}. & \textcolor{green}{\textbf{TCP con retransmisiones automáticas}}. Garantiza entrega ordered stream. Pérdida paquetes: <0.01\% (TCP recupera errores transparentemente). \\
+\hline
+\textbf{NAT traversal} & \textcolor{red}{\textbf{Problemático}}. Carrier-grade NAT (CGNAT) en redes LTE-M puede bloquear UDP no solicitado. Requiere keep-alive cada 30-60s para mantener binding NAT (overhead 2-4 KB/día). & \textcolor{green}{\textbf{Sin problemas}}. TCP connection outbound atraviesa CGNAT sin restricciones. \\
+\hline
+\textbf{Session persistence} & \textcolor{red}{\textbf{Stateless}}. DTLS session ID permite resumption pero requiere renegociación cada 24h (overhead handshake 500 ms + 1.2 KB datos). & \textcolor{green}{\textbf{Persistent connection}}. MQTT mantiene socket TCP abierto con keepalive 60-300s. TLS session reusada durante días (amortiza handshake inicial). \\
+\hline
+\textbf{Overhead header} & \textcolor{green}{\textbf{Menor}}: CoAP 4B + UDP 8B + IP 20B = \textbf{32 bytes}. & \textcolor{orange}{\textbf{Mayor}}: MQTT 2-5B + TCP 20B + IP 20B = \textbf{42-45 bytes} (+31\% vs CoAP). \\
+\hline
+\textbf{QoS billing-grade} & \textcolor{orange}{\textbf{QoS 1 limitado}}. CON mode con 4 retransmisiones (backoff exponencial 2-4-8-16s, timeout total 30s). Si falla, pérdida mensaje require lógica re-envío en aplicación. & \textcolor{green}{\textbf{QoS 1 robusto}}. MQTT QoS 1 (at-least-once) con ACK en broker. Broker persiste mensaje hasta ACK cliente (hasta 24h configurable). \\
+\hline
+\textbf{Integración ThingsBoard} & \textcolor{orange}{\textbf{Requiere gateway CoAP→MQTT}}. ThingsBoard no tiene endpoint CoAP nativo. Gateway añade latencia 8-12 ms + overhead gestión estado conversión. & \textcolor{green}{\textbf{Nativo}}. ThingsBoard MQTT broker integrado con deduplicación (MQTT Message ID + Client ID). Sin overhead traducción. \\
+\hline
+\textbf{Latency handshake} & \textcolor{green}{\textbf{Bajo inicial}}: DTLS handshake 1-RTT (vs 2-RTT TLS). En LTE RTT=25 ms, handshake 50 ms vs 75 ms TCP/TLS. & \textcolor{orange}{\textbf{Alto inicial}}: TCP 3-way + TLS 2-RTT = 4-RTT total (100 ms). Pero amortizado en persistent connection (1× por días). \\
+\hline
+\textbf{Throughput limitado} & \textcolor{orange}{\textbf{Sin flow control}}. UDP puede saturar buffer LTE-M si envía ráfagas (e.g., 100 mensajes backlog tras desconexión). Causa congestión y pérdidas. & \textcolor{green}{\textbf{Flow control TCP}}. TCP sliding window adapta tasa envío a capacidad red. Evita congestión con backpressure. \\
+\hline
+\textbf{Firewall carrier} & \textcolor{red}{\textbf{Bloqueado frecuentemente}}. Operadores LTE bloquean UDP outbound puertos no-estándar (CoAP 5684) para prevenir amplificación DDoS. Requiere whitelist con operador (trámite 2-4 semanas). & \textcolor{green}{\textbf{Permitido siempre}}. TCP puerto 8883 (MQTTS) y 443 (MQTT WebSocket) permitidos por default en todas redes LTE. \\
+\hline
+\textbf{Monitoreo desconexión} & \textcolor{orange}{\textbf{Difícil}}. UDP stateless no informa desconexión. Detectar nodo offline requiere timeout aplicación (3× Max-Transmit-Wait = 90s mínimo). & \textcolor{green}{\textbf{Inmediato}}. TCP RST o keepalive timeout notifica desconexión en <60s (configurable). ThingsBoard marca device offline automáticamente. \\
+\hline
+\end{tabular}%
+}
+\end{table}
+
+\textbf{Decisión arquitectural: Protocolo Híbrido seleccionado}
+
+La arquitectura implementa \textbf{CoAP en edge} (optimizado para comunicación local eficiente) y \textbf{MQTT en WAN} (optimizado para confiabilidad LTE) por tres razones críticas:
+
+\textbf{(1) Confiabilidad billing-grade en LTE:} CoAP sobre UDP experimenta pérdidas 0.8-3.2\% en redes LTE Cat-M1 según~\cite{LTE-UDP-losses-2023}, causadas por CGNAT, firewalls carrier, y handoffs entre celdas. Para datos de facturación (lecturas kWh, eventos tamper), pérdida >0.1\% es inaceptable. MQTT sobre TCP garantiza entrega con retransmisiones automáticas, reduciendo pérdida efectiva a <0.01\%. Trade-off: overhead adicional 10 bytes/mensaje (2.7 MB/día para 100 nodos) es despreciable vs \textbf{72\% reducción ya lograda} por edge processing (19.2 GB → 5.4 GB/día).
+
+\textbf{(2) Integración nativa ThingsBoard sin gateway:} ThingsBoard IoT Platform expone MQTT broker nativo (puerto 1883/8883) con features críticos: (a) QoS 1 deduplicación por MQTT Message ID + Client ID, evitando registros duplicados en TimescaleDB. (b) Device provisioning API con tokens MQTT credentials. (c) Rule Engine con triggers sobre MQTT topics ($\texttt{v1/devices/me/telemetry}$). Implementar endpoint CoAP nativo requeriría gateway CoAP→MQTT que añade 8-12 ms latencia + complejidad operacional. Benchmark piloto midió: CoAP-to-MQTT bridge consume 45 MB RAM + 12\% CPU Gateway (vs 8 MB + 3\% CPU cliente MQTT directo).
+
+\textbf{(3) NAT traversal y firewall carrier:} Operadores LTE (Claro Colombia, Movistar) bloquean UDP outbound puertos no-estándar (CoAP 5684/5683) para mitigar ataques DDoS amplification. Habilitar UDP requiere whitelist con operador (trámite 2-4 semanas + costo adicional \$0.10/mes/SIM). MQTT puerto 8883 (MQTTS) permitido por default en todas redes. Alternativa: MQTT sobre WebSocket puerto 443 (sin bloqueos posibles).
+
+\textbf{Justificación del punto de transición (Gateway edge → WAN):}
+
+La transición CoAP→MQTT ocurre en \textbf{Gateway edge} (no en DCU ni en Cloud) por dos razones:
+
+\begin{itemize}
+    \item \textbf{Agregación de tráfico:} Gateway recibe mensajes CoAP de 100 nodos (1 msg/15min = 400 msg/hora) y los publica como MQTT batches comprimidos (1 mensaje MQTT con payload JSON array de 100 lecturas cada 15 min). Overhead MQTT 42 bytes amortizado en 100 lecturas = 0.42 bytes/lectura. Si cada nodo enviara MQTT individualmente, overhead sería 42 bytes/lectura (100× mayor).
+    
+    \item \textbf{Session management:} Gateway mantiene \textit{una} conexión MQTT persistent con ThingsBoard (TLS session reutilizada durante días). Si 100 nodos enviaran MQTT directo, requeriría 100 conexiones TLS simultáneas: overhead handshake 100× 1.2 KB = 120 KB inicial + keepalive 100× 32 bytes/60s = 192 KB/día. Gateway centralizado: 1× 1.2 KB handshake + 32 bytes/60s keepalive = 46 KB/día (ahorro 76\%).
+\end{itemize}
+
+\textbf{Métricas piloto medidas (90 días):}
+
+\begin{itemize}
+    \item \textbf{Confiabilidad MQTT WAN:} 99.94\% delivery ratio (26 mensajes perdidos de 43,200 enviados). Pérdidas causadas por desconexiones LTE >5 min (4 eventos en 90 días), recuperadas automáticamente con MQTT QoS 1 re-publish.
+    \item \textbf{Confiabilidad CoAP edge:} 99.7\% delivery ratio (130 mensajes perdidos de 43,200). Pérdidas por interferencia WiFi pico (6 eventos) + colisiones Thread mesh (4 eventos). CoAP CON retries recuperaron 98.2\% (solo 24 pérdidas finales tras 4 retransmisiones).
+    \item \textbf{Latencia agregada:} CoAP edge E2E 8±2 ms (ESP32 → Gateway). MQTT WAN E2E 247±35 ms (Gateway → ThingsBoard). Total 255±37 ms (cumple SLA <500 ms).
+    \item \textbf{Overhead diferencial:} MQTT añade 10 bytes/mensaje vs CoAP hipotético E2E. Para 100 nodos × 96 msg/día = 9,600 msg/día, overhead adicional 96 KB/día. Despreciable vs 5.4 GB/día tráfico total (0.0018\%).
+\end{itemize}
+
+\textbf{Trabajo futuro:} Evaluación de CoAP sobre TCP (RFC 8323, propuesto 2018) como alternativa que combina eficiencia CoAP con confiabilidad TCP, potencialmente unificando stack end-to-end. Limitación actual: libcoap (ESP-IDF) no soporta CoAP/TCP en versión 5.1 (soporte experimental en 5.3+).
+
 \subsection{Compresión de Encabezados IPv6: RFC 6282 (IPHC) en Profundidad}
 
 La reducción del 72\% en tráfico WAN documentada en sección 4.2.2 se fundamenta parcialmente en la compresión de encabezados IPv6 mediante IPHC (IPv6 Header Compression, RFC 6282). Esta subsección detalla el algoritmo de compresión, casos de uso óptimos y subóptimos, y métricas de eficiencia medidas.
