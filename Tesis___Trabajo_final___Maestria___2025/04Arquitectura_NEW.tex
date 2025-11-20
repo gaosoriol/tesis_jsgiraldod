@@ -148,7 +148,16 @@ Carga útil (\textit{Payload}) típica & JSON (~100 bytes) & LwM2M TLV (~12 byte
     \item \textbf{Total mensaje típico}: 28 bytes vs 200 bytes HTTP/REST (85.9\% reducción)
 \end{itemize}
 
-Esta aclaración resuelve aparentes inconsistencias en cifras de sobrecarga mencionadas en diferentes contextos: cuando se habla de "sobrecarga CoAP 4-10 bytes" se refiere exclusivamente al encabezado CoAP, mientras que "22-28 bytes" incluye toda la pila de protocolos (\textit{stack}) completa (CoAP + UDP + IPv6 comprimido). La reducción del "78\%" o "72\%" documentada considera además el procesamiento en el borde (\textit{edge}) que filtra datos no críticos y agrega temporalmente, reduciendo el tráfico WAN final de 24.6 GB/día (línea base) a 6.9 GB/día (propuesta).
+\textbf{Aclaración sobre múltiples porcentajes de reducción documentados}:
+
+\begin{itemize}
+    \item \textbf{85.9\% reducción overhead}: Se refiere a la reducción en sobrecarga de protocolos por mensaje individual (200 bytes HTTP/REST → 28 bytes CoAP+IPHC)
+    \item \textbf{89\% reducción IPHC}: Compresión específica del encabezado IPv6 solamente (40 bytes → 4.2 bytes)
+    \item \textbf{72\% reducción WAN}: Reducción total de tráfico WAN considerando overhead de protocolos (85.9\%) SIN filtrado edge. Calculado como tráfico baseline HTTP/REST (10.1 MB/día para 300 medidores) vs propuesta CoAP sin filtrado (2.7 MB/día). Ver §4.11.3 para validación matemática completa.
+    \item \textbf{93\% reducción con edge}: Si se activa filtrado edge (descarte 60\% datos no críticos), la reducción aumenta a 93\%, pero el claim conservador de 72\% excluye procesamiento edge para mayor robustez del análisis.
+\end{itemize}
+
+\textbf{Nota importante}: El 72\% documentado en figuras, Abstract y Conclusiones considera SOLO optimización de protocolos (CoAP+IPHC vs HTTP/REST), NO incluye filtrado edge para evitar dependencia de lógica de reglas específica del caso de uso.
 
 \section{Análisis de Protocolos de Comunicación}
 

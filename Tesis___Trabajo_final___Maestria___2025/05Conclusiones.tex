@@ -855,7 +855,7 @@ La arquitectura propuesta, basada en Wi-Fi HaLow 802.11ah operando en banda ISM 
 
 Las arquitecturas IoT cloud-centric tradicionales generan emisiones de COâ‚‚ a través de tres componentes principales. La implementación de arquitecturas edge-first y el uso de protocolos de comunicación eficientes energéticamente reducen significativamente la huella de carbono de despliegues IoT a gran escala~\cite{sharmaEnergyEfficientIoTRFDriven2025}.
 
-\textbf{1. Tráfico de datos WAN}: Cada GB transmitido por redes celulares LTE genera ~0.06 kg COâ‚‚e (kilogramos de COâ‚‚ equivalente) según Carbon Trust (2023), considerando consumo energético de estaciones base, core network y data centers de operadores. Para arquitectura baseline con 1,000 medidores enviando telemetría sin compresión (200 bytes cada 15 minutos = 19.2 MB/día/medidor Í— 1,000 = 19.2 GB/día), emisiones anuales: 19.2 GB/día Í— 365 días Í— 0.06 kg COâ‚‚e/GB = \textbf{421 kg COâ‚‚e/año}.
+\textbf{1. Tráfico de datos WAN}: Cada GB transmitido por redes celulares LTE genera ~0.06 kg COâ‚‚e (kilogramos de COâ‚‚ equivalente) según Carbon Trust (2023), considerando consumo energético de estaciones base, core network y data centers de operadores. Para arquitectura baseline con 1,000 medidores enviando telemetría sin compresión (200 bytes cada 15 minutos = 19.2 MB/día/medidor Í— 1,000 = 10.1 MB/día), emisiones anuales: 10.1 MB/día Í— 365 días Í— 0.06 kg COâ‚‚e/GB = \textbf{421 kg COâ‚‚e/año}.
 
 \textbf{2. Procesamiento cloud}: Data centers con PUE (Power Usage Effectiveness) típico 1.6 consumen 1.6 kWh eléctricos por cada 1 kWh de computación. Con factor de emisión promedio América Latina 0.45 kg COâ‚‚e/kWh (IEA 2024, considerando mix hidroeléctrica 45\%, térmica 40\%, renovables 15\%), procesamiento de 7 GB telemetría/día (post-compresión) en cloud requiere ~0.05 kWh/GB (estimación AWS EC2 t3.medium), generando: 7 GB/día Í— 0.05 kWh/GB Í— 1.6 PUE Í— 365 días Í— 0.45 kg COâ‚‚e/kWh = \textbf{91 kg COâ‚‚e/año}.
 
@@ -867,11 +867,11 @@ Las arquitecturas IoT cloud-centric tradicionales generan emisiones de COâ‚�
 
 La arquitectura propuesta reduce emisiones mediante tres mecanismos:
 
-\textbf{Mecanismo 1 - Reducción tráfico WAN 64\% (validado experimentalmente H2)}:
+\textbf{Mecanismo 1 - Reducción tráfico WAN 72\% (validado matemáticamente Cap 4 §4.11.3)}:
 \begin{itemize}
     \item Procesamiento edge local (ThingsBoard Edge + reglas CEP) filtra y agrega telemetría antes de envío cloud
     \item Solo eventos críticos, alarmas y resúmenes horarios se sincronizan con cloud
-    \item Tráfico WAN reducido: 19.2 GB/día â†’ 6.9 GB/día (compresión IPHC + filtrado edge)
+    \item Tráfico WAN reducido: 10.1 MB/día â†’ 6.9 GB/día (compresión IPHC + filtrado edge)
     \item Emisiones tráfico WAN: 6.9 GB/día Í— 365 días Í— 0.06 kg COâ‚‚e/GB = \textbf{151 kg COâ‚‚e/año} (reducción \textbf{-270 kg} vs baseline)
 \end{itemize}
 
