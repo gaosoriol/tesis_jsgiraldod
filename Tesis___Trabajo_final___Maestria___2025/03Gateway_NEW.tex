@@ -34,7 +34,7 @@ La arquitectura propuesta se fundamenta en estándares internacionales que garan
 
 \subsection{Conformidad con Estándares Internacionales}
 
-\subsubsection{IEEE 2030.5-2023 (Smart Energy Profile 2.0)}
+\subsubsection{IEEE 2030.5-2018 (Smart Energy Profile 2.0)}
 
 La pasarela (\textit{Gateway}) implementa funcionalidades alineadas con IEEE 2030.5 (SEP 2.0), incluyendo los siguientes Conjuntos de Funciones (\textit{Function Sets})~\cite{IEEERecommendedPractice}:
 
@@ -1705,7 +1705,7 @@ El gateway basado en OpenWRT con arquitectura de contenedores Docker y conectivi
     \item \textbf{Mantenibilidad}: OpenWRT Feeds (opkg custom packages Smart Grid), OpenVPN (túnel VPN permanente hub-spoke IPs fijas 10.8.0.100-199), OpenWISP (gestión masiva 100-1000 GWs templates UCI push remoto, Firmware OTA scheduler dual-partition rollback, monitoring CPU/RAM/Interfaces/Docker alertas email/SMS), Watchtower (OTA contenedores), backups automatizados cron
     \item \textbf{Escalabilidad}: 10 DCUs × 250 nodos Thread = 2,500 puntos finales (\textit{endpoints}) AP. Mesh/EasyMesh multiplican 3-5× capacidad sin rediseño arquitectónico
     \item \textbf{Costo-efectividad}: Hardware propósito general (router OpenWRT + módulos M.2 estándar) reduce CAPEX vs propietarios, optimización LTE 3.7 GB/mes (vs 20-30 GB sin compresión CBOR 40-60\%), Mesh HaLow elimina 60-70\% backhaul dedicado
-    \item \textbf{Conformidad Estándares}: IEEE 2030.5-2023 (Function Sets DCAP/TM/MM/MSG/ED, API REST XML, X.509 ECC P-256, LFDI, RBAC), ISO/IEC 30141:2024 (arquitectura IoT referencia 8 entidades funcionales, 4 vistas funcional/información/despliegue/operacional), cumplimiento regulatorio CREG Colombia para medición inteligente
+    \item \textbf{Conformidad Estándares}: IEEE 2030.5-2018 (Function Sets DCAP/TM/MM/MSG/ED, API REST XML, X.509 ECC P-256, LFDI, RBAC), ISO/IEC 30141:2024 (arquitectura IoT referencia 8 entidades funcionales, 4 vistas funcional/información/despliegue/operacional), cumplimiento regulatorio CREG Colombia para medición inteligente
 \end{itemize}
 
 \subsection{Limitaciones y Trabajo Futuro}

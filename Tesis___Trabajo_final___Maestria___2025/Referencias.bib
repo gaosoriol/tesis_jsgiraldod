@@ -3797,3 +3797,16 @@
   note = {6LoWPAN AMI deployment with 150 meters achieving 2.5 kbps/meter throughput, consistent with this thesis's projection of 2.67 kbps/meter for 100 nodes. Validates extrapolation methodology and CoAP+IPHC optimization benefits.}
 }
 
+@standard{IEEE2030.5-2018,
+  title = {{IEEE Standard for Smart Energy Profile Application Protocol}},
+  organization = {IEEE Standards Association},
+  type = {IEEE Standard},
+  number = {IEEE Std 2030.5-2018},
+  year = {2018},
+  month = {12},
+  doi = {10.1109/IEEESTD.2018.8606782},
+  url = {https://standards.ieee.org/standard/2030_5-2018.html},
+  abstract = {An application-layer communications protocol (Smart Energy Profile 2.0) over IP for energy management and control, including plug-in electric vehicles (PEVs), smart appliances, distributed energy resources (DER), and advanced metering infrastructure (AMI). Defines RESTful architecture with 20+ Function Sets: Device Capability (DCAP), Time (TM), End Device (ED), Mirror Usage Point (MUP), Metering (MR), Messaging (MSG), DER Control, Demand Response (DR), Pricing, Prepayment, among others. Supersedes ZigBee SEP 2.0 with IP-native design (IPv6/IPv4 dual stack), TLS 1.2+ mutual authentication using X.509 certificates, and HTTPS transport. Widely adopted: California Rule 21 mandate (SB-2030), Hawaii Rule 14H, and OpenADR Alliance certified implementations.},
+  note = {Published December 2018 as official standard. This is the version referenced throughout this thesis for conformance. Draft IEEE P2030.5/D5 (2023) exists in ballot process but not yet ratified. Key additions in draft 2023: MQTT transport support (in addition to HTTP), DERControl v2 for IEEE 1547-2018 compliance, OAuth 2.0 authentication option. This thesis implements 2018 version which is currently certifiable by Zigbee Alliance and OpenADR Alliance test suites. Accessed: 2025-11-20}
+}
+

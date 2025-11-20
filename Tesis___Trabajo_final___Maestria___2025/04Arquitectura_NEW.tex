@@ -654,7 +654,7 @@ La selección de Thread 1.3.0~\cite{ThreadGroup2023} sobre Zigbee 3.0 (ambos bas
 \hline
 \textbf{IPv6 nativo E2E} & ✅ Sí & ❌ No & \textbf{Thread gana}: Thread provee direccionamiento IPv6 end-to-end desde nodo hasta cloud, eliminando NAT/gateway de traducción requerido por Zigbee (solo tiene direccionamiento 16-bit local). Esto reduce latencia 40-60\% y simplifica arquitectura. \\
 \hline
-\textbf{Interoperabilidad IEEE 2030.5} & ✅ Directo & ⚠️ Gateway & \textbf{Thread gana}: El standard Smart Energy Profile 2.0 (IEEE 2030.5-2023)~\cite{IEEERecommendedPractice} asume IPv6 nativo. Thread implementa directamente, Zigbee requiere capa adicional de traducción. \\
+\textbf{Interoperabilidad IEEE 2030.5} & ✅ Directo & ⚠️ Gateway & \textbf{Thread gana}: El standard Smart Energy Profile 2.0 (IEEE 2030.5-2018)~\cite{IEEERecommendedPractice} asume IPv6 nativo. Thread implementa directamente, Zigbee requiere capa adicional de traducción. \\
 \hline
 \textbf{Ecosistema IoT} & ⚠️ Emergente & ✅ Maduro (15 años) & \textbf{Zigbee gana}: Mayor cantidad de dispositivos certificados y experiencia operacional. Thread emergió en 2019 con respaldo de Google, Apple, Amazon (Thread Group + Matter). \\
 \hline
@@ -680,7 +680,7 @@ La arquitectura propuesta selecciona Thread por tres ventajas críticas que supe
 
 \textbf{(1) Arquitectura simplificada con IPv6 end-to-end:} Thread elimina necesidad de gateway de traducción entre direccionamiento Zigbee 16-bit y direccionamiento IP. Esto reduce latencia en 40-60\% (de 150 ms a 90 ms típico) según estudios comparativos~\cite{ThreadZigbeeLatency2024}, y simplifica gestión de certificados X.509 para mTLS (cada nodo tiene dirección IPv6 única y estable).
 
-\textbf{(2) Cumplimiento directo de IEEE 2030.5:} El standard Smart Energy Profile 2.0 (IEEE 2030.5-2023)~\cite{IEEERecommendedPractice} especifica IPv6 como capa de red obligatoria para autenticación mTLS y addressing scheme. Thread implementa IEEE 2030.5 directamente, mientras Zigbee requiere Application Layer Gateway (ALG) con overhead de procesamiento adicional y complejidad en gestión de sesiones TLS.
+\textbf{(2) Cumplimiento directo de IEEE 2030.5:} El standard Smart Energy Profile 2.0 (IEEE 2030.5-2018)~\cite{IEEERecommendedPractice} especifica IPv6 como capa de red obligatoria para autenticación mTLS y addressing scheme. Thread implementa IEEE 2030.5 directamente, mientras Zigbee requiere Application Layer Gateway (ALG) con overhead de procesamiento adicional y complejidad en gestión de sesiones TLS.
 
 \textbf{(3) Roadmap de convergencia Matter:} El standard Matter (antes CHIP, lanzado 2022) unifica Thread y Zigbee bajo mismo modelo de aplicación, con Thread como transporte preferido para nuevos despliegues. Thread Group cuenta con respaldo de Google (Nest), Apple (HomeKit), Amazon (Alexa), Samsung (SmartThings), garantizando soporte a largo plazo crítico para infraestructura AMI con vida útil esperada de 15-20 años.
 

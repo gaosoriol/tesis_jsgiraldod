@@ -5,7 +5,7 @@
 
 \section{Síntesis de la Investigación}
 
-Esta tesis abordó el diseño, implementación y validación de una arquitectura IoT centrada en pasarelas de borde (\textit{edge gateways}) multi-protocolo para aplicaciones Smart Energy, integrando heterogéneamente Thread 802.15.4, Wi-Fi HaLow 802.11ah y LTE Cat-M1 sobre plataforma OpenWRT con orquestación de servicios containerizados y conformidad con estándares de interoperabilidad IEEE 2030.5-2023 e ISO/IEC 30141:2024~\cite{abdulsalamOverviewRecentWireless2024,tangResearchInteroperabilityIoT,liangReviewEdgeComputing2024,abowardahEdgeComputingIoT2024,ayaUnleashingIntelligenceEdge2024,cohenEdgeComputingEnabled2024,kumariEdgeComputingData2024,shenAugmentingEdgeIntelligence2024,wulurCoordinationEdgeCloud2024,zhangEnablingFaultTolerant2024}. La investigación integra paradigmas emergentes de computación en el borde (\textit{edge computing}) con protocolos de baja potencia en infraestructuras críticas, demostrando viabilidad técnica y económica~\cite{boonmeerukCostEffectiveIIoTGateway2024,perezImplicationSoftwareContainerization2024}.
+Esta tesis abordó el diseño, implementación y validación de una arquitectura IoT centrada en pasarelas de borde (\textit{edge gateways}) multi-protocolo para aplicaciones Smart Energy, integrando heterogéneamente Thread 802.15.4, Wi-Fi HaLow 802.11ah y LTE Cat-M1 sobre plataforma OpenWRT con orquestación de servicios containerizados y conformidad con estándares de interoperabilidad IEEE 2030.5-2018 e ISO/IEC 30141:2024~\cite{abdulsalamOverviewRecentWireless2024,tangResearchInteroperabilityIoT,liangReviewEdgeComputing2024,abowardahEdgeComputingIoT2024,ayaUnleashingIntelligenceEdge2024,cohenEdgeComputingEnabled2024,kumariEdgeComputingData2024,shenAugmentingEdgeIntelligence2024,wulurCoordinationEdgeCloud2024,zhangEnablingFaultTolerant2024}. La investigación integra paradigmas emergentes de computación en el borde (\textit{edge computing}) con protocolos de baja potencia en infraestructuras críticas, demostrando viabilidad técnica y económica~\cite{boonmeerukCostEffectiveIIoTGateway2024,perezImplicationSoftwareContainerization2024}.
 
 \subsection{Cumplimiento de Objetivos}
 
@@ -176,7 +176,7 @@ Este conjunto de datos experimentales (\textit{dataset} experimental) (disponibl
 \textbf{Contribución metodológica:} El trabajo documenta patrones de diseño, compromisos arquitectónicos (\textit{trade-offs} arquitectónicos) y decisiones de ingeniería para implementar una arquitectura IoT conforme a múltiples estándares internacionales simultáneamente:
 
 \begin{itemize}
-\item \textbf{IEEE 2030.5-2023} (Smart Energy Profile 2.0): Implementación de Function Sets DCAP, Time, EndDevice, MirrorUsagePoint con autenticación TLS mutua y RBAC
+\item \textbf{IEEE 2030.5-2018} (Smart Energy Profile 2.0): Implementación de Function Sets DCAP, Time, EndDevice, MirrorUsagePoint con autenticación TLS mutua y RBAC
 \item \textbf{ISO/IEC 30141:2024} (IoT Reference Architecture): Cumplimiento de las cuatro vistas del modelo (funcional, información, despliegue, operacional)
 \item \textbf{Thread 1.3.1} (Connectivity Standards Alliance): Certificación de interoperabilidad con dispositivos multi-vendor mediante OTBR estándar
 \item \textbf{IEEE 802.11ah-2016} (Wi-Fi HaLow): Validación de topologías AP/STA/Mesh/EasyMesh con hardware comercial (Morse Micro MM6108)
@@ -312,7 +312,7 @@ Para deployments edge con recursos limitados, TimescaleDB es elección superior.
 
 \subsubsection{IEEE 2030.5 Facilita Interoperabilidad Pero Requiere Subset Pragmático}
 
-El estándar IEEE 2030.5-2023 define 20+ Conjuntos de Funciones (\textit{Function Sets}) opcionales. Implementación completa impráctica en el borde:
+El estándar IEEE 2030.5-2018 define 20+ Conjuntos de Funciones (\textit{Function Sets}) opcionales. Implementación completa impráctica en el borde:
 
 \begin{itemize}
 \item \textbf{Conjuntos de Funciones esenciales:} DCAP (capabilities discovery), Time (synchronization), EndDevice (device management), MirrorUsagePoint/MirrorMeterReading (telemetry) cubren 80\% de casos de uso Smart Energy.

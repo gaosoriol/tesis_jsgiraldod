@@ -242,7 +242,7 @@ El problema se delimita a la evaluación cuantitativa de: (a) reducción de over
 
 \textbf{Estándares implementados}:
 \begin{itemize}
-\item \textbf{Smart Energy}: IEEE 2030.5-2023 (Function Sets: DCAP, Time, EndDevice, MirrorUsagePoint, MirrorMeterReading), ISO/IEC 30141:2024 (IoT Reference Architecture).
+\item \textbf{Smart Energy}: IEEE 2030.5-2018 (Function Sets: DCAP, Time, EndDevice, MirrorUsagePoint, MirrorMeterReading), ISO/IEC 30141:2024 (IoT Reference Architecture).
 \item \textbf{Comunicación 6LoWPAN}: RFC 6282 (IPHC), RFC 4944 (6LoWPAN), RFC 7252 (CoAP), RFC 7641 (Observe), RFC 7959 (Block-wise), OMA LwM2M 1.2.
 \item \textbf{Conectividad}: IEEE 802.15.4-2020 (Thread 1.3.1), IEEE 802.11ah-2016 (HaLow).
 \end{itemize}
@@ -379,7 +379,7 @@ Una arquitectura IoT para Smart Energy basada en: (1) stack de protocolos optimi
 
 \subsection{Objetivo General}
 
-Diseñar, implementar y validar una arquitectura IoT centrada en edge gateways para aplicaciones Smart Energy que integre: (1) stack de protocolos optimizado 6LoWPAN/CoAP/LwM2M sobre IEEE 802.15.4 para reducción de latencia y overhead, (2) capacidades de procesamiento edge con IA local para gestión inteligente de recursos en tiempo real, y (3) conectividad de última milla mediante IEEE 802.11ah con estrategia multi-banda (2/4/8 MHz) adaptada a casos de uso específicos, garantizando latencia end-to-end <100 ms, reducción de tráfico WAN >65\%, y disponibilidad >99\% con conformidad a estándares IEEE 2030.5-2023 e ISO/IEC 30141:2024.
+Diseñar, implementar y validar una arquitectura IoT centrada en edge gateways para aplicaciones Smart Energy que integre: (1) stack de protocolos optimizado 6LoWPAN/CoAP/LwM2M sobre IEEE 802.15.4 para reducción de latencia y overhead, (2) capacidades de procesamiento edge con IA local para gestión inteligente de recursos en tiempo real, y (3) conectividad de última milla mediante IEEE 802.11ah con estrategia multi-banda (2/4/8 MHz) adaptada a casos de uso específicos, garantizando latencia end-to-end <100 ms, reducción de tráfico WAN >65\%, y disponibilidad >99\% con conformidad a estándares IEEE 2030.5-2018 e ISO/IEC 30141:2024.
 
 \subsection{Objetivos Específicos}
 
@@ -422,7 +422,7 @@ Diseñar, implementar y validar una arquitectura IoT centrada en edge gateways p
 \textbf{OE5 - Caso de Estudio Smart Energy Real:}
 \begin{itemize}
 \item Desplegar prototipo funcional para 900 medidores residenciales con topología: 300 nodos ESP32-C6 Thread por gateway × 3 gateways Raspberry Pi 4 + OpenWRT + HaLow, validando arquitectura en condiciones reales urbanas/suburbanas.
-\item Implementar conformidad IEEE 2030.5-2023 (Function Sets: DCAP, Time, EndDevice, MirrorUsagePoint, MirrorMeterReading, Messaging) con validación de interoperabilidad funcional vía test suite OpenADR VTN.
+\item Implementar conformidad IEEE 2030.5-2018 (Function Sets: DCAP, Time, EndDevice, MirrorUsagePoint, MirrorMeterReading, Messaging) con validación de interoperabilidad funcional vía test suite OpenADR VTN.
 \item Documentar lecciones aprendidas, patrones de diseño arquitectónicos, y guías de implementación técnica (instalación OpenWRT, configuración HaLow 4 modos, despliegue stack Docker, tuning kernel PREEMPT\_RT) en anexos técnicos completos.
 \end{itemize}
 
@@ -435,7 +435,7 @@ Diseñar, implementar y validar una arquitectura IoT centrada en edge gateways p
 
 \item \textbf{Implementación prototipo}: Gateway funcional basado en Banana Pi BPI-R4 con integración Thread (nRF52840 RCP), HaLow (Morse Micro MM6108), LTE (Quectel EG25-G), OpenWRT 23.05.x y stack Docker Compose con 7 servicios.
 
-\item \textbf{Conformidad estándares}: Implementación de IEEE 2030.5-2023 Function Sets (DCAP, Time, EndDevice, MirrorUsagePoint, MirrorMeterReading, Messaging) y mapeo ISO/IEC 30141:2024.
+\item \textbf{Conformidad estándares}: Implementación de IEEE 2030.5-2018 Function Sets (DCAP, Time, EndDevice, MirrorUsagePoint, MirrorMeterReading, Messaging) y mapeo ISO/IEC 30141:2024.
 
 \item \textbf{Nodos IoT}: Desarrollo de nodos ESP32-C6 Thread con cliente LwM2M, interfaz RS-485 para medidores DLMS/COSEM y firmware actualizable OTA.
 
@@ -534,7 +534,7 @@ El siguiente capítulo (Marco Teórico) proporciona los fundamentos teóricos ne
 
 \begin{itemize}
 \item \textbf{Protocolos de comunicación IoT}: Análisis detallado de Thread, 6LoWPAN, CoAP, LwM2M y Wi-Fi HaLow (IEEE 802.11ah), incluyendo especificaciones técnicas, ventajas comparativas y casos de uso óptimos para cada tecnología.
-\item \textbf{Estándares de interoperabilidad}: Revisión exhaustiva de IEEE 2030.5-2023 (Smart Energy Profile 2.0) e ISO/IEC 30141:2024 (IoT Reference Architecture), estableciendo los requisitos de conformidad para el gateway propuesto.
+\item \textbf{Estándares de interoperabilidad}: Revisión exhaustiva de IEEE 2030.5-2018 (Smart Energy Profile 2.0) e ISO/IEC 30141:2024 (IoT Reference Architecture), estableciendo los requisitos de conformidad para el gateway propuesto.
 \item \textbf{Arquitecturas de Edge Computing}: Estado del arte en plataformas de procesamiento edge (ThingsBoard Edge, Azure IoT Edge, AWS IoT Greengrass), bases de datos time-series (TimescaleDB, InfluxDB) y sistemas de mensajería (Kafka, MQTT).
 \item \textbf{Trabajos relacionados}: Comparativa crítica con soluciones académicas y comerciales existentes, identificando brechas específicas que motivan esta investigación.
 \end{itemize}
