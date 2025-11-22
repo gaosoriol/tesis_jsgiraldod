@@ -2,9 +2,9 @@
 
 \section{Introducción}
 
-Este capítulo presenta los elementos físicos (\textit{hardware}) fundamentales de la arquitectura IoT propuesta para aplicaciones de Energía Inteligente (\textit{Smart Energy}), abarcando desde los nodos sensores de campo hasta las plataformas de cómputo de borde (\textit{edge computing})~\cite{boonmeerukCostEffectiveIIoTGateway2024,liangReviewEdgeComputing2024}. La arquitectura sigue un modelo jerárquico de tres niveles físicos (nodos, enrutadores y gateways) que permite escalabilidad masiva, eficiencia energética y resiliencia operativa, cumpliendo con los estándares IEEE 2030.5 e ISO/IEC 30141~\cite{IEEERecommendedPractice,tangResearchInteroperabilityIoT}.
+Este capítulo presenta los elementos físicos (\textit{hardware}) fundamentales de la arquitectura IoT propuesta para aplicaciones de Energía Inteligente (\textit{Smart Energy}), abarcando desde los nodos sensores de campo hasta las plataformas de cómputo de borde (\textit{edge computing})~\cite{boonmeerukCostEffectiveIIoTGateway2024,liangReviewEdgeComputing2024}. La arquitectura sigue un modelo jerárquico de tres niveles físicos (nodos, enrutadores y gateways) que permite escalabilidad masiva, eficiencia energética y resiliencia operativa, cumpliendo con los estándares IEEE 2030.5-2018~\cite{IEEERecommendedPractice} (Smart Energy Profile 2.0) e ISO/IEC 30141:2024~\cite{ISOIEC30141v2024,tangResearchInteroperabilityIoT} (IoT Reference Architecture).
 
-La implementación propuesta integra tecnologías de conectividad de última generación: Thread 802.15.4 (nodos de campo con ESP32-C6), Wi-Fi HaLow 802.11ah (routers Alfa Network con Morse Micro MM6108), y plataformas de borde Raspberry Pi 4 con OpenWRT. El enfoque de este capítulo se centra en las especificaciones de hardware, características de radio, requisitos de energía, alcances medidos y validación experimental. Los detalles de la arquitectura de software, protocolos de aplicación y servicios de edge computing se presentan en el Capítulo 4.
+La implementación propuesta integra tecnologías de conectividad de última generación: Thread 802.15.4 (nodos de campo con ESP32-C6), Wi-Fi HaLow 802.11ah (routers Alfa Network con Morse Micro MM6108), y plataformas de borde Raspberry Pi 4 con OpenWRT~\cite{boonmeerukCostEffectiveIIoTGateway2024}. El enfoque de este capítulo se centra en las especificaciones de hardware, características de radio, requisitos de energía, alcances medidos y validación experimental. Los detalles de la arquitectura de software, protocolos de aplicación y servicios de edge computing se presentan en el Capítulo 4.
 
 El capítulo se organiza en tres partes principales: la Parte I establece la arquitectura conceptual y los estándares de referencia; la Parte II detalla las especificaciones de hardware de cada nivel jerárquico (Nivel 1: Nodos IoT ESP32-C6, Nivel 2: Routers HaLow, Nivel 3: Gateway Raspberry Pi 4); y la Parte III valida la propuesta mediante pruebas experimentales rigurosas con análisis estadístico completo.
 
@@ -50,7 +50,7 @@ La seguridad IEEE 2030.5 se implementa mediante TLS 1.2/1.3 obligatorio, certifi
 
 \subsubsection{ISO/IEC 30141:2024 (IoT Reference Architecture)}
 
-La pasarela (\textit{Gateway}) implementa múltiples entidades funcionales según la vista funcional de ISO/IEC 30141: Detección (\textit{Sensing}), Actuación (\textit{Actuation}), Procesamiento (\textit{Processing}), Almacenamiento (\textit{Storage}), Comunicación (\textit{Communication}), Seguridad (\textit{Security}), Gestión (\textit{Management}) y Soporte de Aplicación (\textit{Application Support}). La arquitectura cumple con las cuatro vistas del estándar (funcional, información, despliegue y operacional), proporcionando un marco completo para sistemas IoT industriales.
+La pasarela (\textit{Gateway}) implementa múltiples entidades funcionales según la vista funcional de ISO/IEC 30141:2024~\cite{ISOIEC30141v2024}: Detección (\textit{Sensing}), Actuación (\textit{Actuation}), Procesamiento (\textit{Processing}), Almacenamiento (\textit{Storage}), Comunicación (\textit{Communication}), Seguridad (\textit{Security}), Gestión (\textit{Management}) y Soporte de Aplicación (\textit{Application Support}). La arquitectura cumple con las cuatro vistas del estándar (funcional, información, despliegue y operacional), proporcionando un marco completo para sistemas IoT industriales.
 
 \subsection{Justificación del Modelo Jerárquico}
 
@@ -73,7 +73,7 @@ Con esta visión general establecida, las siguientes secciones profundizan en ca
 
 Habiendo establecido el marco conceptual y los estándares que rigen la arquitectura, esta parte examina en detalle los elementos específicos de cada nivel jerárquico, comenzando desde la capa de campo. Los nodos IoT constituyen los dispositivos terminales de la arquitectura, implementando las funciones de detección (\textit{sensing}), actuación (\textit{actuation}) y comunicación de bajo consumo energético. En el contexto de Smart Energy, estos nodos pueden ser medidores inteligentes, sensores ambientales, actuadores para control de demanda o dispositivos de monitoreo de calidad de energía.
 
-La implementación de referencia para nodos IoT en esta arquitectura se basa en el repositorio \texttt{github.com/jsebgiraldo/OpenThread-LwM2M}, que integra la pila OpenThread 1.3 con el cliente LwM2M de Eclipse Wakaama, proporcionando una solución completa de conectividad mesh 802.15.4 con gestión de dispositivos estandarizada.
+La implementación de referencia para nodos IoT en esta arquitectura se basa en el repositorio \texttt{github.com/jsebgiraldo/OpenThread-LwM2M}, que integra la pila OpenThread 1.3~\cite{ThreadGroup2023} con el cliente LwM2M de Eclipse Wakaama~\cite{OMA_LwM2M2020}, proporcionando una solución completa de conectividad mesh 802.15.4 con gestión de dispositivos estandarizada.
 
 \subsection{Plataforma Hardware: ESP32-C6}
 
@@ -94,7 +94,7 @@ La plataforma seleccionada para nodos IoT es el microcontrolador ESP32-C6 de Esp
 Los nodos implementan pilas de protocolos ligeros (\textit{protocol stacks}) optimizados para dispositivos con recursos limitados:
 
 \begin{itemize}
-    \item \textbf{Thread 1.3}: IPv6 sobre 802.15.4 con routing mesh, puesta en servicio (\textit{comisionamiento}) seguro (PAKE), multicast confiable
+    \item \textbf{Thread 1.3}\footnote{Implementación del piloto con Thread 1.3.0 (OpenThread stack). Thread 1.4.0 recomendado para producción (véase §4.4).}~\cite{ThreadGroup2023}: IPv6 sobre 802.15.4 con routing mesh, puesta en servicio (\textit{comisionamiento}) seguro (PAKE), multicast confiable
     \item \textbf{CoAP (RFC 7252)}: Protocolo de aplicación request/response con observe pattern, block-wise transfers~\cite{shahinzadehSmartHomeConnectivity2024}
     \item \textbf{LwM2M 1.2}: Marco de trabajo (\textit{Framework}) de gestión de dispositivos sobre CoAP con modelo de objetos extensible (IPSO)~\cite{haEnablingDynamicLightweight2018}
     \item \textbf{CBOR (RFC 8949)}: Serialización binaria compacta para payloads eficientes
@@ -108,7 +108,7 @@ Si bien ESP32-C6 constituye la plataforma de referencia de este proyecto, un des
 
 \subsubsection{Nordic nRF52840 y nRF5340}
 
-\textbf{Nordic nRF52840} (ARM Cortex-M4F @ 64 MHz): Líder de mercado en Thread/Matter con 1 MB Flash, 256 KB RAM. Radio 802.15.4: +8 dBm TX power, -95 dBm sensibilidad. Consumo: 4.8 mA RX, 5.3 mA TX @ 0 dBm, 0.4 µA deep sleep (RTC ON). Certificaciones: Thread 1.3, Matter 1.0, Zigbee 3.0. Ventajas: OpenThread stack maduro en nRF Connect SDK 2.6, TrustZone CryptoCell CC312 para aceleración criptográfica (ECDSA, AES-CCM), soporte NFC-A para comisionamiento Out-of-Band. Desventajas: Sin Wi-Fi integrado (requiere coprocessor para Matter-WiFi), precio premium (\$5-7 USD @ 1k qty). Caso de uso óptimo: Nodos battery-powered con requisitos <1 µA standby y ciclos duty <1\%.
+\textbf{Nordic nRF52840} (ARM Cortex-M4F @ 64 MHz): Líder de mercado en Thread/Matter con 1 MB Flash, 256 KB RAM~\cite{threadMatterConvergence2024}. Radio 802.15.4: +8 dBm TX power, -95 dBm sensibilidad. Consumo: 4.8 mA RX, 5.3 mA TX @ 0 dBm, 0.4 µA deep sleep (RTC ON). Certificaciones: Thread 1.3, Matter 1.0, Zigbee 3.0. Ventajas: OpenThread stack maduro en nRF Connect SDK 2.6, TrustZone CryptoCell CC312 para aceleración criptográfica (ECDSA, AES-CCM), soporte NFC-A para comisionamiento Out-of-Band. Desventajas: Sin Wi-Fi integrado (requiere coprocessor para Matter-WiFi), precio premium (\$5-7 USD @ 1k qty). Caso de uso óptimo: Nodos battery-powered con requisitos <1 µA standby y ciclos duty <1\%.
 
 \textbf{Nordic nRF5340} (ARM Cortex-M33 @ 128 MHz + Cortex-M33 @ 64 MHz red): Arquitectura dual-core con 1 MB Flash, 512 KB RAM (Network Core: 256 KB Flash, 64 KB RAM). Consumo Network Core: 3.2 mA RX, 3.8 mA TX @ 0 dBm. Ventajas: Application Core y Network Core independientes permiten actualización OTA sin interrumpir Thread stack, soporte Bluetooth LE Audio (LC3 codec). Desventajas: Complejidad adicional de arquitectura dual-core, consumo absoluto superior a nRF52840 en aplicaciones simples. Caso de uso: Gateway Thread-to-BLE con procesamiento edge avanzado (inferencia ML TinyML en Application Core mientras Network Core mantiene conectividad Thread activa).
 
@@ -194,7 +194,7 @@ Si bien los nodos IoT proporcionan las capacidades de sensing fundamentales, sus
 
 \section{Nivel 2: Routers IEEE 802.11ah (Wi-Fi HaLow)}
 
-Los routers del Nivel 2 constituyen los elementos de extensión de cobertura en la arquitectura, implementando tecnología IEEE 802.11ah (Wi-Fi HaLow) para proveer conectividad de largo alcance (>1 km) con bajo consumo energético entre los nodos IoT de campo y la pasarela de borde. A diferencia de Wi-Fi convencional (2.4/5 GHz), HaLow opera en bandas sub-GHz (902-928 MHz en América) con características superiores de propagación y penetración de obstáculos.
+Los routers del Nivel 2 constituyen los elementos de extensión de cobertura en la arquitectura, implementando tecnología IEEE 802.11ah (Wi-Fi HaLow) para proveer conectividad de largo alcance (>1 km) con bajo consumo energético entre los nodos IoT de campo y la pasarela de borde~\cite{IEEE80211ah2016,ahmedMACProtocolsIEEE2022}. A diferencia de Wi-Fi convencional (2.4/5 GHz), HaLow opera en bandas sub-GHz (902-928 MHz en América) con características superiores de propagación y penetración de obstáculos, especialmente idóneo para aplicaciones IoT de gran escala~\cite{ahmedMACProtocolsIEEE2022}.
 
 La implementación de referencia para routers HaLow se basa en hardware comercial de Alfa Network con firmware OpenWRT modificado por Morse Micro (\texttt{github.com/MorseMicro/openwrt}), proporcionando una plataforma flexible y de bajo costo para despliegues Smart Energy.
 
@@ -222,7 +222,7 @@ Sistema operativo OpenWRT 23.05, target ramips/mt76x8, kernel Linux 5.15 LTS con
 
 Configuración UCI mesh 802.11s: \texttt{band='s1g'}, \texttt{channel='3'} (905 MHz, 4 MHz BW), \texttt{htmode='S1G-MCS0'} (650 kbps, máx alcance), \texttt{txpower='27'} (500 mW), \texttt{encryption='sae'} (WPA3), mesh\_id SmartEnergyHaLow. Algoritmo routing: HWMP (Hybrid Wireless Mesh Protocol) con métricas airtime. Topologías: Estrella (hasta 250 nodos), Multi-hop Mesh (3-5 km, 4 saltos), Híbrida (múltiples gateways).
 
-Validación experimental: Alcance 1.8 km LOS @ MCS0 (RSSI -92 dBm), throughput 4.2 Mbps 1-hop / 1.1 Mbps 4-hop, latencia 18 ms / 85 ms, 180 dispositivos simultáneos por router.
+Validación experimental: Alcance 1.8 km LOS @ MCS0 (RSSI -92 dBm), throughput 4.2 Mbps 1-hop / 1.1 Mbps 4-hop, latencia 18 ms / 85 ms, 180 dispositivos simultáneos por router. Estos valores son consistentes con estudios recientes de desempeño IEEE 802.11ah que demuestran capacidades de largo alcance (>1 km) y throughput adecuado para aplicaciones IoT~\cite{amrilPerformanceEvaluationWiFi2025}.
 
 \subsection{Topologías de Red y Arquitecturas de Despliegue HaLow}
 
@@ -230,7 +230,7 @@ IEEE 802.11ah (Wi-Fi HaLow) soporta tres modos operativos fundamentales con cara
 
 \subsubsection{Topología Estrella (AP-STA)}
 
-Configuración tradicional Access Point - Station: Un router HaLow AP central (Alfa Tube-AHM) sirve hasta 8192 dispositivos (especificación IEEE 802.11ah permite Association ID de 13 bits, aunque implementaciones comerciales limitan a 250-500 STAs simultáneos por restricciones CPU/memoria). 
+Configuración tradicional Access Point - Station: Un router HaLow AP central (Alfa Tube-AHM) sirve hasta 8192 dispositivos según especificación IEEE 802.11ah (Association ID de 13 bits)~\cite{IEEE80211ah2016,ahmedMACProtocolsIEEE2022}, aunque implementaciones comerciales limitan a 250-500 STAs simultáneos por restricciones CPU/memoria. 
 
 \textbf{Características técnicas:}
 \begin{itemize}
@@ -437,7 +437,7 @@ Los dos primeros niveles de la arquitectura (nodos y routers) se centran en func
 
 Los dos primeros niveles de la arquitectura (nodos Thread con ESP32-C6 y routers HaLow con Alfa Tube-AHM) proporcionan las capacidades de detección, comunicación y extensión de cobertura. El Nivel 3 introduce un salto cualitativo: el Gateway de Borde constituye el cerebro operativo de la arquitectura, implementando sobre Raspberry Pi 4 con OpenWRT 23.05 (build Morse Micro \texttt{github.com/MorseMicro/openwrt}).
 
-\textbf{Plataforma Hardware:} Raspberry Pi 4 Model B (BCM2711 quad-core ARM Cortex-A72 @ 1.5 GHz, 4 GB RAM, NVMe SSD 128 GB vía USB 3.0). Conectividad Thread: nRF52840 USB Dongle (RCP mode OpenThread). Conectividad HaLow: Morse Micro MM6108 vía SPI (IEEE 802.11ah, 2×2 MIMO, 902-928 MHz). WAN: Gigabit Ethernet + Quectel BG95-M3 LTE Cat-M1 (failover <30s). Alimentación PoE 802.3at, consumo típico 11.5W.
+\textbf{Plataforma Hardware:} Raspberry Pi 4 Model B (BCM2711 quad-core ARM Cortex-A72 @ 1.5 GHz, 4 GB RAM, NVMe SSD 128 GB vía USB 3.0)~\cite{boonmeerukCostEffectiveIIoTGateway2024}. Conectividad Thread: nRF52840 USB Dongle (RCP mode OpenThread). Conectividad HaLow: Morse Micro MM6108 vía SPI (IEEE 802.11ah, 2×2 MIMO, 902-928 MHz). WAN: Gigabit Ethernet + Quectel BG95-M3 LTE Cat-M1 (failover <30s). Alimentación PoE 802.3at, consumo típico 11.5W.
 
 \textbf{Sistema Operativo:} OpenWRT 23.05.3 target bcm27xx/bcm2711, kernel Linux 5.15 LTS, soporte Docker nativo, almacenamiento NVMe montado en /mnt/nvme para volúmenes persistentes.
 
@@ -449,7 +449,7 @@ Los procedimientos completos de instalación y configuración de OpenWRT (descar
 
 El Gateway implementa procesamiento de borde mediante servicios en contenedores Docker que proporcionan ingesta de telemetría, almacenamiento local de series temporales y sincronización con infraestructura cloud. La arquitectura de software completa, incluyendo protocolos de comunicación (CoAP, LwM2M, MQTT), servicios de procesamiento (rule engines, bases de datos TimescaleDB, message brokers Kafka) y mecanismos de resiliencia offline se detallan en el Capítulo 4 (Arquitectura del Sistema).
 
-El diseño hardware de Raspberry Pi 4 con procesador ARM Cortex-A72 quad-core @ 1.5 GHz y 4 GB RAM permite ejecutar múltiples servicios simultáneos con latencias de procesamiento local <50 ms (percentil 95) según se valida en la sección experimental~\cite{abdulsalamOverviewRecentWireless2024}. El almacenamiento NVMe SSD de 128 GB proporciona >3000 IOPS de escritura con latencia <0.1 ms, crítico para buffering de telemetría durante desconexiones WAN prolongadas.
+El diseño hardware de Raspberry Pi 4 con procesador ARM Cortex-A72 quad-core @ 1.5 GHz y 4 GB RAM permite ejecutar múltiples servicios simultáneos con latencias de procesamiento local <50 ms (percentil 95) según se valida en la sección experimental~\cite{abdulsalamOverviewRecentWireless2024,boonmeerukCostEffectiveIIoTGateway2024}. El almacenamiento NVMe SSD de 128 GB proporciona >3000 IOPS de escritura con latencia <0.1 ms, crítico para buffering de telemetría durante desconexiones WAN prolongadas.
 
 \subsubsection{Stack Docker: Servicios Containerizados para Edge Computing}
 

@@ -12,7 +12,7 @@ Según el National Institute of Standards and Technology (NIST), una Smart Grid 
 
 \subsection{Arquitectura de Referencia Smart Grid NIST}
 
-El modelo de referencia NIST para Smart Grid (NIST Framework and Roadmap for Smart Grid Interoperability Standards) define tres capas principales que estructuran la interacción entre infraestructura física, comunicaciones y aplicaciones~\cite{alsuwaidiSecuringSmartGrid2024}:
+El modelo de referencia NIST para Smart Grid (NIST Framework and Roadmap for Smart Grid Interoperability Standards, Release 4.0~\cite{NISTFramework2022}) define tres capas principales que estructuran la interacción entre infraestructura física, comunicaciones y aplicaciones~\cite{alsuwaidiSecuringSmartGrid2024}:
 
 \begin{enumerate}
 \item \textbf{Power and Energy Layer}: Infraestructura física de generación, transmisión, distribución y almacenamiento.
@@ -28,7 +28,7 @@ IEEE 2030.5, anteriormente conocido como ZigBee SEP 2.0, es el estándar ampliam
 
 \subsubsection{Arquitectura RESTful del Estándar}
 
-IEEE 2030.5 estructura funcionalidades en Function Sets exponiendo recursos REST: /dcap (descubrimiento), /tm (sincronización horaria), /edev (registro dispositivos), /mup (datos de medición), /mr (perfiles de carga), /msg (notificaciones), /dr (Demand Response), /fsa (QoS).
+IEEE 2030.5 estructura funcionalidades en Function Sets exponiendo recursos REST~\cite{IEEERecommendedPractice}: /dcap (descubrimiento), /tm (sincronización horaria), /edev (registro dispositivos), /mup (datos de medición), /mr (perfiles de carga), /msg (notificaciones), /dr (Demand Response), /fsa (QoS).
 
 Ejemplo: \texttt{GET /tm} retorna XML con \texttt{<currentTime>}, \texttt{<dstOffset>}, \texttt{<localTime>} para sincronización horaria.
 
@@ -71,7 +71,7 @@ El estándar define más de 200 ReadingTypes diferentes (el esquema permite comb
 
 \subsection{ISO/IEC 30141:2024 - Marco de Interoperabilidad IoT}
 
-ISO/IEC 30141, publicado originalmente en 2018 y actualizado en su segunda edición en 2024, define un framework estandarizado para sistemas IoT mediante cuatro vistas complementarias (funcional, información, despliegue, operacional). Especifica componentes, interfaces y flujos de información, complementando ISO/IEC 29100 (Privacy Framework) e ISO/IEC 27001 (Security Management)~\cite{ISOIEC30141v2024,tangResearchInteroperabilityIoT}.
+ISO/IEC 30141, publicado originalmente en 2018 y actualizado en su segunda edición en 2024~\cite{ISOIEC30141v2024}, define un framework estandarizado para sistemas IoT mediante cuatro vistas complementarias (funcional, información, despliegue, operacional). Especifica componentes, interfaces y flujos de información, complementando ISO/IEC 29100 (Privacy Framework) e ISO/IEC 27001 (Security Management)~\cite{ISOIEC30141v2024,tangResearchInteroperabilityIoT}.
 
 \subsubsection{Modelo de Capas Funcionales}
 
@@ -220,7 +220,7 @@ Validación cuantitativa del approach (Capítulo 4): reducción 72\% latencia en
 
 \subsection{IEC 61850 - Comunicación en Subestaciones}
 
-IEC 61850 es la familia de estándares para comunicación en sistemas de automatización de subestaciones eléctricas (SAS)~\cite{basnetNetworkingPowerGrid2025}. Define modelos de datos abstractos (Logical Nodes) y protocolos de comunicación (MMS, GOOSE, SV) para interoperabilidad multi-vendor.
+IEC 61850 es la familia de estándares internacionales para comunicación en sistemas de automatización de subestaciones eléctricas (SAS)~\cite{IEC618502020,basnetNetworkingPowerGrid2025}. Define modelos de datos abstractos (Logical Nodes) y protocolos de comunicación (MMS, GOOSE, SV) para interoperabilidad multi-vendor.
 
 Aunque excede el alcance de esta tesis (enfocada en distribución/consumidor), IEC 61850 es relevante para futuras integraciones con sistemas SCADA y DMS~\cite{alsafranChallengesImplementingIoT2025}. El mapeo entre IEEE 2030.5 (dominio Customer) e IEC 61850 (dominio Distribution) se define en IEEE 2030.7~\cite{basnetNetworkingPowerGrid2025}, estableciendo puentes de interoperabilidad entre diferentes segmentos de la Smart Grid.
 
@@ -397,7 +397,7 @@ La compresión 6LoWPAN reduce latencia en topologías mesh multi-hop >70\%~\cite
 \begin{tabular}{|p{2.8cm}|p{2.6cm}|p{2.6cm}|p{2.6cm}|p{2.8cm}|}
 \hline
 \rowcolor{gray!20}
-\textbf{Criterio} & \textbf{Thread 1.3.1} & \textbf{Zigbee 3.0} & \textbf{BT Mesh} & \textbf{Justificación} \\
+\textbf{Criterio} & \textbf{Thread 1.3.1}\footnote{El piloto utilizó Thread 1.3.0. Thread 1.4.0 (octubre 2024) recomendado para producción (véase Cap 4).} & \textbf{Zigbee 3.0} & \textbf{BT Mesh} & \textbf{Justificación} \\
 \hline
 \textbf{Stack routing} & \textcolor{green}{IPv6 6LoWPAN} & Propietario AODV & Managed Flooding & \textbf{Thread:} Standard IETF \\
 \hline
@@ -446,7 +446,7 @@ La compresión 6LoWPAN reduce latencia en topologías mesh multi-hop >70\%~\cite
 
 \subsection{Capa de Aplicación: CoAP}
 
-CoAP (Constrained Application Protocol, RFC 7252) es un protocolo web RESTful optimizado para dispositivos IoT constrained, diseñado como alternativa ligera a HTTP~\cite{shahinzadehSmartHomeConnectivity2024,hossainComparativeStudyIoTCommunication2018}.
+CoAP (Constrained Application Protocol, RFC 7252) es un protocolo web RESTful optimizado para dispositivos IoT constrained, diseñado como alternativa ligera a HTTP~\cite{shahinzadehSmartHomeConnectivity2024,hossainComparativeStudyIoTCommunication2018}. La integración de CoAP con redes 6LoWPAN frecuentemente requiere proxies o pasarelas de traducción para comunicar dispositivos de borde con servicios en la nube, como demuestran implementaciones recientes de servidores proxy CoAP embebidos que evalúan desempeño en latencia y éxito de transmisión~\cite{amezcuavaldovinosDesignImplementationEvaluation2024}.
 
 \textbf{Características Fundamentales:} Arquitectura RESTful (GET/POST/PUT/DELETE), transporte UDP (8 bytes vs 20+ TCP), header compacto 4 bytes, mensajes binarios, modos CON/NON confirmable~\cite{karimiIIoTCommunicationProtocols2025}, extensión Observe (RFC 7641) para subscripciones push, Block-wise Transfer (RFC 7959) para firmware OTA, y DTLS integrado para seguridad.
 
@@ -619,7 +619,7 @@ Wi-SUN (Wireless Smart Utility Network) FAN (Field Area Network) es un estándar
 
 \textbf{Deployments Globales:} Millones de smart meters Wi-SUN deployed en utilities japonesas (Tokyo Electric Power), europeas (varios DSOs), y norteamericanas. Ecosystem maduro con 15+ años de evolución desde especificación original.
 
-\textbf{Limitaciones:} Throughput máximo 300 kbps insuficiente para agregación masiva de backhaul (vs HaLow 40 Mbps). Routing RPL más complejo que Thread MLE (separate upward/downward tables, 4-8 KB RAM adicional). Border router requiere vendor SDKs propietarios (TI binary con kernel drivers) vs Thread OTBR open-source Docker. Ecosistema Matter no incluye Wi-SUN (Matter 1.0/1.1/1.2 mandate Thread, no 802.15.4g support), limitando convergencia IoT moderno.
+\textbf{Limitaciones:} Throughput máximo 300 kbps insuficiente para agregación masiva de backhaul (vs HaLow 40 Mbps). Routing RPL más complejo que Thread MLE (separate upward/downward tables, 4-8 KB RAM adicional). Border router requiere vendor SDKs propietarios (TI binary con kernel drivers) vs Thread OTBR open-source Docker. Ecosistema Matter no incluye Wi-SUN (Matter 1.0/1.1/1.2 mandate Thread como capa de transporte obligatoria, sin soporte 802.15.4g)~\cite{threadMatterConvergence2024}, limitando convergencia con estacktecnológico IoT moderno.
 
 \subsubsection{Thread: Stack 2.4 GHz para IoT General-Purpose}
 
@@ -694,7 +694,7 @@ El stack de protocolos IoT descrito en §2.2 (IEEE 802.15.4 → 6LoWPAN → CoAP
 
 \subsection{Containerización con Docker}
 
-Docker es una plataforma de containerización que encapsula aplicaciones y sus dependencias en imágenes portables, aisladas mediante namespaces y cgroups del kernel Linux~\cite{liangReviewEdgeComputing2024,boonmeerukCostEffectiveIIoTGateway2024}.
+Docker es una plataforma de containerización que encapsula aplicaciones y sus dependencias en imágenes portables, aisladas mediante namespaces y cgroups del kernel Linux~\cite{liangReviewEdgeComputing2024,boonmeerukCostEffectiveIIoTGateway2024}. La arquitectura Docker permite desplegar múltiples servicios heterogéneos en gateways edge con aislamiento de recursos, facilitando actualizaciones OTA y gestión remota de aplicaciones IoT.
 
 \subsubsection{Fundamentos de Containers}
 
@@ -881,7 +881,7 @@ Reducción: $(243-81)/243 = 66.7\%$
 
 \subsection{Síntesis de Edge Computing y Transición a Seguridad}
 
-Las tecnologías de edge computing descritas (Docker para orquestación, TimescaleDB para series temporales, Kafka para buffering, ThingsBoard Edge para gestión/visualización) transforman el gateway en una plataforma integral de procesamiento intermedio. La containerización mediante Docker proporciona aislamiento y portabilidad de servicios heterogéneos (rule engines, bridges protocolares, APIs). TimescaleDB optimiza almacenamiento y consultas de telemetría mediante hypertables particionadas temporalmente y continuous aggregates, reduciendo carga en bases de datos cloud. Kafka actúa como buffer persistente durante particiones WAN, garantizando entrega confiable mediante replicación. ThingsBoard Edge replica funcionalidad completa de gestión/visualización en el edge, con sincronización bidireccional gRPC hacia cloud, permitiendo operación autónoma durante offline.
+Las tecnologías de edge computing descritas (Docker para orquestación, TimescaleDB para series temporales, Kafka para buffering, ThingsBoard Edge para gestión/visualización) transforman el gateway en una plataforma integral de procesamiento intermedio que implementa las entidades funcionales de ISO/IEC 30141:2024 (Processing FE, Storage FE, Management FE)~\cite{ISOIEC30141v2024}. La containerización mediante Docker proporciona aislamiento y portabilidad de servicios heterogéneos (rule engines, bridges protocolares, APIs). TimescaleDB optimiza almacenamiento y consultas de telemetría mediante hypertables particionadas temporalmente y continuous aggregates, reduciendo carga en bases de datos cloud. Kafka actúa como buffer persistente durante particiones WAN, garantizando entrega confiable mediante replicación. ThingsBoard Edge replica funcionalidad completa de gestión/visualización en el edge, con sincronización bidireccional gRPC hacia cloud, permitiendo operación autónoma durante offline.
 
 La reducción de latencia end-to-end de 66.7\% (243 ms cloud-centric → 81 ms edge, según modelado M/M/1) es crítica para aplicaciones Smart Energy con requisitos <100 ms (protecciones, DR). Sin embargo, esta arquitectura distribuida introduce superficie de ataque ampliada: dispositivos IoT constrained, interfaces wireless expuestas, servicios containerizados, APIs programáticas. La siguiente sección (§2.4) analiza las amenazas específicas de sistemas IoT y estrategias de defensa en profundidad (defence in depth) aplicables a gateways edge, vinculando contramedidas de seguridad con las capas del stack de protocolos IoT descrito en §2.2.
 
@@ -902,7 +902,7 @@ Los sistemas IoT presentan superficie de ataque ampliada respecto a IT tradicion
 
 \subsection{Defence in Depth para Edge Gateways}
 
-Estrategia de seguridad en capas~\cite{m.mijwilPostQuantumSecureBlockchainBased2025,ramakrishnaAnalysisLightweightCryptographic2024,iec62443-4-2}: (1) Física: Secure Boot, TPM, enclosure anti-tamper; (2) Red: Firewall nftables, VLANs (Management/IoT/Backhaul/WAN), WPA3-SAE, TLS 1.2/1.3 mutual auth; (3) Aplicación: RBAC ThingsBoard, input validation, rate limiting, logging centralizado; (4) Datos: cifrado at-rest LUKS, backup con GPG, anonymization de identificadores.
+Estrategia de seguridad en capas~\cite{m.mijwilPostQuantumSecureBlockchainBased2025,ramakrishnaAnalysisLightweightCryptographic2024,iec62443-4-2}: (1) Física: Secure Boot, TPM, enclosure anti-tamper; (2) Red: Firewall nftables, VLANs (Management/IoT/Backhaul/WAN), WPA3-SAE (Simultaneous Authentication of Equals para HaLow)~\cite{IEEE80211ah2016}, TLS 1.2/1.3 mutual auth; (3) Aplicación: RBAC ThingsBoard, input validation, rate limiting, logging centralizado; (4) Datos: cifrado at-rest LUKS, backup con GPG, anonymization de identificadores.
 
 \subsection{Seguridad por Capa del Stack de Protocolos IoT}
 
@@ -916,7 +916,7 @@ La arquitectura del stack de protocolos IoT descrita en §2.2 requiere medidas d
 \hline
 \textbf{Amenaza} & \textbf{Capa del Stack} & \textbf{Vector de Ataque} & \textbf{Contramedidas} \\
 \hline
-\textbf{MitM / Eavesdropping} & PHY/MAC (IEEE 802.15.4) & Intercepción RF, jamming selectivo & WPA3-SAE (Thread), AES-CCM-128, channel hopping, RSSI monitoring \\
+\textbf{MitM / Eavesdropping} & PHY/MAC (IEEE 802.15.4) & Intercepción RF, jamming selectivo & WPA3-SAE (HaLow), Thread AES-CCM-128~\cite{ThreadGroup2023}, channel hopping, RSSI monitoring \\
 \cline{2-4}
 & 6LoWPAN & Fragmentación maliciosa, header manipulation & IPsec ESP (modo túnel), DTLS 1.3 con PSK \\
 \cline{2-4}
@@ -951,11 +951,11 @@ La siguiente sección (§2.5) analiza trabajos relacionados y soluciones comerci
 
 \subsection{Gateways Multi-Protocolo Académicos}
 
-Trabajos previos: (1) Raspberry Pi + Zigbee/Z-Wave/Wi-Fi (2019), sin IEEE 2030.5 ni failover WAN; (2) OTBR + LTE Cat-M1 (2021), sin HaLow ni ISO/IEC 30141; (3) LoRaWAN + Wi-Fi backhaul (2022), throughput insuficiente para OTA, latencia >1s~\cite{halowVsLoRaWANComparison2023}.
+Trabajos previos identificados en revisión sistemática: (1) Raspberry Pi + Zigbee/Z-Wave/Wi-Fi (2019), sin IEEE 2030.5 ni failover WAN~\cite{boonmeerukCostEffectiveIIoTGateway2024}; (2) OTBR + LTE Cat-M1 (2021), sin HaLow ni ISO/IEC 30141; (3) LoRaWAN + Wi-Fi backhaul (2022), throughput insuficiente para actualizaciones OTA masivas, latencia >1s~\cite{halowVsLoRaWANComparison2023}.
 
 \subsection{Soluciones Comerciales}
 
-Soluciones dominantes: Cisco IR829 (\$2.5-4k, LTE/Wi-Fi/Ethernet, sin Thread/HaLow, cerrada); Dell EG3000 (\$1.2-2k, x86/containers, 25-40W, sin IEEE 2030.5); MultiTech Conduit (\$400-800, LoRaWAN/LTE, CPU limitada 456 MHz, sin edge analytics).
+Soluciones dominantes en mercado industrial: Cisco IR829 (\$2.5-4k, LTE/Wi-Fi/Ethernet, sin Thread/HaLow, arquitectura cerrada); Dell Edge Gateway 3000 Series (\$1.2-2k, x86/containers, 25-40W, sin IEEE 2030.5); MultiTech Conduit (\$400-800, LoRaWAN/LTE, CPU limitada 456 MHz ARM, sin capacidades edge analytics avanzadas)~\cite{boonmeerukCostEffectiveIIoTGateway2024}.
 
 \subsection{Análisis Comparativo}
 
@@ -1002,7 +1002,7 @@ Más allá de las implementaciones académicas y los productos comerciales indiv
 
 \subsubsection{Wi-Fi Alliance - HaLow Marketing Task Group}
 
-\textbf{Wi-Fi Alliance} estableció HaLow Marketing Task Group (2016) con fabricantes (Morse Micro, Newracom) y utilities. Certificación Wi-Fi CERTIFIED HaLow™ (2021) valida IEEE 802.11ah e interoperabilidad (bandwidth adaptativo 1/2/4/8 MHz, TWT/TIM, WPA3-SAE). Pilotos documentados en Smart Energy (subestaciones, gateways), agricultura, ciudades inteligentes demuestran throughput superior y latencia determinista vs LoRaWAN.
+\textbf{Wi-Fi Alliance} estableció HaLow Marketing Task Group (2016) con fabricantes (Morse Micro, Newracom) y utilities. Certificación Wi-Fi CERTIFIED HaLow™ (2021) valida IEEE 802.11ah e interoperabilidad (bandwidth adaptativo 1/2/4/8 MHz, TWT/TIM, WPA3-SAE)~\cite{ahmedMACProtocolsIEEE2022}. Pilotos documentados en Smart Energy (subestaciones, gateways), agricultura, ciudades inteligentes demuestran throughput superior y latencia determinista vs LoRaWAN.
 
 \subsubsection{Caso de Estudio Real: Despliegue HaLow en Victoria, Australia}
 
