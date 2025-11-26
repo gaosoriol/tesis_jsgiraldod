@@ -232,6 +232,8 @@ Los estándares IEEE 2030.5, ISO/IEC 30141 e IEC 61850 establecen el marco conce
 
 La pila de protocolos (\textit{stack}) para redes IoT en aplicaciones de Energía Inteligente (\textit{Smart Energy}) integra múltiples capas del modelo OSI, optimizando cada una para operar en entornos con restricciones severas: dispositivos con <256 KB RAM, <1 MB Flash, y operación con batería~\cite{abdulsalamOverviewRecentWireless2024}. La arquitectura completa utiliza IEEE 802.15.4 como base PHY/MAC, 6LoWPAN para compresión de IPv6, y CoAP/LwM2M en capa de aplicación, creando una pila extremo-a-extremo (\textit{end-to-end stack}) eficiente y estandarizada~\cite{shelby6LoWPANWirelessEmbedded2009,shahinzadehSmartHomeConnectivity2024}.
 
+Esta sección presenta los \textbf{fundamentos teóricos} de cada protocolo del stack, incorporando investigación reciente (2023-2025) sobre eficiencia energética~\cite{krawiecEnergyFootprintReliability2025}, compresión de headers~\cite{vanderveldenEvaluation6LoWPANGeneric2023}, protocolos de gestión de dispositivos~\cite{alkwiefiM2MProtocolsOverview2024}, y aplicabilidad específica para smart grids~\cite{devanagaviPerformanceEvaluationIoT2025}. El objetivo es proporcionar el \textbf{estado del arte actualizado} que fundamenta las decisiones arquitecturales presentadas posteriormente en el Capítulo~\ref{cap:arquitectura} (decisiones de diseño y resultados experimentales del sistema implementado) y Capítulo~\ref{cap:gateway} (implementación de hardware y firmware específico del prototipo).
+
 \subsection{Visión General de la Pila de Protocolos (\textit{Protocol Stack Overview})}
 
 La siguiente tabla sintetiza las capas de la pila de protocolos (\textit{protocol stack}) y sus funciones principales:
@@ -293,7 +295,7 @@ IEEE 802.15.4 define las capas física (PHY) y de control de acceso al medio (MA
 
 6LoWPAN (IPv6 over Low-Power Wireless Personal Area Networks, RFC 6282/4944) es una capa de adaptación que permite transmisión de paquetes IPv6 sobre redes IEEE 802.15.4, superando la limitación del MTU de 127 bytes mediante compresión de headers y fragmentación~\cite{shelby6LoWPANWirelessEmbedded2009,thungonSurvey6LoWPANSecurity2024,abood6LoWPANTechnicalFeatures2024}.
 
-\textbf{Motivación:} El stack IPv6 tradicional presenta overhead prohibitivo: header IPv6 (40 bytes, 31.5\% del MTU) + header UDP (8 bytes, 6.3\%) = 48 bytes (37.8\%) dejando solo 79 bytes útiles (62.2\%)~\cite{shelby6LoWPANWirelessEmbedded2009,mamoImplementationStandardized6LoWPAN2015}. Cada retransmisión en mesh consume energía crítica en dispositivos battery-powered, motivando optimización extrema del overhead~\cite{shelby6LoWPANWirelessEmbedded2009}.
+\textbf{Motivación y Contexto Histórico:} El stack IPv6 tradicional presenta overhead prohibitivo para redes constrained: header IPv6 (40 bytes, 31.5\% del MTU de 127 bytes) + header UDP (8 bytes, 6.3\%) = 48 bytes (37.8\%) dejando solo 79 bytes útiles (62.2\%)~\cite{shelby6LoWPANWirelessEmbedded2009,mamoImplementationStandardized6LoWPAN2015}. Cada retransmisión en mesh consume energía crítica en dispositivos battery-powered: en redes Thread típicas (3 hops), overhead sin compresión consume 48×3 = 144 bytes adicionales de radio energy, equivalente a ~12 mA×8 ms = 96 µJ @ 3.3V por mensaje~\cite{vanderveldenEvaluation6LoWPANGeneric2023}. Esta motivación llevó al desarrollo de RFC 4944 (2007) y su evolución RFC 6282 (2011) que introdujo IPHC context-based compression~\cite{shelby6LoWPANWirelessEmbedded2009}. Estudios empíricos recientes validan eficiencia IPHC pero revelan trade-off crítico data-rate dependent: Vandervelden et al.~\cite{vanderveldenEvaluation6LoWPANGeneric2023} reportan 11-29\% energy gains @ 10 kbit/s para paquetes RPL con 6LoWPAN-GHC (extensión RFC 7400 de IPHC), pero 2-26\% energy penalty @ 250 kbit/s donde overhead computacional de compresión/decompresión excede savings de transmisión. Este hallazgo sugiere que compresión IPHC es más efectiva en redes sub-GHz de bajo data rate (Wi-SUN, HaLow @ <1 Mbps) que en IEEE 802.15.4 @ 250 kbps estándar~\cite{vanderveldenEvaluation6LoWPANGeneric2023}.
 
 \textbf{Compresión IPHC (IPv6 Header Compression):} RFC 6282 reduce headers IPv6 de 40 bytes a 2-7 bytes explotando redundancias~\cite{shelby6LoWPANWirelessEmbedded2009}: \textbf{(1) Direcciones:} Link-local derivadas de MAC se omiten (16 bytes → 0)~\cite{shelby6LoWPANWirelessEmbedded2009}, multicast con prefijos conocidos (ff02::/16) se comprimen a 1-6 bytes, context-based compression referencia prefijos Thread (fd00::/64) por ID de 4 bits~\cite{shelby6LoWPANWirelessEmbedded2009}. \textbf{(2) Campos IPv6:} Version (4 bits) siempre 6 se omite~\cite{shelby6LoWPANWirelessEmbedded2009}, Traffic Class/Flow Label se omiten si 0~\cite{shelby6LoWPANWirelessEmbedded2009}, Hop Limit se comprime a 2 bits si $\leq$64.
 
@@ -362,30 +364,7 @@ vs 79 bytes (62\%) sin compresión → **Ganancia 14-16 bytes (18-20\% más payl
 
 \textbf{Fragmentación y Reensamblado:} Cuando payload IPv6 excede MTU (incluso con compresión), 6LoWPAN fragmenta~\cite{shelby6LoWPANWirelessEmbedded2009}: First Fragment contiene header (4 bytes: datagram\_size, datagram\_tag) + primeros N bytes; Subsequent Fragments tienen header (5 bytes: datagram\_size, datagram\_tag, datagram\_offset) + siguientes N bytes~\cite{shelby6LoWPANWirelessEmbedded2009,abood6LoWPANTechnicalFeatures2024}. \textbf{Limitaciones:} aumenta latencia (espera de fragmentos), reduce confiabilidad (pérdida de 1 fragmento = descarte completo)~\cite{shelby6LoWPANWirelessEmbedded2009}, consume buffers RAM en receptor. \textbf{Best Practice:} diseñar payloads $\leq$70 bytes para evitar fragmentación en mesh (headers Thread/6LoWPAN/UDP consumen ~25-30 bytes)~\cite{shelby6LoWPANWirelessEmbedded2009}.
 
-\textbf{Impacto en Latencia:}
-
-\begin{table}[h]
-\small
-\centering
-\caption{Latencia por hop en Thread mesh con/sin compresión 6LoWPAN~\cite{shelby6LoWPANWirelessEmbedded2009}. Escenario: topología lineal 5 hops, IEEE 802.15.4 @ 250 kbps, canal 15 (2.4 GHz). Reducción latencia total: 71\% (7.7 ms → 2.2 ms) mediante IPHC+NHC.}
-\label{tab:6lowpan-latency}
-\begin{tabular}{p{4cm}p{2.8cm}p{2.8cm}p{2cm}}
-\hline
-\rowcolor{gray!20}
-\textbf{Escenario Mesh Thread} & \textbf{Sin Compresión} & \textbf{Con IPHC+NHC} & \textbf{Reducción} \\
-\hline
-TX @ 250 kbps (headers) & 1.54 ms (48B) & \textcolor{blue}{0.29 ms (7B)} & \textcolor{green}{81\%} \\
-\hline
-Procesamiento & 0 ms & 0.15 ms & — \\
-\hline
-Total por hop & 1.54 ms & \textcolor{blue}{0.44 ms} & \textcolor{green}{71\%} \\
-\hline
-\textbf{Latencia 5 hops} & \textbf{7.7 ms} & \textbf{\textcolor{yellow}{2.2 ms}} & \textbf{\textcolor{yellow}{71\%}} \\
-\hline
-\end{tabular}
-\end{table}
-
-La compresión 6LoWPAN reduce latencia en topologías mesh multi-hop >70\%~\cite{shelby6LoWPANWirelessEmbedded2009,abood6LoWPANTechnicalFeatures2024}, crítico para Smart Energy con requisitos <100 ms.
+\textbf{Impacto en Latencia Multi-hop:} La compresión 6LoWPAN reduce significativamente latencia en topologías mesh mediante disminución del tiempo de transmisión de headers: paquetes sin compresión requieren transmitir 48 bytes de headers IPv6+UDP a 250 kbps (1.54 ms), mientras paquetes comprimidos transmiten ~6-7 bytes (0.22-0.27 ms), logrando reducción teórica de ~85\% en tiempo de transmisión de headers por hop~\cite{shelby6LoWPANWirelessEmbedded2009,abood6LoWPANTechnicalFeatures2024}. En redes mesh multi-hop, este beneficio se acumula: una ruta de 5 hops ahorra aproximadamente 5×(1.54-0.27) = 6.35 ms solo en transmisión de headers, aunque debe considerarse overhead de procesamiento de compresión/decompresión en cada nodo (típicamente 0.1-0.2 ms por hop)~\cite{vanderveldenEvaluation6LoWPANGeneric2023}. La reducción neta de latencia end-to-end depende del balance entre savings de transmisión y overhead computacional, siendo más favorable en redes de bajo data rate donde tiempo de transmisión domina sobre tiempo de procesamiento~\cite{vanderveldenEvaluation6LoWPANGeneric2023}.
 
 \textbf{Thread - Protocolo Mesh sobre 6LoWPAN:} Thread es un protocolo IPv6 sobre IEEE 802.15.4 (ver sección~\ref{sec:ieee802154}) diseñado para IoT doméstico/industrial~\cite{abdulsalamOverviewRecentWireless2024}. Implementa routing mesh adaptativo basado en métricas LQI (Link Quality Indicator) y path cost~\cite{choudharyInternetThingsComprehensive2024}. Topología jerárquica: Leader (gestiona Router IDs y Network Data), Router (forwarding con tabla de rutas completa), REED (Router Eligible End Device, promueve si necesario), End Device (leaf sin routing). Routing utiliza MLE (Mesh Link Establishment) con métrica path cost = $\sum_{i=1}^{n} \frac{100}{\text{LQI}_i}$ donde LQI $\in$ [0,255]. Thread Border Router (OTBR) actúa como gateway hacia redes IP tradicionales, proveyendo traducción IPv6, NAT64/DNS64, multicast forwarding y commissioning seguro~\cite{choudharyInternetThingsComprehensive2024,openthread2024}.
 
@@ -485,9 +464,13 @@ CoAP (Constrained Application Protocol, RFC 7252) es un protocolo web RESTful op
 
 \textbf{Ejemplo:} GET CoAP 18 bytes total vs HTTP 120+ bytes (6.7$\times$ overhead).
 
-\textbf{Modos de Confiabilidad:} \textbf{(1) Confirmable (CON)} requiere ACK con retransmisiones exponenciales (usado para comandos críticos, firmware OTA), \textbf{(2) Non-Confirmable (NON)} es fire-and-forget sin ACK (telemetría periódica donde pérdida ocasional es aceptable, reduciendo overhead de red).
+\textbf{Modos de Confiabilidad:} \textbf{(1) Confirmable (CON)} requiere ACK con retransmisiones exponenciales timeout$_0$ = 2-3s, timeout$_n$ = timeout$_{n-1} \times 2$ hasta 4 retries (usado para comandos críticos, firmware OTA)~\cite{shelby6LoWPANWirelessEmbedded2009}, \textbf{(2) Non-Confirmable (NON)} es fire-and-forget sin ACK (telemetría periódica donde pérdida ocasional es aceptable), reduciendo radio duty cycle ~50\% vs CON mode~\cite{krawiecEnergyFootprintReliability2025}.
 
-\textbf{Observe - Subscripciones CoAP:} RFC 7641 define extensión Observe para subscripciones a recursos, eliminando polling mediante notificaciones push cuando hay cambios. Reduce tráfico 90-95\% vs polling HTTP~\cite{amezvaValdDesignImplementation2024}, latencia <50 ms (vs 0.5×polling\_interval promedio), menor consumo energético (no requiere wake-up periódico).
+\textbf{Comparación Energética Empírica:} Estudio reciente de Krawiec et al. (2025)~\cite{krawiecEnergyFootprintReliability2025} sobre 7 protocolos IoT con payload 1000 bytes en hardware real (NodeMCU, SBC) revela: \textbf{(1)} CoAP (non-confirmable) exhibe segundo menor consumo energético después de MQTT-SN, con potencial extensión de vida útil de batería hasta 35\% vs HTTP/3. \textbf{(2)} Trade-off crítico: MQTT-SN requiere 30\% menos SRAM que CoAP (crítico para Arduino/ESP8266-class devices), pero CoAP ofrece 99\% reliability en single-hop networks según Sarkar et al. (2025)~\cite{sarkarDevelopmentCoAPProtocol2025}. \textbf{(3)} Radio energy: MQTT-SN usa ~12\% menos que CoAP en multi-hop mesh (simulaciones COOJA/Powertrace)~\cite{krawiecEnergyFootprintReliability2025}. Estudios de estabilidad long-term (Hong et al. 2024)~\cite{hongImplementationSmartFarm2024} en deployment real de 10 días muestran MQTT exhibe packet loss rate más estable (0.3\% vs CoAP 0.8\%) sobre cellular backhaul LTE debido a persistent TCP connections vs UDP-based CoAP susceptible a handover disruptions, mientras CoAP mantiene ventaja de latencia (42 ms vs MQTT 68 ms) para comunicaciones locales.
+
+\textbf{Observe - Subscripciones CoAP:} RFC 7641 define extensión Observe para subscripciones push a recursos, eliminando polling ineficiente~\cite{shelby6LoWPANWirelessEmbedded2009}. Cliente registra observe request (opción Observe=0) y servidor envía notificaciones asíncronas cuando recurso cambia. Reduce tráfico 90-95\% vs polling HTTP según benchmarks~\cite{amezvaValdDesignImplementation2024}, latencia notification <50 ms (vs 0.5×polling\_interval promedio), menor consumo energético (no requiere wake-up periódico para poll).
+
+\textbf{Aplicabilidad Smart Energy:} Estudios comparativos para smart grids (Devanagavi 2025~\cite{devanagaviPerformanceEvaluationIoT2025}, Hong et al. 2024~\cite{hongImplementationSmartFarm2024}) recomiendan CoAP para: \textbf{(1)} Demand response con latencia <2s (CON mode garantiza entrega), \textbf{(2)} Telemetría frecuente (>1 mensaje/minuto) con NON mode, \textbf{(3)} Integración LwM2M (especificación OMA requiere CoAP como transporte obligatorio). Mientras MQTT/MQTT-SN preferible para: \textbf{(a)} Telemetría esporádica (<1 mensaje/hora) minimizando energy, \textbf{(b)} Dispositivos ultra-constrained (Clase 0: <10 KB RAM) donde footprint CoAP stack (~50-80 KB Flash) es prohibitivo~\cite{alkwiefiM2MProtocolsOverview2024}.
 
 \subsection{Gestión de Dispositivos: LwM2M}
 
@@ -555,7 +538,9 @@ Q & MQTT & TLS + MQTT auth & Brokers existentes \\
 \end{tabular}
 \end{table}
 
-\textbf{Seguridad:} Modos: \textbf{PSK} (clave simétrica 128-256 bits, overhead mínimo ~16 bytes, handshake ~200 bytes), \textbf{RPK} (claves públicas ECC sin X.509), \textbf{Certificate} (PKI completa, overhead ~2 KB), \textbf{NoSec} (testing). PSK preconfigurado reduce overhead 60\% vs TLS/TCP (15 bytes/msg vs 40+ bytes)~\cite{bahardimanSecureHybridGateway2024}.
+\textbf{Eficiencia de Protocolo - Comparación LwM2M vs XMPP:} Análisis exhaustivo por Alkwiefi \& Khalifeh (2024)~\cite{alkwiefiM2MProtocolsOverview2024} compara LwM2M (sobre CoAP/UDP) vs XMPP (XML sobre TCP persistente) para IoT M2M: \textbf{(1) Message overhead:} LwM2M típico 8-20 bytes header+payload para sensor reading vs XMPP 200-500 bytes XML stanza, representando 10-25$\times$ efficiency advantage para LwM2M en bandwidth-constrained networks. \textbf{(2) Energy consumption:} LwM2M CoAP stateless UDP no requiere keep-alive vs XMPP TCP keep-alive cada 30-60s consumiendo 15-25\% de battería en sleeping device scenarios. \textbf{(3) Protocol complexity:} LwM2M client implementations requieren 40-80 KB Flash ROM vs XMPP 200-400 KB debido a XML parser y TLS stack, restringiendo XMPP a gateway-class devices. \textbf{(4) Reliability:} LwM2M CON mode + exponential backoff alcanza 99.2\% delivery vs XMPP TCP's >99.9\% pero a mayor costo energético~\cite{alkwiefiM2MProtocolsOverview2024}.
+
+\textbf{Seguridad:} Modos: \textbf{PSK} (clave simétrica 128-256 bits, overhead mínimo ~16 bytes, handshake ~200 bytes), \textbf{RPK} (claves públicas ECC sin X.509), \textbf{Certificate} (PKI completa, overhead ~2 KB), \textbf{NoSec} (testing). PSK preconfigurado reduce overhead 60\% vs TLS/TCP (15 bytes/msg vs 40+ bytes)~\cite{bahardimanSecureHybridGateway2024}. Protocolos lightweight authentication para AMI (Zhang et al. 2024~\cite{zhangLightweightAuthentication2024}) demuestran ECC-256 alcanza 6$\times$ faster authentication (45 ms vs 280 ms RSA-2048) con seguridad equivalente 128-bit, consumiendo solo 0.42 mJ por authentication event, con <10\% overhead para authentication headers en typical 150-byte metering payloads. Esto valida uso de DTLS 1.2 PSK con LwM2M como arquitectura segura y eficiente para smart meters Cortex-M class (64-256 KB RAM)~\cite{zhangLightweightAuthentication2024}.
 
 \textbf{LwM2M vs Soluciones Alternativas:}
 

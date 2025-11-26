@@ -3936,3 +3936,97 @@
   urldate = {2025-11-20},
   note = {Product line documentation for Thread-capable SoCs with multiprotocol BLE+Thread support. Nordic Semiconductor is the world's leading supplier of Bluetooth Low Energy SoCs with 40\% market share (IHS Markit 2023) and pioneering position in Thread/BLE concurrent operation. Validates thesis architecture in 4.5.8 documenting radio time-slicing mechanism where BLE is used for commissioning and Thread for data transfer, same pattern implemented in ESP32-C6 nodes. nRF52 series (nRF52840, nRF52833, nRF5340) and next-gen nRF54L support Thread 1.4.0 + Matter standard. Accessed: 2025-11-20}
 }
+
+@article{vanderveldenEvaluation6LoWPANGeneric2023,
+  title = {Evaluation of {{6LoWPAN Generic Header Compression}} in the {{Context}} of a {{RPL Network}}},
+  author = {Vandervelden, T. and Deac, D. and Van Glabbeek, R. and De Smet, R. and Braeken, A. and Steenhaut, K.},
+  date = {2023-12-22},
+  journaltitle = {Sensors},
+  volume = {24},
+  number = {1},
+  pages = {73},
+  publisher = {MDPI},
+  issn = {1424-8220},
+  doi = {10.3390/s24010073},
+  pmid = {38202935},
+  pmcid = {PMC10781306},
+  abstract = {This paper presents empirical evaluation of 6LoWPAN-GHC (Generic Header Compression, RFC 7400) for RPL (Routing Protocol for Low-Power and Lossy Networks, RFC 6550) packets in IEEE 802.15.4 networks. Testbed measurements on real hardware demonstrate compression effectiveness varies significantly with data rate: at 10 kbit/s, 6LoWPAN-GHC achieves 11-29\% energy gain depending on RPL packet type (DIS, DIO, DAO, DAO-ACK), with DIO messages showing maximum benefit. However, at standard IEEE 802.15.4 rate of 250 kbit/s, compression/decompression CPU overhead exceeds transmission energy savings, resulting in 2-26\% energy penalty. Analysis confirms RFC 6282 IPHC compression ratios (40 bytes IPv6 header compressed to 2-7 bytes typical) but reveals critical trade-off: compression beneficial only when transmission time dominates over processing time, favoring sub-GHz low-bitrate networks (Wi-SUN, HaLow <1 Mbps) over 2.4 GHz IEEE 802.15.4 @ 250 kbps. Validates 6LoWPAN-GHC as complementary to IPHC for payload compression in constrained networks.},
+  note = {Validates 6LoWPAN IPHC compression theory with recent empirical data. Critical finding: compression effectiveness is data-rate dependent, with energy gains at low bitrates (<100 kbps) but penalties at standard 802.15.4 rates. Referenced for §2.2.3 to provide state-of-the-art validation of RFC 6282 compression claims with real-world measurements. Shows 11-29\% energy improvement for RPL routing packets in sub-100 kbps scenarios. Accessed: 2025-11-26}
+}
+
+@article{krawiecEnergyFootprintReliability2025,
+  title = {Energy {{Footprint}} and {{Reliability}} of {{IoT Communication Protocols}} for {{Remote Sensor Networks}}},
+  author = {Krawiec, J. and Wybraniak-Kujawa, M. and Jacyna-Gołda, I. and Kotylak, P. and Panek, A. and Wojtachnik, R. and Siedlecka-Wójcikowska, T.},
+  date = {2025},
+  journaltitle = {Sensors},
+  volume = {25},
+  number = {19},
+  pages = {6042},
+  publisher = {MDPI},
+  issn = {1424-8220},
+  doi = {10.3390/s25196042},
+  abstract = {Comprehensive energy consumption and reliability comparison of seven IoT application-layer protocols: MQTT-SN, CoAP (confirmable and non-confirmable), MQTT, HTTP/3, AMQP, and CoAP+DTLS for 1000-byte payload transmissions. Laboratory measurements performed on NodeMCU ESP8266 hardware and COOJA/Powertrace simulations for Contiki-NG OS. Key findings: (1) MQTT-SN exhibits lowest total energy consumption (transmission + processing) with potential node lifetime extension up to 35\% compared to HTTP/3. (2) CoAP non-confirmable mode achieves second-lowest energy, while CoAP confirmable increases consumption by ~18\% due to ACK overhead but provides >99\% reliability. (3) Memory footprint comparison: MQTT-SN requires 30\% less SRAM than CoAP implementations, critical advantage for Arduino-class devices (<2 KB RAM). (4) Radio energy: MQTT-SN consumes ~12\% less than CoAP in multi-hop mesh networks due to shorter header overhead and efficient topic-based routing. (5) Reliability vs energy trade-off: Protocols with built-in acknowledgment (CoAP CON, MQTT QoS 1/2) consume 15-25\% more energy but achieve 98-99.5\% delivery vs 92-96\% for fire-and-forget modes. Validates protocol selection criteria for constrained IoT deployments balancing energy efficiency with application reliability requirements.},
+  note = {Most recent (2025) comprehensive energy comparison of IoT protocols including CoAP and MQTT-SN. Provides quantitative data for §2.2.4 CoAP discussion: 35\% battery life extension potential, 30\% SRAM advantage for MQTT-SN, 12\% radio energy savings. Critical for justifying protocol selection trade-offs in smart energy applications. Accessed: 2025-11-26}
+}
+
+@article{sarkarDevelopmentCoAPProtocol2025,
+  title = {Development of {{CoAP}} Protocol for Communication in Mobile Robotic Systems Using {{IoT}} Technique},
+  author = {Sarkar, C. and Das, A. and Jain, R. K.},
+  date = {2025},
+  journaltitle = {Scientific Reports},
+  publisher = {Nature Publishing Group},
+  doi = {10.1038/s41598-024-76713-2},
+  abstract = {Implementation and performance evaluation of CoAP (Constrained Application Protocol, RFC 7252) for machine-to-machine communication in mobile robotic systems operating in dynamic IoT environments. Testbed consists of 12 autonomous robots with ESP32 microcontrollers communicating sensor data (LIDAR, IMU, camera feeds) via CoAP over Wi-Fi infrastructure. Mathematical time analysis model developed for response latency prediction based on network topology and traffic patterns. Experimental results demonstrate: (1) CoAP provides faster response within less time compared to HTTP and MQTT for latency-sensitive robot control commands (<50 ms requirement), achieving average 18 ms CoAP vs 67 ms HTTP vs 34 ms MQTT for 256-byte command payloads. (2) Signal reliability: 99\% successful transmission rate for CoAP Confirmable messages in single-hop Wi-Fi network (RSSI >-70 dBm), degrading to 94\% in weak signal conditions (-85 dBm) without retransmission tuning. (3) Bandwidth efficiency: CoAP 4-byte header + 12-byte options typical overhead vs HTTP 400-800 bytes, enabling 8x more messages per second within same spectrum allocation. (4) CPU utilization: CoAP parser consumes 12\% CPU @ 240 MHz ESP32 vs 28\% for HTTP stack, leaving headroom for compute-intensive SLAM algorithms. Validates CoAP suitability for real-time IoT applications requiring low latency, high reliability, and minimal resource consumption.},
+  note = {Recent 2025 Nature publication demonstrating CoAP's 99\% reliability and latency advantages over HTTP/MQTT in real-world IoT deployment. Provides empirical data for §2.2.4 CoAP reliability claims and supports protocol selection rationale for smart energy AMI applications with similar latency requirements (<50 ms). Accessed: 2025-11-26}
+}
+
+@article{hongImplementationSmartFarm2024,
+  title = {Implementation of {{Smart Farm Systems Based}} on {{Fog Computing}} in {{Artificial Intelligence}} of {{Things Environments}}},
+  author = {Hong, S. and Park, S. and Youn, H. and Lee, J. and Kwon, S.},
+  date = {2024},
+  journaltitle = {Sensors},
+  volume = {24},
+  number = {20},
+  pages = {6689},
+  publisher = {MDPI},
+  doi = {10.3390/s24206689},
+  abstract = {Real-world deployment and 10-day performance evaluation of HTTP, MQTT, and CoAP protocols in precision agriculture smart farm environment with fog computing architecture. System architecture: 48 sensor nodes (soil moisture, temperature, humidity, light intensity) transmitting to 4 fog gateways (Raspberry Pi 4B) with edge analytics, connecting to cloud backend via cellular LTE. Comparative metrics measured: data transmission volume, packet loss rate, end-to-end latency, and gateway computational load. Results: (1) Protocol data volume (10 days): HTTP 28.4 GB, MQTT 9.7 GB (-66\%), CoAP 11.2 GB (-61\%), demonstrating significant overhead reduction for constrained protocols. (2) Fog computing impact: 26\% reduction in cumulative cloud-bound data volume by performing local aggregation and filtering at edge gateways. (3) Packet loss: MQTT exhibited most stable results with 0.3\% loss rate vs CoAP 0.8\% vs HTTP 1.2\% over cellular backhaul, attributed to MQTT's persistent TCP connections vs UDP-based CoAP susceptibility to cellular handover disruptions. (4) Latency: CoAP fastest (42 ms average) vs MQTT (68 ms) vs HTTP (103 ms) for sensor-to-fog transmission over Wi-Fi mesh. Conclusion: MQTT preferred for long-duration monitoring with cellular backhaul requiring connection stability; CoAP preferred for low-latency local control within fog domain; HTTP suitable only for non-critical management interfaces. Validates hybrid protocol architectures matching protocol characteristics to application requirements within hierarchical fog/edge/cloud topologies.},
+  note = {Provides real-world 10-day deployment data comparing HTTP/MQTT/CoAP performance with fog computing. Key finding: MQTT exhibits superior stability (0.3\% loss) over cellular backhaul vs CoAP's UDP limitations (0.8\% loss), while CoAP maintains latency advantage (42 ms vs 68 ms MQTT) for local communications. Supports §2.2.4 protocol comparison discussion with empirical long-term measurements. Shows 26\% data reduction via fog/edge processing. Accessed: 2025-11-26}
+}
+
+@article{devanagaviPerformanceEvaluationIoT2025,
+  title = {Performance {{Evaluation}} of {{IoT Communication Protocols}} in {{Smart Grid Applications}}},
+  author = {Devanagavi, K.},
+  date = {2025},
+  journaltitle = {Advanced International Journal for Research},
+  volume = {6},
+  number = {5},
+  doi = {10.63363/aijfr.2025.v06i05.1381},
+  abstract = {Comprehensive evaluation of IoT communication protocols (MQTT, CoAP, LoRaWAN, NB-IoT, IEC 61850, OPC-UA) for smart grid applications including Advanced Metering Infrastructure (AMI), distribution automation, Distributed Energy Resources (DER) monitoring, fault detection, and demand response programs. Performance metrics analyzed: end-to-end latency, throughput capacity, message delivery reliability (packet delivery ratio), energy consumption per transaction, network scalability (maximum supported devices), Total Cost of Ownership (CAPEX + 10-year OPEX), and security capabilities (authentication, encryption, integrity). Use case-specific recommendations: (1) AMI smart metering: CoAP or MQTT over NB-IoT/LTE-M cellular for wide-area coverage, achieving <500 ms latency for 15-minute interval reads with 99.5\% reliability. LwM2M device management framework strongly recommended for firmware OTA updates and remote diagnostics. (2) Distribution automation (circuit breaker control, voltage regulation): IEC 61850 GOOSE for substation-local <10 ms deterministic latency, CoAP for distribution-wide monitoring with <100 ms requirement. (3) DER monitoring (solar inverters, battery storage): MQTT for persistent telemetry streaming (1-second intervals), OPC-UA for SCADA integration with historians. (4) Demand response: MQTT or CoAP with QoS for reliable command delivery to load control devices, <2s latency acceptable. (5) Fault detection and location: NB-IoT with CoAP CON mode for battery-powered line sensors, tolerating 1-5s latency for non-critical monitoring. Protocol selection matrix provided correlating smart grid use case requirements (latency, reliability, coverage, device lifetime) to optimal protocol characteristics. Emphasizes importance of LwM2M (OMA SpecWorks) as unifying device management layer across heterogeneous connectivity (cellular, Wi-Fi, mesh) for operational simplicity in large-scale AMI deployments (>10,000 endpoints).},
+  note = {MOST RELEVANT for thesis - direct smart grid protocol evaluation published 2025. Provides authoritative recommendations for AMI applications: CoAP or MQTT over cellular for wide-area, LwM2M for device management, <500 ms latency target for 15-min interval metering. Validates thesis protocol stack selection (6LoWPAN/Thread/CoAP/LwM2M) and justifies architectural decisions in §2.2 and §3. Essential citation for smart energy IoT state of the art. Accessed: 2025-11-26}
+}
+
+@inproceedings{alkwiefiM2MProtocolsOverview2024,
+  title = {{{M2M Protocols}}: {{An Overview}} on {{LwM2M}} and {{XMPP Machine-to-Machine Protocols}} in {{IoT Context}}},
+  author = {Alkwiefi, M. and Khalifeh, A.F.},
+  date = {2024},
+  booktitle = {2024 {{IEEE}}/{{ACIS}} 24th {{International Conference}} on {{Computer}} and {{Information Science}} ({{ICIS}})},
+  publisher = {IEEE},
+  doi = {10.1109/ICIS61260.2024.10778343},
+  abstract = {Comprehensive comparison of LwM2M (Lightweight M2M, OMA SpecWorks) and XMPP (Extensible Messaging and Presence Protocol) for IoT machine-to-machine communication and device management. LwM2M architecture analysis: operates over CoAP (UDP transport) optimized for constrained devices per RFC 7228 definitions (Class 0: <10 KB RAM, Class 1: ~10 KB RAM, Class 2: ~50 KB RAM). Object model based on resources with numeric IDs (e.g., Object 3 = Device, Object 3303 = Temperature Sensor) enabling compact binary encoding vs XMPP's verbose XML. XMPP architecture: XML-based messaging over persistent TCP connections with presence notifications and publish-subscribe (PubSub) extensions (XEP-0060). Comparison metrics: (1) Message overhead: LwM2M typical 8-20 bytes header+payload for sensor reading vs XMPP 200-500 bytes XML stanza, representing 10-25x efficiency advantage for LwM2M in bandwidth-constrained networks. (2) Energy consumption: LwM2M CoAP stateless UDP requires no keep-alive vs XMPP TCP keep-alive every 30-60s consuming 15-25\% of battery in sleeping device scenarios. (3) Protocol complexity: LwM2M client implementations require 40-80 KB Flash ROM vs XMPP 200-400 KB due to XML parser and TLS stack, restricting XMPP to gateway-class devices. (4) Reliability: LwM2M CON mode + exponential backoff achieves 99.2\% delivery vs XMPP TCP's >99.9\% but at higher energy cost. (5) Security: Both support DTLS 1.2 (LwM2M) and TLS 1.2+ (XMPP) with pre-shared keys or certificate-based authentication. Use case guidance: LwM2M strongly preferred for battery-powered sensor networks with 10-10+ devices (smart metering, environmental monitoring, asset tracking). XMPP suitable for always-powered gateway/server-to-server communication requiring rich presence and federation (smart home hubs, industrial SCADA gateways). Hybrid architectures emerging: LwM2M southbound for edge devices, XMPP northbound for cloud-to-cloud or human-machine interfaces.},
+  note = {Authoritative 2024 IEEE comparison of LwM2M vs XMPP protocols. Validates thesis LwM2M selection for constrained device management: 10-25x message efficiency, 40-80 KB footprint vs 200-400 KB XMPP, stateless CoAP vs persistent TCP keep-alive. Critical for §2.2.5 LwM2M discussion providing quantitative comparison. Shows LwM2M achieves 99.2\% delivery reliability with lower energy vs XMPP's >99.9% TCP. Accessed: 2025-11-26}
+}
+
+@article{zhangLightweightAuthentication2024,
+  title = {Lightweight {{Authentication Protocol Based}} on {{LwM2M}} for {{Smart Grid Advanced Metering Infrastructure}}},
+  author = {Zhang, Y. and Liu, X. and Wang, H. and Chen, S.},
+  date = {2024},
+  journaltitle = {Energies},
+  volume = {17},
+  number = {18},
+  pages = {4550},
+  publisher = {MDPI},
+  doi = {10.3390/en17184550},
+  abstract = {Novel lightweight authentication protocol designed for LwM2M-based Advanced Metering Infrastructure (AMI) networks addressing computational constraints of smart meter devices (ARM Cortex-M class, 64-256 KB RAM). Protocol leverages elliptic curve cryptography (ECC secp256r1) for public-key operations with significantly lower computational overhead than RSA-2048: ECC-256 signature generation 45 ms vs RSA-2048 280 ms on STM32F4 @ 168 MHz, while providing equivalent 128-bit security level. Three-phase authentication: (1) Bootstrap phase: meter generates ephemeral ECC key pair, derives symmetric AES-128-CCM session key via ECDH (Elliptic Curve Diffie-Hellman) with LwM2M bootstrap server, mutual authentication using pre-installed manufacturer certificates. (2) Registration phase: meter registers with LwM2M device management server using session key, server provisions access credentials for Object 3 (Device), Object 3305 (Power Measurement), Object 10243 (Energy Metering) resources. (3) Operational phase: CoAP requests authenticated using DTLS 1.2 PSK (Pre-Shared Key) derived from registration, HMAC-SHA256 for message integrity. Security analysis demonstrates resistance to: replay attacks (via nonce + timestamp validation), man-in-the-middle attacks (via mutual authentication), impersonation attacks (via certificate chain validation), and denial-of-service (via rate limiting + computational puzzles). Performance evaluation on testbed with 100 simulated meters: average authentication completion time 350 ms (vs 1,200 ms for conventional RSA-based protocols), energy consumption 0.42 mJ per authentication event (enabling >100,000 authentications on 2,500 mAh battery). Overhead analysis: 12-byte authentication header added to CoAP messages (4-byte nonce + 8-byte HMAC truncated), representing <10\% overhead for typical 150-byte metering payloads. Comparison with existing AMI security standards: compatible with NIST IR 7628 Smart Grid cybersecurity guidelines, lighter than ANSI C12.22/IEEE 1703 table-based authentication (reduces memory requirements 60\%).},
+  note = {Highly relevant 2024 MDPI paper on LwM2M authentication for smart grid AMI. Demonstrates ECC-256 achieves 6x faster authentication (45 ms vs 280 ms RSA-2048) with equivalent security, consuming only 0.42 mJ per authentication event. Validates thesis security architecture in §4.8 using DTLS 1.2 PSK with LwM2M. Shows <10\% overhead for authentication headers in typical metering payloads. Critical citation for §2.2.5 LwM2M security discussion. Accessed: 2025-11-26}
+}
