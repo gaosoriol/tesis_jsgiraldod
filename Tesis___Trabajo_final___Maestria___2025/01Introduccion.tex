@@ -347,6 +347,14 @@ La investigación sigue un enfoque mixto que combina Design Science Research (DS
 
 \textbf{Entregables:} Tabla comparativa (Capítulo 4), análisis de trade-offs, recomendaciones de uso.
 
+\subsection{Hipótesis de Trabajo}
+
+Como respuesta al problema planteado, esta tesis propone y valida la siguiente hipótesis:
+
+\textbf{Hipótesis General:} Una arquitectura IoT para Smart Energy basada en: (1) stack de protocolos optimizado 6LoWPAN/CoAP/LwM2M sobre IEEE 802.15.4, (2) edge gateways con capacidades de procesamiento local e IA integrada, y (3) conectividad de última milla mediante IEEE 802.11ah con selección adaptativa de bandwidth (2/4/8 MHz), permite reducir la latencia end-to-end en >70\%, el overhead de paquetes en >60\%, el tráfico WAN en >65\%, garantizando disponibilidad >99\% durante desconexiones prolongadas y procesamiento inteligente en tiempo real, comparado con arquitecturas tradicionales basadas en MQTT/HTTP sobre conectividad celular.
+
+Las hipótesis específicas (H1-H8) que desglosan esta hipótesis general en componentes validables se presentan en el Anexo~\ref{anexo:hipotesis-detalladas}, cubriendo aspectos de compresión de protocolos, procesamiento edge con IA, arquitectura multi-banda 802.11ah, eficiencia CoAP vs MQTT, gestión LwM2M, procesamiento CEP local, y ventaja comparativa integral.
+
 \section{Justificación: Convergencia de Fibra, HaLow y Edge Computing}
 
 La convergencia de tres tecnologías emergentes fundamenta la arquitectura propuesta en esta investigación: (1) infraestructura de fibra óptica llegando cada vez más cerca del usuario final (FTTN/FTTC), (2) radio sub-GHz IEEE 802.11ah (HaLow) con alcance extendido >1 km, y (3) capacidades de procesamiento edge computing con contenedores Docker. Esta sección justifica por qué la combinación de estas tecnologías representa una solución óptima para el desafío de última milla en Smart Energy.
@@ -396,35 +404,6 @@ La convergencia de fibra (backhaul), HaLow (último salto) y edge computing (int
 \textbf{Resiliencia}: Triple redundancia (fibra primary, LTE secondary, edge buffer 72h) logra 99.99\% uptime vs 99.91\% enlace único, reduciendo downtime de 8h/año a 52min/año.
 
 Esta justificación establece que la arquitectura propuesta no es meramente una suma de tecnologías, sino una integración estratégica que maximiza fortalezas individuales (capacidad fibra, alcance HaLow, inteligencia edge) mientras mitiga debilidades mutuas (costo última milla, throughput limitado, latencia cloud).
-
-\section{Hipótesis}
-
-\subsection{Hipótesis General}
-
-Una arquitectura IoT para Smart Energy basada en: (1) stack de protocolos optimizado 6LoWPAN/CoAP/LwM2M sobre IEEE 802.15.4, (2) edge gateways con capacidades de procesamiento local e IA integrada, y (3) conectividad de última milla mediante IEEE 802.11ah con selección adaptativa de bandwidth (2/4/8 MHz), permite reducir la latencia end-to-end en >70\%, el overhead de paquetes en >60\%, el tráfico WAN en >65\%, garantizando disponibilidad >99\% durante desconexiones prolongadas y procesamiento inteligente en tiempo real, comparado con arquitecturas tradicionales basadas en MQTT/HTTP sobre conectividad celular.
-
-\subsection{Hipótesis Específicas}
-
-\textbf{H1 - Optimización mediante 6LoWPAN/CoAP/LwM2M:} La implementación del stack 6LoWPAN (compresión IPHC/NHC) + CoAP (overhead 4-10 bytes) + LwM2M (objetos binarios TLV) sobre IEEE 802.15.4 reduce el overhead de paquetes en >70\% y la latencia por salto en >40\% comparado con MQTT/JSON sobre TCP/IP, logrando tiempos de transmisión <15 ms por hop en topologías mesh de hasta 5 saltos.
-
-\textbf{H2 - Procesamiento Edge con IA:} El despliegue de servicios containerizados edge (ThingsBoard Edge, TimescaleDB, Kafka) con integración de modelos LLM locales (Ollama + Llama 3.2 3B) permite: (a) reducción de tráfico WAN en >65\% mediante procesamiento local, (b) latencia de inferencia <500 ms para detección de anomalías, (c) disponibilidad de servicios >99\% durante desconexiones WAN >72 horas, y (d) precisión de detección de anomalías >95\% en patrones de consumo energético.
-
-\textbf{H3 - Arquitectura Multi-Banda 802.11ah:} La arquitectura basada en gateways HaLow con selección estratégica de bandwidth según caso de uso maximiza eficiencia operacional:
-\begin{itemize}
-\item \textbf{2 MHz}: Óptimo para conexiones estables con sensores remotos (>2 km alcance, sensibilidad -96 dBm, tráfico <100 kbps, entornos NLOS con penetración indoor superior), logrando PDR >98\% en condiciones adversas con SNR 8-12 dB.
-\item \textbf{4 MHz}: Balance ideal para gestión de red (1-1.5 km alcance, throughput 40 Mbps agregado, latencia <50 ms P95), soportando 50+ nodos con tráfico moderado (lecturas cada 15 min) sin degradación >10\%.
-\item \textbf{8 MHz}: Maximiza throughput para alto tráfico con línea de vista (backhaul de concentradores, >80 Mbps, latencia <20 ms P99, alcance 0.5-1 km LOS), permitiendo agregación de datos de 100+ dispositivos por gateway.
-\end{itemize}
-
-\textbf{H4 - Compresión 6LoWPAN de Headers:} La compresión IPHC (IPv6 Header Compression) de 6LoWPAN reduce headers IPv6+UDP de 48 bytes a 2-7 bytes (compresión >85\%), y la compresión NHC (Next Header Compression) para CoAP reduce overhead adicional de 10-20 bytes a 2-4 bytes, resultando en payloads efectivos >90\% del MTU IEEE 802.15.4 (127 bytes) para aplicaciones Smart Energy.
-
-\textbf{H5 - Eficiencia CoAP vs MQTT:} CoAP sobre UDP con modos Non-Confirmable (NON) para telemetría no crítica y Confirmable (CON) para comandos críticos, combinado con Observe para subscripciones, reduce latencia en >50\% y overhead de red en >60\% comparado con MQTT/TCP, logrando tiempos de respuesta <30 ms para transacciones GET/POST en redes Thread mesh.
-
-\textbf{H6 - LwM2M para Gestión Eficiente:} LwM2M con objetos estándar OMA (Device, Connectivity Monitoring, Firmware Update) y transporte CoAP reduce tráfico de gestión de dispositivos en >75\% comparado con soluciones propietarias HTTP/REST, permitiendo actualizaciones OTA de firmware con transferencia block-wise sobre enlaces de baja velocidad (<250 kbps) sin timeouts.
-
-\textbf{H7 - Procesamiento CEP Local:} El motor de reglas Complex Event Processing (CEP) de ThingsBoard Edge desplegado localmente en gateway procesa >10,000 eventos/seg con latencia <10 ms P99, ejecutando rule chains complejas (filtrado, agregación, transformación, alarmas) sin requerir round-trip WAN, reduciendo latencia de respuesta en >80\% comparado con procesamiento cloud.
-
-\textbf{H8 - Ventaja Comparativa Integral:} La arquitectura propuesta supera a arquitecturas tradicionales (cloud-centric MQTT/LTE) en al menos 5 de 7 métricas clave: latencia (<30\% baseline), overhead paquetes (<40\% baseline), tráfico WAN (<35\% baseline), disponibilidad offline (>72h vs 0h), precisión IA (>95\% vs N/A), alcance HaLow (>150\% vs WiFi), y eficiencia energética (<60\% baseline).
 
 \section{Objetivos}
 
