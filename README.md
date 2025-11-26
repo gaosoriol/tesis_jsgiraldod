@@ -1,225 +1,233 @@
-# Tesis de Maestría: Gateway de Telemetría para Smart Energy
+# Tesis de Maestría - Arquitectura IoT para Smart Energy
 
-**Universidad Nacional de Colombia**  
-**Programa de Maestría en Ingeniería Eléctrica**  
-**Autor:** Luis Antonio  
-**Año:** 2025
+**Arquitectura IoT Centrada en Pasarelas de Borde: Implementación de Protocolos basados en 6LowPAN para Smart Energy**
 
-## 📋 Descripción del Proyecto
+Juan Sebastian Giraldo Duque  
+Universidad Nacional de Colombia - Sede Manizales  
+Maestría en Ingeniería - Automatización Industrial  
+2025
 
-Desarrollo de un gateway IoT avanzado para infraestructuras de medición inteligente (AMI - Advanced Metering Infrastructure) en redes Smart Grid, implementado sobre **Raspberry Pi 4 + OpenWRT** con capacidades de edge computing, múltiples protocolos de comunicación y resiliencia offline.
+## 📋 Descripción
 
-## 🎯 Objetivos
+Tesis de maestría que propone, implementa y valida una arquitectura IoT de 4 niveles para infraestructuras de medición inteligente (AMI) en redes Smart Energy. La arquitectura integra Thread (802.15.4), Wi-Fi HaLow (802.11ah) y LTE Cat-M1, con edge computing basado en Docker y cumplimiento de estándares IEEE 2030.5 e ISO/IEC 30141.
 
-- Diseñar arquitectura de gateway multi-protocolo para telemetría Smart Energy
-- Implementar conectividad de largo alcance con **IEEE 802.11ah HaLow** (sub-GHz, 1-3 km)
-- Integrar redes Thread/802.15.4 mesh para medidores inteligentes
-- Desarrollar resiliencia offline con queue persistente (7 días buffer local)
-- Cumplir estándares internacionales: IEEE 2030.5, ISO/IEC 30141, CREG Colombia
+**Piloto experimental:** 30 medidores Itron SL7000 operando durante 90 días en Medellín, Colombia.
 
-## 🏗️ Arquitectura del Sistema
+## 🏗️ Arquitectura del Sistema (4 Niveles)
 
 ```
-[Medidores Thread] ──> [DCU/OTBR] ──> [Gateway RPi4] ──> [ThingsBoard Cloud]
-   (ESP32-C6)         (nRF52840)      HaLow/LTE/Eth         (AWS/Azure)
-                                      Docker Containers
-                                      └── TB Edge
-                                      └── PostgreSQL
-                                      └── Kafka
-                                      └── MQTT Broker
+Nivel 1 - Campo:     [ESP32-C6 Thread Nodes] → CoAP/LwM2M → DCU
+Nivel 2 - Barrio:    [DCU] ← HaLow 920 MHz 2/4 MHz → [Gateway]
+Nivel 3 - Edge:      [Raspberry Pi 4 + Docker] → ThingsBoard Edge
+Nivel 4 - Cloud:     [AWS] → EC2, RDS PostgreSQL, ElastiCache, MSK Kafka
 ```
 
-## 🔧 Hardware del Gateway (Raspberry Pi 4)
-
-### Plataforma Base
-- **SoC:** Broadcom BCM2711 (Cortex-A72 quad-core @ 1.5 GHz)
-- **RAM:** 4 GB LPDDR4-3200
-- **Almacenamiento:** 
-  - Boot: microSD 32 GB (OpenWRT system)
-  - Data: M.2 NVMe SSD 256 GB via PCIe HAT (Docker, PostgreSQL, queue)
-- **Alimentación:** PoE+ IEEE 802.3at (25W) con ventilador activo
-
-### Conectividad
-- **Thread/802.15.4:** Nordic nRF52840 Dongle (USB, OpenThread RCP)
-- **HaLow 802.11ah:** Morse Micro MM6108 via SPI (GPIO, 902-928 MHz, 40 Mbps)
-- **LTE-M/NB-IoT:** Quectel BG95-M3 (USB, Cat-M1, 375 kbps)
-- **Ethernet:** Gigabit RJ45 (WAN primaria)
-
-## 💻 Software Stack
-
-### Sistema Operativo
-- **OpenWRT 23.05.0** (bcm27xx/bcm2711 target)
-- Kernel Linux 5.15.134 LTS
-- Arquitectura: aarch64 (ARM64v8)
-
-### Contenedores Docker
-- **ThingsBoard Edge 3.6:** Edge computing, reglas, dashboards locales
-- **PostgreSQL 15 + TimescaleDB:** Series temporales, compresión 10-20×
-- **Apache Kafka:** Message broker, buffer 7 días, >100k msg/s
-- **Mosquitto:** MQTT broker, TLS/mTLS, QoS 0/1/2
-- **OpenThread Border Router (OTBR):** Thread mesh IPv6 gateway
-
-### Protocolos de Comunicación
-- **MQTT** (QoS 0/1/2): Telemetría uplink, LWT, retained messages
-- **CoAP** (UDP): Thread mesh intra-nodo, Observe, DTLS+PSK
-- **HTTP/REST:** APIs gestión (TB Edge, IEEE 2030.5, LuCI)
-- **LwM2M:** Device management, firmware OTA, objetos OMA
-
-## 📡 Modos de Operación HaLow
-
-El gateway soporta 4 modos de operación IEEE 802.11ah:
-
-1. **AP (Access Point):** Cobertura centralizada 3 km, 2500 endpoints
-2. **STA (Station):** Cliente para backhaul rural sin costo celular
-3. **802.11s Mesh:** Auto-healing, extensión 6-9 km, HWMP routing
-4. **EasyMesh (IEEE 1905.1):** Roaming transparente, steering inteligente
-
-## 🔒 Seguridad
-
-- **OpenWRT Firewall:** nftables, zonas aisladas (WAN/LAN/HaLow/Thread)
-- **TLS 1.3:** TB Edge cloud sync (puerto 7070 gRPC)
-- **WPA3-SAE:** HaLow AP con PMF obligatorio
-- **Thread AES-128-CCM:** Mesh network encryption
-- **mTLS:** MQTT broker con certificados X.509 ECC P-256
-- **OpenVPN:** Túnel permanente para gestión remota (NOC)
-
-## 🛠️ Gestión Remota
-
-- **OpenWRT Feeds:** opkg package manager, custom feed para Smart Grid
-- **OpenVPN Client:** Túnel permanente VPN a NOC (IPs fijas 10.8.0.100-199)
-- **OpenWISP:** Gestión centralizada masiva (100-1000 gateways)
-  - Templates UCI con variables
-  - Firmware OTA scheduler con rollback automático
-  - Monitoring (CPU/RAM/Storage/Interfaces/Docker)
-  - Alertas (email/SMS/webhook)
-
-## 📊 Resiliencia y Performance
-
-### Almacenamiento Persistente
-- **Queue TB Edge:** 100k msgs (2 GB), compresión gzip/lz4
-- **PostgreSQL + TimescaleDB:** Retención 90 días, compresión 10-20×
-- **Kafka:** Buffer 7 días, replay histórico, multi-consumidor
-- **SSD NVMe:** >3000 IOPS, >1M ciclos E/W, latencia <1 ms
-
-### Failover WAN
-- **Ethernet (primaria):** Metric 10
-- **LTE-M (secundaria):** Metric 20
-- **Conmutación:** <30s automático con mwan3
-- **Compresión LTE:** CBOR 40-60% reducción tráfico
-
-### Capacidad
-- **Topología estrella (AP único):** 2,500 endpoints (10 DCUs × 250 nodos)
-- **Topología mesh (3 gateways):** 7,500 endpoints, 9 km cobertura
-- **Throughput HaLow:** 40 Mbps (20 Mbps agregado con 10 DCUs)
-- **Latencia E2E:** <5s percentil 95 (Thread → TB Edge)
-
-## 📚 Estructura del Repositorio
+## 📁 Estructura del Repositorio
 
 ```
-tesis/
-├── Tesis___Trabajo_final___Maestria___2025/
-│   ├── 0000.tex                    # Documento principal (118 páginas)
-│   ├── 03Gateway.tex               # Capítulo gateway (3902 líneas)
-│   ├── 04Arquitectura.tex          # Arquitectura completa E2E
-│   ├── Referencias.bib             # Bibliografía (IEEE, ISO, papers)
-│   ├── 00Figuras/                  # Imágenes y diagramas
-│   ├── build.bat, build.ps1        # Scripts compilación Windows
-│   ├── Makefile                    # Compilación Linux/macOS
-│   └── dtvstyle.bst                # Estilo bibliográfico UN
-├── ref/                            # PDFs de referencia (IEEE 2030.5, ISO 30141, etc.)
-├── .gitignore                      # Archivos LaTeX compilación ignorados
-└── README.md                       # Este archivo
+├── Tesis___Trabajo_final___Maestria___2025/  # Archivos LaTeX de la tesis
+│   ├── 0000.tex                               # Documento principal
+│   ├── 01Introduccion.tex                     # Cap 1: Introducción
+│   ├── 02MarcoTeorico.tex                     # Cap 2: Marco Teórico
+│   ├── 03Arquitectura_NEW.tex                 # Cap 3: Arquitectura (4 niveles)
+│   ├── 04Implementacion_NEW.tex               # Cap 4: Implementación
+│   ├── 05Resultados_NEW.tex                   # Cap 5: Resultados Experimentales
+│   ├── 05Conclusiones.tex                     # Conclusiones y Trabajo Futuro
+│   ├── 09AnexoA-15AnexoG_*.tex               # 7 Anexos técnicos
+│   ├── 00Figuras/                             # Diagramas y figuras
+│   └── Bibliografia.bib                       # Referencias (180+ papers)
+├── docs_sesiones/                             # Documentación de proceso
+│   ├── AUDITORIA_REFERENCIAS_CRUZADAS.md      # Validación de citas
+│   ├── DEFENSA_PREGUNTAS_WISUN.md             # Respuestas comité
+│   ├── DEFINICIONES_TECNICAS_TESIS.md         # Glosario técnico
+│   ├── HISPANIZACION_COMPLETA.md              # Términos en español
+│   ├── INSTRUCCIONES_FINALES.md               # Guía compilación
+│   └── RESUMEN_PARA_TUTOR_NOV25.md            # Resumen ejecutivo
+├── ref/                                       # PDFs de estándares y papers
+├── tesis.drawio                               # Diagramas de arquitectura
+└── README.md                                  # Este archivo
 ```
 
-## 🔨 Compilación del Documento
+## 🔧 Tecnologías Implementadas
+
+### Hardware
+- **Nodos Thread:** ESP32-C6 (RISC-V, 160 MHz, Thread 1.4.0)
+- **Gateway Edge:** Raspberry Pi 4 (4 GB RAM, BCM2711)
+- **Radio HaLow:** Morse Micro MM6108 (920 MHz, 2/4/8 MHz BW)
+- **Modem LTE:** Quectel EG25-G (Cat-M1, eDRX + PSM)
+
+### Software
+- **OS Gateway:** OpenWRT 23.05 (custom build Morse Micro)
+- **Stack Edge:** Docker Compose (ThingsBoard Edge, PostgreSQL, Kafka)
+- **Protocolos:** Thread, 6LoWPAN, CoAP, LwM2M, MQTT, HTTP/REST
+- **Cloud:** ThingsBoard 3.6.2 Community Edition en AWS
+
+## 📊 Resultados Clave
+
+- ✅ **Latencia edge processing:** 8±2 ms (p95: 10 ms, p99: 14 ms)
+- ✅ **Disponibilidad offline:** 99.7% durante 48h sin WAN
+- ✅ **Reducción tráfico WAN:** 72% mediante edge processing
+- ✅ **Reducción overhead headers:** 78.1% (6LoWPAN IPHC/NHC)
+- ✅ **TCO piloto 90 días:** $1,946 total = $10.13/dispositivo
+- ✅ **Ahorro energético:** 85.5% vs arquitectura LTE siempre activa
+
+## 🚀 Compilación del Documento
 
 ### Requisitos
-- **LaTeX:** MiKTeX (Windows) o TeX Live (Linux/macOS)
-- **Compilador:** pdflatex
-- **Bibliografía:** bibtex
-- **Paquetes:** babel, geometry, fancyhdr, minted, hyperref, etc.
+- **LaTeX:** TeX Live 2023+ o MiKTeX
+- **pdflatex** con soporte UTF-8
+- **bibtex** para bibliografía
+- Paquetes: babel, minted, hyperref, natbib, xcolor, etc.
 
-### Compilar en Windows
-```powershell
-cd Tesis___Trabajo_final___Maestria___2025
-.\build.ps1
-# Output: 0000.pdf (118 páginas, ~800 KB)
-```
+### Comandos de Compilación
 
-### Compilar en Linux/macOS
 ```bash
-cd Tesis___Trabajo_final___Maestria___2025
-make
-# o manualmente:
-pdflatex 0000.tex
+cd Tesis___Trabajo_final___Maestria___2025/
+
+# Compilación completa (4 pasos para referencias cruzadas)
+pdflatex -interaction=nonstopmode 0000.tex
 bibtex 0000
-pdflatex 0000.tex
-pdflatex 0000.tex
+pdflatex -interaction=nonstopmode 0000.tex
+pdflatex -interaction=nonstopmode 0000.tex
 ```
 
-## 📖 Contenido del Capítulo Gateway (03Gateway.tex)
+**Output:** `0000.pdf` (~326 páginas)
 
-1. **Introducción:** AMI, función del gateway, estándares
-2. **IEEE 2030.5 SEP 2.0:** Function Sets (DCAP, TM, MM, MSG, ED)
-3. **ISO/IEC 30141:** Arquitectura IoT de referencia (4 vistas)
-4. **OpenWRT:** Justificación, ventajas vs sistemas propietarios
-5. **🆕 Implementación Raspberry Pi 4:**
-   - Hardware real (BCM2711, 4 GB RAM, periféricos)
-   - nRF52840 Thread dongle (USB, RCP firmware)
-   - Morse Micro MM6108 HaLow (SPI via GPIO)
-   - Quectel BG95 LTE-M (USB, ModemManager)
-   - M.2 NVMe SSD (PCIe HAT, 256 GB, >3000 IOPS)
-   - Instalación OpenWRT paso a paso
-   - Configuración completa (Thread, HaLow, LTE, Docker)
-6. **Modos HaLow:** AP, STA, 802.11s Mesh, EasyMesh (configuraciones UCI)
-7. **Resiliencia:** SSD + TB Edge queue persistente (100k msgs, 7 días)
-8. **Datos Distribuidos:** Kafka + PostgreSQL/TimescaleDB
-9. **Protocolos IoT:** MQTT, CoAP, HTTP/REST, LwM2M (comparativa)
-10. **Gestión Remota:** Feeds, OpenVPN, OpenWISP (OTA masivo)
-11. **Validación:** Pruebas funcionales, performance, failover
-12. **Trabajo Futuro:** IA local (Ollama roadmap), 5G RedCap, MPTCP
+### Solución de Problemas
 
-## 🌐 Estándares y Normativas
+Si aparecen errores Unicode, asegúrate de que todos los archivos `.tex` están en UTF-8:
 
-- **IEEE 2030.5-2023:** Smart Energy Profile 2.0 (SEP 2.0)
-- **ISO/IEC 30141:2024:** IoT Reference Architecture
-- **IEEE 802.11ah-2016:** Sub-1 GHz Wi-Fi (HaLow)
-- **Thread 1.3:** Low-power mesh networking
-- **MQTT 5.0:** ISO/IEC 20922
-- **LwM2M 1.2:** OMA SpecWorks device management
-- **CREG Colombia:** Resoluciones medición inteligente
+```bash
+# Verificar encoding
+file -i *.tex
 
-## 📈 Roadmap Futuro
+# Convertir a UTF-8 si es necesario
+iconv -f ISO-8859-1 -t UTF-8 archivo.tex > archivo_utf8.tex
+```
 
-### Validaciones Pendientes
-- [ ] Mediciones CPU/RAM/Temp bajo carga completa
-- [ ] Benchmarks throughput E2E (Thread → TB Cloud)
-- [ ] Stress test 1000 msg/s durante 24h
-- [ ] Thermal throttling validation (<75°C objetivo)
+## 📖 Contenido de los Capítulos
 
-### Mejoras Planeadas
-- [ ] **Ollama IA Local:** Llama 3.2 1B / Phi-3 mini (RPi 4 8GB)
-- [ ] **MCP Server Python:** Herramientas TB Edge API estructuradas
-- [ ] **HaLow USB:** Migración a drivers ath11k_usb (Q2 2026)
-- [ ] **5G RedCap:** Quectel RG500U (<50ms latencia)
-- [ ] **Compute Module 4:** Hardware industrial (-40°C a +85°C)
-- [ ] **Alta Disponibilidad:** Par activo-pasivo con VRRP
+### Capítulo 1: Introducción (30 págs)
+- Contexto Smart Grid y AMI
+- Planteamiento del problema
+- Objetivos general y específicos
+- Hipótesis de investigación (H1-H8)
+- Justificación técnica y económica
+
+### Capítulo 2: Marco Teórico (45 págs)
+- Estándares: IEEE 2030.5, ISO/IEC 30141, Thread, HaLow
+- Protocolos: 6LoWPAN, CoAP, LwM2M, MQTT
+- Edge computing y arquitecturas IoT
+- Estado del arte (180+ referencias)
+
+### Capítulo 3: Arquitectura del Sistema (60 págs)
+- Arquitectura de 4 niveles (Campo → Barrio → Edge → Cloud)
+- Especificación técnica de cada nivel
+- Flujos de datos y protocolos
+- Seguridad y resiliencia
+- Análisis comparativo vs arquitecturas baseline
+
+### Capítulo 4: Implementación (55 págs)
+- Firmware ESP32-C6 (Thread + DLMS parser)
+- Configuración gateway OpenWRT + Docker
+- Deployment ThingsBoard Edge + Cloud
+- Procedimientos de instalación y comisionamiento
+- Troubleshooting y lecciones aprendidas
+
+### Capítulo 5: Resultados Experimentales (70 págs)
+- Setup del piloto (30 medidores, 90 días)
+- Métricas de latencia, disponibilidad, throughput
+- Validación de hipótesis H1-H8
+- Análisis de escalabilidad y TCO
+- Comparación con literatura (benchmarking)
+
+### Conclusiones (35 págs)
+- Cumplimiento de objetivos
+- Validación de hipótesis
+- Contribuciones científicas
+- Limitaciones del trabajo
+- Trabajo futuro (roadmap 2025-2030)
+
+### Anexos (31 págs)
+- A: Instalación OpenWRT en Raspberry Pi 4
+- B: Configuración Thread Border Router
+- C: Configuración HaLow (AP/Mesh)
+- D: Especificaciones IEEE 2030.5
+- E: Código fuente nodo ESP32-C6
+- F: Configuraciones OpenWRT completas
+- G: Hipótesis detalladas (H1-H8)
+
+## 📈 Estado del Proyecto
+
+✅ **Completado:**
+- Todos los capítulos (1-5) escritos y revisados
+- 7 anexos técnicos con código fuente y configuraciones
+- 180+ referencias bibliográficas validadas
+- Limpieza Unicode/Cyrillic (50+ caracteres corregidos)
+- Workspace consolidado (nov 26, 2025)
+
+⏸️ **Pendiente:**
+- Resolución de 3 caracteres U+FFFD (replacement character)
+- Compilación PDF final limpia sin warnings
+- Revisión final del tutor
+- Preparación para sustentación
+
+## 🔬 Validación de Hipótesis
+
+| Hipótesis | Estado | Resultado |
+|-----------|--------|-----------|
+| **H1** - 6LoWPAN reduce overhead >70% | ✅ VALIDADA | 78.1% reducción |
+| **H2** - Edge processing reduce WAN >65% | ✅ VALIDADA | 72% reducción |
+| **H3** - HaLow multi-BW optimiza cobertura | ✅ VALIDADA | PDR >98% @ 2 MHz |
+| **H4** - IPHC comprime headers >85% | ✅ VALIDADA | 87% compresión |
+| **H5** - CoAP reduce latencia >50% vs MQTT | ✅ VALIDADA | 63% reducción |
+| **H6** - LwM2M optimiza gestión dispositivos | ✅ VALIDADA | 85% menos tráfico |
+| **H7** - CEP edge procesa >10k evt/s <10ms | ⚠️ PARCIAL | 12.3k evt/s, 8±2 ms |
+| **H8** - Arquitectura supera baseline 5/7 métricas | ✅ VALIDADA | 7/7 métricas |
+
+## 🌐 Estándares y Conformidad
+
+- ✅ **IEEE 2030.5-2018:** Smart Energy Profile 2.0 (SEP 2.0)
+- ✅ **ISO/IEC 30141:2024:** IoT Reference Architecture (7 FEs implementadas)
+- ✅ **Thread 1.4.0:** IPv6 mesh networking over 802.15.4
+- ✅ **IEEE 802.11ah-2016:** Wi-Fi HaLow (sub-GHz)
+- ✅ **LwM2M 1.2:** OMA SpecWorks device management
+- ✅ **MQTT 5.0:** ISO/IEC 20922
+- ✅ **IEC 62056-21:** DLMS/COSEM meter reading
+
+## 📝 Cambios Recientes
+
+### Nov 26, 2025 - Limpieza Unicode y Workspace
+
+**Commit 4e77cb1:** `fix: Limpieza Unicode y Cyrillic en LaTeX (50+ caracteres)`
+- Reemplazados símbolos Unicode con comandos LaTeX apropiados
+- Greek letters: μ → `$\mu$`, Ω → `$\Omega$`, φ → `$\varphi$`
+- Operadores: ≥ → `$\geq$`, → → `$\rightarrow$`, ↔ → `$\leftrightarrow$`
+- Subscripts: ₂ → `$_{2}$`
+- Triángulos: ▶ → `$\blacktriangleright$`
+- Corregidos caracteres Cyrillic (П, О, Н) con P, O, N latinas
+
+**Commit 613d18c:** `chore: Limpieza workspace - eliminación archivos obsoletos`
+- Eliminados 10 archivos markdown de sesiones antiguas
+- Removidos scripts legacy y backups innecesarios
+- Workspace consolidado para versión final de tesis
+
+## 📚 Referencias Clave
+
+- **Velásquez et al. (2024):** Smart Grids empowered by 5G and IoT
+- **Alsafran et al. (2025):** Challenges implementing IoT in AMI
+- **Knyazev et al. (2017):** IEEE 2030.5 vs DLMS/COSEM comparative analysis
+- **Tang et al. (2024):** Interoperability research in IoT architectures
+- **Liang et al. (2024):** Review of edge computing for IoT
 
 ## 📄 Licencia
 
-Este proyecto es material académico de la Universidad Nacional de Colombia.  
-Todos los derechos reservados © 2025 Luis Antonio
-
-## 👤 Contacto
-
-**Autor:** Luis Antonio  
-**Institución:** Universidad Nacional de Colombia  
-**Programa:** Maestría en Ingeniería Eléctrica  
-**Email:** [Agregar email institucional]  
-**GitHub:** [Agregar URL del repositorio]
+© 2025 Juan Sebastian Giraldo Duque  
+Universidad Nacional de Colombia - Sede Manizales  
+Todos los derechos reservados
 
 ---
 
-**Última actualización:** Octubre 27, 2025  
-**Estado:** En desarrollo (Capítulo Gateway completo, pendiente arquitectura E2E)  
-**Páginas:** 118 / ~150 estimadas (tesis completa)
+**Última actualización:** Noviembre 26, 2025  
+**Estado:** Pre-defensa (correcciones finales)  
+**Páginas:** 326 (incluye anexos)
