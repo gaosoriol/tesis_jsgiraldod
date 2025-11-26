@@ -129,7 +129,7 @@ La arquitectura propuesta en esta tesis implementa las 7 entidades funcionales r
 \textbf{Application Support FE} \newline \footnotesize{APIs} & REST + WebSocket & ThingsBoard REST API, WebSocket telemetry streaming, IEEE 2030.5 adapter CoAP$\leftrightarrow$HTTP \\
 \hline
 \rowcolor{yellow!20}
-\textbf{Conformidad} & \textcolor{green}{\textbf{✓ Completa}} & 7/7 FEs implementadas con protocolos concretos, interfaces estandarizadas, mapeo verificable \\
+\textbf{Conformidad} & \textcolor{green}{\textbf{$\checkmark$ Completa}} & 7/7 FEs implementadas con protocolos concretos, interfaces estandarizadas, mapeo verificable \\
 \hline
 \end{tabular}
 }
@@ -408,7 +408,7 @@ vs 79 bytes (62\%) sin compresión → **Ganancia 14-16 bytes (18-20\% más payl
 \textbf{Trade-off analizado en profundidad:} Thread seleccionado sobre Zigbee maduro (>15 años deployment en utilities, >300M devices instalados) por tres razones arquitectónicas críticas para AMI con integración IEEE 2030.5:
 
 \begin{enumerate}
-    \item \textbf{IPv6 native end-to-end:} Zigbee utiliza Application Support (APS) sublayer propietaria sobre 802.15.4, requiriendo gateway con traducción APS↔IP. Esta conversión introduce: (a) \textbf{Latencia adicional +5-10 ms} por frame translation y buffering, (b) \textbf{Punto único de falla} en Zigbee Coordinator (SPOF), (c) \textbf{Complejidad arquitectónica} manteniendo dual-stack (Zigbee + IP) con translation tables. Thread elimina translation layer: 6LoWPAN IPHC comprime headers IPv6 (40 bytes → 2-7 bytes) pero mantiene semántica IP nativa, permitiendo IEEE 2030.5 Function Sets (metering, pricing, DER control) operar directamente sobre CoAP/UDP sin gateways intermedios.
+    \item \textbf{IPv6 native end-to-end:} Zigbee utiliza Application Support (APS) sublayer propietaria sobre 802.15.4, requiriendo gateway con traducción APS$\leftrightarrow$IP. Esta conversión introduce: (a) \textbf{Latencia adicional +5-10 ms} por frame translation y buffering, (b) \textbf{Punto único de falla} en Zigbee Coordinator (SPOF), (c) \textbf{Complejidad arquitectónica} manteniendo dual-stack (Zigbee + IP) con translation tables. Thread elimina translation layer: 6LoWPAN IPHC comprime headers IPv6 (40 bytes → 2-7 bytes) pero mantiene semántica IP nativa, permitiendo IEEE 2030.5 Function Sets (metering, pricing, DER control) operar directamente sobre CoAP/UDP sin gateways intermedios.
     
     \item \textbf{Routing proactivo vs reactivo:} Zigbee AODV (Ad-hoc On-Demand Distance Vector) descubre rutas reactivamente mediante RREQ/RREP flooding cuando necesita transmitir, causando \textbf{latencia inicial 100-500 ms} y \textbf{broadcast storms} en redes densas (>50 nodes). Thread MLE (Mesh Link Establishment) mantiene tabla de rutas proactiva con advertisements periódicos cada 32 s, convergencia <5 s ante fallas, path selection basado en metrics ETX (Expected Transmission Count). Para AMI con reportes periódicos cada 15-60 min, overhead proactive MLE (32 bytes cada 32 s = 8 bps por node) es despreciable vs beneficio de latencia determinista.
     

@@ -66,10 +66,10 @@ Este nivel comprende los dispositivos de campo que capturan telemetría de medid
     \item \textbf{Alimentación:} 5V @ 100 mA promedio (0.5 W) desde medidor o fuente externa
     \item \textbf{Consumo medido:} 
         \begin{itemize}
-        \item Sleep mode: 7 μA
+        \item Sleep mode: 7 $\mu$A
         \item RX Thread activo: 19 mA (95 mW @ 5V)
         \item TX Thread @ +4 dBm: 22 mA (110 mW @ 5V)
-        \item Promedio duty cycle 5\%: 20 mA × 5\% + 7 μA × 95\% = 1.0 mA (5 mW)
+        \item Promedio duty cycle 5\%: 20 mA × 5\% + 7 $\mu$A × 95\% = 1.0 mA (5 mW)
         \end{itemize}
     \item \textbf{Certificaciones:} FCC, CE, IC (módulos pre-certificados)
 \end{itemize}
@@ -131,7 +131,7 @@ Procedimiento de instalación ejecutado en 30 nodos:
 \item \textbf{Provisioning Thread credentials:} Dataset Thread con Network Key, PAN ID, Extended PAN ID, Channel
 \item \textbf{Configuración medidor:} Baudrate RS-485 (9600/19200 bps), slave address Modbus
 \item \textbf{Verificación conectividad:} Ping CoAP a Border Router, latencia <50 ms esperada
-\item \textbf{Registro LwM2M:} Bootstrap server → Registration → Observe habilitado
+\item \textbf{Registro LwM2M:} Bootstrap server $\rightarrow$ Registration $\rightarrow$ Observe habilitado
 \end{enumerate}
 
 \textbf{Tiempo promedio instalación:} 8 minutos/nodo (total 240 minutos para 30 nodos)
@@ -151,7 +151,7 @@ La arquitectura seleccionó Thread 1.4.0 sobre Zigbee 3.0 tras análisis compara
 \rowcolor{gray!20}
 \textbf{Criterio} & \textbf{Thread 1.4.0} & \textbf{Zigbee 3.0} & \textbf{Análisis y Justificación} \\\\
 \hline
-\textbf{IPv6 nativo E2E} & Sí & No & \textbf{Thread gana}: IPv6 end-to-end elimina NAT/gateway traducción Zigbee, reduce latencia 40\% (150 ms → 90 ms) \\\\
+\textbf{IPv6 nativo E2E} & Sí & No & \textbf{Thread gana}: IPv6 end-to-end elimina NAT/gateway traducción Zigbee, reduce latencia 40\% (150 ms $\rightarrow$ 90 ms) \\\\
 \hline
 \textbf{IEEE 2030.5 compliance} & Directo & Gateway & Thread implementa IEEE 2030.5 nativamente, Zigbee requiere ALG (Application Layer Gateway) \\\\
 \hline
@@ -171,7 +171,7 @@ La arquitectura seleccionó Thread 1.4.0 sobre Zigbee 3.0 tras análisis compara
 
 \textbf{Decisión final: Thread 1.4.0} por ventajas críticas:
 \begin{enumerate}
-    \item \textbf{IPv6 E2E}: Elimina gateway traducción, reduce latencia 40\% (150 ms → 90 ms)
+    \item \textbf{IPv6 E2E}: Elimina gateway traducción, reduce latencia 40\% (150 ms $\rightarrow$ 90 ms)
     \item \textbf{IEEE 2030.5 nativo}: Cumplimiento directo Smart Energy Profile 2.0 sin ALG
     \item \textbf{TCO equivalente}: Costo adicional módulos compensado por eliminación ALG
 \end{enumerate}
@@ -185,7 +185,7 @@ La arquitectura seleccionó Thread 1.4.0 sobre Zigbee 3.0 tras análisis compara
     \item \textbf{TX Power:} +4 dBm (balance alcance vs consumo)
 \end{itemize}
 
-\textbf{Topología:} 30 nodos End Devices → 1 DCU (Border Router) → Gateway. Máximo 1 hop Thread (latencia medida 8 ms). Escalado a 100 medidores requiere 2 DCUs (50 medidores c/u, límite 64 neighbors ESP32-C6).
+\textbf{Topología:} 30 nodos End Devices $\rightarrow$ 1 DCU (Border Router) $\rightarrow$ Gateway. Máximo 1 hop Thread (latencia medida 8 ms). Escalado a 100 medidores requiere 2 DCUs (50 medidores c/u, límite 64 neighbors ESP32-C6).
 
 \section{Implementación Nivel 3: Gateway de Borde Raspberry Pi + Docker Edge}
 \label{sec:impl-nivel3-gateway}
@@ -356,10 +356,10 @@ La arquitectura utiliza LTE Cat-M1 (eMTC) para uplink WAN del Gateway por balanc
 \textbf{Optimización energética eDRX + PSM:}
 
 \begin{itemize}
-    \item \textbf{eDRX Cycle:} 10.24 s (máximo Cat-M1). Gateway monitorea paging 1×/10s, reduce consumo RX 99\% (60 mA → 0.58 mA)
+    \item \textbf{eDRX Cycle:} 10.24 s (máximo Cat-M1). Gateway monitorea paging 1×/10s, reduce consumo RX 99\% (60 mA $\rightarrow$ 0.58 mA)
     \item \textbf{PSM T3324 (Active Timer):} 30 s post-TX, Gateway reachable para downlink
     \item \textbf{PSM T3412 (Periodic TAU):} 24 h, mantiene registration celular
-    \item \textbf{Patrón operación:} TX telemetry 1×/min → 30 s active → 29.5 min PSM (3 µA) → repeat
+    \item \textbf{Patrón operación:} TX telemetry 1×/min $\rightarrow$ 30 s active $\rightarrow$ 29.5 min PSM (3 $\mu$A) $\rightarrow$ repeat
     \item \textbf{Consumo medido:} 1.1 mA promedio (vs 60 mA always-on = 98\% reducción)
 \end{itemize}
 
@@ -573,7 +573,7 @@ El deployment de 30 nodos en piloto (Oct-Dic 2024, barrio Medellín) siguió pro
 \begin{enumerate}
     \item \textbf{Pre-instalación:} Verificación medidor Itron SL7000 con puerto RS-485 accesible (pin 21/22 terminal block)
     \item \textbf{Montaje físico:} Nodo ESP32-C6 en caja IP65 (Hammond 1554C) con tornillos Torx T10 (anti-tamper)
-    \item \textbf{Conexión RS-485:} Terminal A (RX+, pin 21), Terminal B (RX-, pin 22), GND común (pin 20). Resistor terminación 120Ω habilitado via jumper JP1
+    \item \textbf{Conexión RS-485:} Terminal A (RX+, pin 21), Terminal B (RX-, pin 22), GND común (pin 20). Resistor terminación 120$\Omega$ habilitado via jumper JP1
     \item \textbf{Alimentación:} Puerto auxiliar medidor 5V DC @ 100 mA (pin 18/19). Validar voltaje 4.75-5.25V con multímetro antes energizar ESP32
     \item \textbf{Commissioning BLE:} Escaneo QR code con app Android custom (NFC Thread Joiner). PAKE passphrase generado SHA-256(device\_id || install\_date)
     \item \textbf{Provisión Thread:} Network Key 128-bit, PAN ID 0xABCD, Extended PAN ID 0x1234567890ABCDEF, Channel 25 (2.475 GHz)
@@ -617,11 +617,11 @@ Durante el deployment piloto se identificaron los siguientes problemas recurrent
 \hline
 Nodo no se une a Thread & Credenciales incorrectas o Channel ocupado & Re-commissioning con app BLE, verificar Channel 25 libre \\
 \hline
-Lectura DLMS timeout & Cable RS-485 A/B invertido & Intercambiar terminales A↔B \\
+Lectura DLMS timeout & Cable RS-485 A/B invertido & Intercambiar terminales A$\leftrightarrow$B \\
 \hline
 Gateway sin uplink LTE & APN incorrecto u operador no registrado & Configurar APN Claro: \texttt{internet.comcel.com.co} \\
 \hline
-Pérdida paquetes HaLow & Interferencia WiFi 2.4 GHz & Cambiar canal HaLow 902→915 MHz \\
+Pérdida paquetes HaLow & Interferencia WiFi 2.4 GHz & Cambiar canal HaLow 902$\rightarrow$915 MHz \\
 \hline
 \end{tabular}
 \end{table}
@@ -662,7 +662,7 @@ Las herramientas GenAI asistieron en las siguientes tareas documentadas:
 
 \textbf{Limitaciones identificadas:} Los modelos locales 7B-13B parámetros presentan \textit{hallucinations} ocasionales en dominios altamente especializados (protocolo DLMS/COSEM), requiriendo validación manual contra especificaciones IEC 62056-21. Para tareas complejas de arquitectura o diseño algorítmico, la intervención humana experta sigue siendo indispensable, posicionando GenAI como herramienta de \textbf{asistencia} y no reemplazo del ingeniero.
 
-\section{Implementación Nivel 4: Servidor ThingsBoard Cloud}\n\label{sec:impl-nivel4-cloud}\n\nEl Nivel 4 implementa plataforma IoT centralizada para gestión masiva de dispositivos, analytics históricos, dashboards multi-tenant y APIs programáticas. La implementación desplegó ThingsBoard 3.6.2 Community Edition en AWS con arquitectura microservicios.\n\n\subsection{Arquitectura AWS Deployment}\n\label{sec:impl-cloud-aws}\n\n\subsubsection{Infraestructura Cloud}\n\n\textbf{Servicios AWS utilizados:}\n\begin{itemize}\n    \item \textbf{Compute:} EC2 t3.xlarge (4 vCPU, 16 GB RAM) × 1 instancia (ThingsBoard monolito)\n    \item \textbf{Database:} RDS PostgreSQL 15.4 db.t3.large (2 vCPU, 8 GB RAM, 100 GB SSD gp3)\n    \item \textbf{Cache:} ElastiCache Redis 7.0 cache.t3.medium (2 vCPU, 3.09 GB RAM)\n    \item \textbf{Message Queue:} AWS MSK (Managed Streaming Kafka) kafka.t3.small × 2 brokers\n    \item \textbf{Storage:} S3 bucket (telemetry archives, 1 TB Standard, lifecycle 90d → Glacier)\n    \item \textbf{Networking:} VPC privada, Security Groups, ALB (Application Load Balancer)\n    \item \textbf{Monitoring:} CloudWatch Logs, Metrics, Alarms (CPU >80\%, latency P95 >500ms)\n\end{itemize}\n\n\textbf{Costos operativos mensuales (estimado piloto 192 medidores):}\n\begin{itemize}\n    \item EC2 t3.xlarge: \$122/mes (On-Demand US-East-1)\n    \item RDS PostgreSQL db.t3.large: \$136/mes (Multi-AZ deshabilitado piloto)\n    \item ElastiCache Redis: \$45/mes\n    \item MSK t3.small × 2: \$72/mes\n    \item S3 + Data Transfer: \$15/mes (24 GB/mes ingestion, 10 GB egress)\n    \item \textbf{Total:} \textbf{\$390/mes} = \$2.03/medidor/mes\n\end{itemize}\n\n\subsection{Configuración ThingsBoard}\n\label{sec:impl-cloud-thingsboard}\n\n\subsubsection{Device Profiles y Rule Chains}\n\n\textbf{Device Profiles implementados:}\n\begin{enumerate}\n\item \textbf{ESP32-Thread-Meter:} \n    \begin{itemize}\n    \item Transport: MQTT (bridge desde gateway edge)\n    \item Telemetry keys: voltage, current, energy\_kwh, power\_factor, rssi\_thread\n    \item Attributes: firmware\_version, commissioning\_date, meter\_serial\n    \item Alarm rules: voltage\_sag (<207V), voltage\_swell (>253V), tamper\_detected\n    \end{itemize}\n\item \textbf{Gateway-Edge-RPi4:}\n    \begin{itemize}\n    \item Transport: MQTT (directo TLS 8883)\n    \item Telemetry: cpu\_usage, memory\_usage, disk\_usage, wan\_latency, devices\_online\n    \item Alarms: gateway\_offline (>5 min), high\_cpu (>90\% sustained 10 min)\n    \end{itemize}\n\end{enumerate}\n\n\textbf{Rule Chains críticas:}\n\begin{enumerate}\n\item \textbf{Telemetry Processing:} Validación rangos (voltage 180-265V, current 0-100A), persistencia TimescaleDB, agregación horaria\n\item \textbf{Alarm Management:} Severity classification (CRITICAL/MAJOR/MINOR), email notifications, SMS para CRITICAL\n\item \textbf{Data Export:} Cron job diario exportando CSV a S3 para billing/analytics externo\n\end{enumerate}\n\n\subsection{Dashboards Multi-Tenant}\n\label{sec:impl-cloud-dashboards}\n\n\textbf{Dashboards implementados:}\n\begin{enumerate}\n\item \textbf{Real-Time Monitoring:} Mapa geográfico devices, telemetría last 5 min, alarmas activas\n\item \textbf{Historical Analytics:} Gráficos consumo diario/mensual, power factor trends, voltage quality\n\item \textbf{Device Management:} Listado devices, firmware versions, connectivity status\n\item \textbf{Billing Summary:} Consumo acumulado por usuario, proyección facturación\n\end{enumerate}\n\n\textbf{Acceso multi-tenant:}\n\begin{itemize}\n\item \textbf{Tenant Admin:} Full access (usuario utility, gestión completa)\n\item \textbf{Customer Users:} Vista limitada solo sus dispositivos (usuarios finales residenciales)\n\item \textbf{Read-Only:} Dashboards públicos (auditoría, regulador)\n\end{itemize}\n\n\subsection{Integración APIs y Webhooks}\n\label{sec:impl-cloud-apis}\n\n\textbf{APIs REST expuestas:}\n\begin{itemize}\n\item \textbf{Telemetry API:} GET /api/plugins/telemetry/\{deviceId\}/values/timeseries\n\item \textbf{Device API:} POST /api/device (provisioning), GET /api/devices (listado)\n\item \textbf{Alarm API:} GET /api/alarm/\{entityType\}/\{entityId\} (query alarmas)\n\end{itemize}\n\n\textbf{Webhooks configurados:}\n\begin{itemize}\n\item \textbf{Billing System:} POST daily consumption → CRM/ERP externo\n\item \textbf{Slack Notifications:} POST critical alarms → canal #ami-alerts\n\item \textbf{Prometheus Exporter:} Métricas ThingsBoard → Grafana Cloud\n\end{itemize}\n\n\section{Síntesis de Implementación por Niveles}\n\label{sec:impl-sintesis}\n\nLa implementación práctica validó la viabilidad técnica de la arquitectura de 4 niveles:\n\n\textbf{Nivel 1 (Nodos Thread):} 30 ESP32-C6 operando 90 días, 99.2\% uptime, consumo 5 mW promedio\n\n\textbf{Nivel 2 (Red HaLow):} Router MikroTik + HaLow alcance 1.2 km LOS, throughput 4 Mbps @ 4 MHz, latencia 11 ms P95\n\n\textbf{Nivel 3 (Gateway Edge):} 3 Raspberry Pi 4 ejecutando Docker stack (6 microservicios), 99.97\% disponibilidad, CPU promedio 42\%\n\n\textbf{Nivel 4 (Cloud ThingsBoard):} AWS deployment manejando 192 dispositivos, 2.88M mensajes/mes, costo \$2.03/dispositivo/mes\n\n\textbf{TCO piloto 90 días:} CAPEX \$776 (hardware) + OPEX \$1,170 (AWS 3 meses) = \textbf{\$1,946 total} = \$10.13/dispositivo implementado\n\nEl siguiente capítulo (Capítulo 5) presenta los resultados experimentales cuantitativos derivados de esta implementación, validando las hipótesis H1-H8 formuladas en §1.2.5.\n\n\section{Conclusiones del Capítulo}\n\label{sec:impl-conclusiones}
+\section{Implementación Nivel 4: Servidor ThingsBoard Cloud}\n\label{sec:impl-nivel4-cloud}\n\nEl Nivel 4 implementa plataforma IoT centralizada para gestión masiva de dispositivos, analytics históricos, dashboards multi-tenant y APIs programáticas. La implementación desplegó ThingsBoard 3.6.2 Community Edition en AWS con arquitectura microservicios.\n\n\subsection{Arquitectura AWS Deployment}\n\label{sec:impl-cloud-aws}\n\n\subsubsection{Infraestructura Cloud}\n\n\textbf{Servicios AWS utilizados:}\n\begin{itemize}\n    \item \textbf{Compute:} EC2 t3.xlarge (4 vCPU, 16 GB RAM) × 1 instancia (ThingsBoard monolito)\n    \item \textbf{Database:} RDS PostgreSQL 15.4 db.t3.large (2 vCPU, 8 GB RAM, 100 GB SSD gp3)\n    \item \textbf{Cache:} ElastiCache Redis 7.0 cache.t3.medium (2 vCPU, 3.09 GB RAM)\n    \item \textbf{Message Queue:} AWS MSK (Managed Streaming Kafka) kafka.t3.small × 2 brokers\n    \item \textbf{Storage:} S3 bucket (telemetry archives, 1 TB Standard, lifecycle 90d $\rightarrow$ Glacier)\n    \item \textbf{Networking:} VPC privada, Security Groups, ALB (Application Load Balancer)\n    \item \textbf{Monitoring:} CloudWatch Logs, Metrics, Alarms (CPU >80\%, latency P95 >500ms)\n\end{itemize}\n\n\textbf{Costos operativos mensuales (estimado piloto 192 medidores):}\n\begin{itemize}\n    \item EC2 t3.xlarge: \$122/mes (On-Demand US-East-1)\n    \item RDS PostgreSQL db.t3.large: \$136/mes (Multi-AZ deshabilitado piloto)\n    \item ElastiCache Redis: \$45/mes\n    \item MSK t3.small × 2: \$72/mes\n    \item S3 + Data Transfer: \$15/mes (24 GB/mes ingestion, 10 GB egress)\n    \item \textbf{Total:} \textbf{\$390/mes} = \$2.03/medidor/mes\n\end{itemize}\n\n\subsection{Configuración ThingsBoard}\n\label{sec:impl-cloud-thingsboard}\n\n\subsubsection{Device Profiles y Rule Chains}\n\n\textbf{Device Profiles implementados:}\n\begin{enumerate}\n\item \textbf{ESP32-Thread-Meter:} \n    \begin{itemize}\n    \item Transport: MQTT (bridge desde gateway edge)\n    \item Telemetry keys: voltage, current, energy\_kwh, power\_factor, rssi\_thread\n    \item Attributes: firmware\_version, commissioning\_date, meter\_serial\n    \item Alarm rules: voltage\_sag (<207V), voltage\_swell (>253V), tamper\_detected\n    \end{itemize}\n\item \textbf{Gateway-Edge-RPi4:}\n    \begin{itemize}\n    \item Transport: MQTT (directo TLS 8883)\n    \item Telemetry: cpu\_usage, memory\_usage, disk\_usage, wan\_latency, devices\_online\n    \item Alarms: gateway\_offline (>5 min), high\_cpu (>90\% sustained 10 min)\n    \end{itemize}\n\end{enumerate}\n\n\textbf{Rule Chains críticas:}\n\begin{enumerate}\n\item \textbf{Telemetry Processing:} Validación rangos (voltage 180-265V, current 0-100A), persistencia TimescaleDB, agregación horaria\n\item \textbf{Alarm Management:} Severity classification (CRITICAL/MAJOR/MINOR), email notifications, SMS para CRITICAL\n\item \textbf{Data Export:} Cron job diario exportando CSV a S3 para billing/analytics externo\n\end{enumerate}\n\n\subsection{Dashboards Multi-Tenant}\n\label{sec:impl-cloud-dashboards}\n\n\textbf{Dashboards implementados:}\n\begin{enumerate}\n\item \textbf{Real-Time Monitoring:} Mapa geográfico devices, telemetría last 5 min, alarmas activas\n\item \textbf{Historical Analytics:} Gráficos consumo diario/mensual, power factor trends, voltage quality\n\item \textbf{Device Management:} Listado devices, firmware versions, connectivity status\n\item \textbf{Billing Summary:} Consumo acumulado por usuario, proyección facturación\n\end{enumerate}\n\n\textbf{Acceso multi-tenant:}\n\begin{itemize}\n\item \textbf{Tenant Admin:} Full access (usuario utility, gestión completa)\n\item \textbf{Customer Users:} Vista limitada solo sus dispositivos (usuarios finales residenciales)\n\item \textbf{Read-Only:} Dashboards públicos (auditoría, regulador)\n\end{itemize}\n\n\subsection{Integración APIs y Webhooks}\n\label{sec:impl-cloud-apis}\n\n\textbf{APIs REST expuestas:}\n\begin{itemize}\n\item \textbf{Telemetry API:} GET /api/plugins/telemetry/\{deviceId\}/values/timeseries\n\item \textbf{Device API:} POST /api/device (provisioning), GET /api/devices (listado)\n\item \textbf{Alarm API:} GET /api/alarm/\{entityType\}/\{entityId\} (query alarmas)\n\end{itemize}\n\n\textbf{Webhooks configurados:}\n\begin{itemize}\n\item \textbf{Billing System:} POST daily consumption $\rightarrow$ CRM/ERP externo\n\item \textbf{Slack Notifications:} POST critical alarms $\rightarrow$ canal #ami-alerts\n\item \textbf{Prometheus Exporter:} Métricas ThingsBoard $\rightarrow$ Grafana Cloud\n\end{itemize}\n\n\section{Síntesis de Implementación por Niveles}\n\label{sec:impl-sintesis}\n\nLa implementación práctica validó la viabilidad técnica de la arquitectura de 4 niveles:\n\n\textbf{Nivel 1 (Nodos Thread):} 30 ESP32-C6 operando 90 días, 99.2\% uptime, consumo 5 mW promedio\n\n\textbf{Nivel 2 (Red HaLow):} Router MikroTik + HaLow alcance 1.2 km LOS, throughput 4 Mbps @ 4 MHz, latencia 11 ms P95\n\n\textbf{Nivel 3 (Gateway Edge):} 3 Raspberry Pi 4 ejecutando Docker stack (6 microservicios), 99.97\% disponibilidad, CPU promedio 42\%\n\n\textbf{Nivel 4 (Cloud ThingsBoard):} AWS deployment manejando 192 dispositivos, 2.88M mensajes/mes, costo \$2.03/dispositivo/mes\n\n\textbf{TCO piloto 90 días:} CAPEX \$776 (hardware) + OPEX \$1,170 (AWS 3 meses) = \textbf{\$1,946 total} = \$10.13/dispositivo implementado\n\nEl siguiente capítulo (Capítulo 5) presenta los resultados experimentales cuantitativos derivados de esta implementación, validando las hipótesis H1-H8 formuladas en §1.2.5.\n\n\section{Conclusiones del Capítulo}\n\label{sec:impl-conclusiones}
 
 Este capítulo documentó la implementación práctica de la arquitectura propuesta, cubriendo especificaciones de hardware (ESP32-C6, Raspberry Pi 4, módulos LTE), desarrollo de firmware (OpenThread, parser DLMS/COSEM, stack Docker), configuraciones de red (Thread, HaLow, LTE), implementación de controles de seguridad (Secure Boot, WPA3-SAE, PKI X.509), y procedimientos de deployment estandarizados.
 

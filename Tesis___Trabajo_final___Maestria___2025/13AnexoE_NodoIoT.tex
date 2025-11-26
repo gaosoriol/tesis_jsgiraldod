@@ -12,7 +12,7 @@ Este anexo documenta la implementación de referencia de un nodo IoT sensor basa
     \item \textbf{Radio}: IEEE 802.15.4 (Thread 1.3) integrado
     \item \textbf{Interfaz medición}: RS-485 UART (DLMS/COSEM IEC 62056-21)
     \item \textbf{Alimentación}: Batería Li-Ion 18650 3.7V + regulador 3.3V
-    \item \textbf{Modos de bajo consumo}: Deep sleep (<20 µA), light sleep (~800 µA)
+    \item \textbf{Modos de bajo consumo}: Deep sleep (<20 $\mu$A), light sleep (~800 $\mu$A)
 \end{itemize}
 
 \subsection{Stack de Software}
@@ -416,7 +416,7 @@ static float g_voltage = 230.0f;        // V
 static float g_current = 0.0f;          // A
 static float g_active_power = 0.0f;     // kW
 static float g_reactive_power = 0.0f;   // kvar
-static float g_power_factor = 1.0f;     // cos(φ)
+static float g_power_factor = 1.0f;     // cos($\varphi$)
 static float g_active_energy = 0.0f;    // kWh acumulada
 static float g_reactive_energy = 0.0f;  // kvarh acumulada
 static float g_frequency = 60.0f;       // Hz
@@ -435,7 +435,7 @@ static int read_power_meter_dlms(void)
     g_active_power = base_power + delta_power + 
                      ((float)(esp_random() % 100) / 1000.0f);  // +ruido
     
-    // Corriente: I = P / (V * cosφ)
+    // Corriente: I = P / (V * cos$\varphi$)
     g_voltage = 230.0f + ((float)(esp_random() % 100) / 100.0f) - 0.5f;  // 230V ±10V
     g_power_factor = 0.92f + ((float)(esp_random() % 100) / 1000.0f);   // 0.92-1.0
     g_current = (g_active_power * 1000.0f) / (g_voltage * g_power_factor);
