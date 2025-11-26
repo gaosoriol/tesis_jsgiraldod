@@ -82,10 +82,15 @@ El piloto evaluó cuatro escenarios operacionales:
     \item \textbf{Firmware OTA Update:} Actualización remota 30 nodos con rollback automático
 \end{enumerate}
 
-\section{Validación de Latencia}
+\section{Desempeño de la Red Híbrida}
+\label{sec:res-desempeno-red}
+
+Esta sección valida el comportamiento de la red híbrida Thread (Nivel 1) + HaLow (Nivel 2) + Gateway Edge (Nivel 3), evaluando latencia end-to-end, disponibilidad del sistema y throughput de los enlaces de backhaul.
+
+\subsection{Latencia End-to-End y Edge Processing}
 \label{sec:res-latencia}
 
-\subsection{Latencia Edge Processing}
+\subsubsection{Latencia Edge Processing}
 \label{sec:res-latencia-edge}
 
 La latencia de procesamiento edge representa la métrica más crítica de la arquitectura propuesta, midiendo el tiempo transcurrido desde que un nodo ESP32-C6 transmite una lectura CoAP hasta que el Gateway responde con ACK procesado (sin roundtrip a cloud).
@@ -175,10 +180,10 @@ Edge + Cloud (propuesta) & \textbf{8±2 ms} & 248 ms & \textbf{98.5\% edge} \\
 \end{tabular}
 \end{table}
 
-\section{Validación de Disponibilidad}
+\subsection{Disponibilidad del Sistema}
 \label{sec:res-disponibilidad}
 
-\subsection{Disponibilidad Medida en Piloto}
+\subsubsection{Disponibilidad Medida en Piloto}
 \label{sec:res-disponibilidad-medida}
 
 La disponibilidad del sistema durante el piloto de 90 días (Oct-Dic 2024) se midió mediante health checks automáticos cada 60 segundos desde Gateway a todos los 30 nodos, registrando eventos de downtime en syslog.
@@ -248,7 +253,12 @@ Con base en los eventos registrados:
     \item \textbf{Disponibilidad calculada:} $\frac{720}{720 + 2.73} = 99.62\%$ (coincide con medición)
 \end{itemize}
 
-\section{Validación de Escalabilidad}
+\section{Modelo de Costos y Escalabilidad}
+\label{sec:res-costos-escalabilidad}
+
+Esta sección analiza la viabilidad económica de la arquitectura propuesta y valida su escalabilidad técnica desde el piloto de 30 medidores hasta despliegues de 100-1,000 dispositivos por gateway.
+
+\subsection{Escalabilidad Técnica}
 \label{sec:res-escalabilidad}
 
 \subsection{Extrapolación 30 → 100 Medidores}
@@ -374,7 +384,7 @@ El análisis de escalabilidad identificó dos cuellos de botella potenciales:
     \item \textbf{Gateway Storage:} SSD 128 GB permite retención 60 días datos históricos @ 100 medidores; superior requiere migración cloud periódica
 \end{enumerate}
 
-\section{Validación de Throughput HaLow}
+\subsection{Throughput Red HaLow (Nivel 2 Backhaul)}
 \label{sec:res-throughput-halow}
 
 % CONTENIDO NUEVO: Mediciones throughput HaLow IEEE 802.11ah
@@ -386,7 +396,7 @@ El análisis de escalabilidad identificó dos cuellos de botella potenciales:
 % - Alcance vs throughput: 1 km @ MCS0, 200 m @ MCS7
 % - Comparación vs WiFi 2.4 GHz (menor alcance pero mayor throughput)
 
-\section{Análisis Económico}
+\subsection{Análisis Económico Total Cost of Ownership}
 \label{sec:res-analisis-economico}
 
 \subsection{Total Cost of Ownership (TCO)}
@@ -514,8 +524,10 @@ Cellular 4G (Telit) & \$95 & \$970 & \$1,065 \\
 
 % Nota: Valores basados en cotizaciones Q4 2024 Colombia
 
-\section{Análisis de Eficiencia Energética}
+\section{Evaluación de Eficiencia Energética}
 \label{sec:res-energia}
+
+Esta sección evalúa el consumo energético de los 4 niveles arquitectónicos, con énfasis en autonomía gateway edge mediante batería (operación autónoma 72h) y reducción tráfico WAN por procesamiento local (72\% menos datos transmitidos cloud).
 
 \subsection{Autonomía Energética Gateway}
 
@@ -582,13 +594,15 @@ $$T_{\text{propuesta}} = 30 \times 96 \times (200 + 28.2) \times 0.4 \times 0.6 
 
 \textbf{Discrepancia 14pp (86\% vs 72\%):} Overhead MQTT +40 bytes, filtrado real 52\% vs 60\%, metadata +18 bytes.
 
-\section{Comparación con Literatura Académica}
+\section{Discusión de Resultados}
+\label{sec:res-discusion}
+
+Esta sección contextualiza los resultados experimentales obtenidos mediante comparación con literatura académica reciente (2020-2025) y soluciones comerciales AMI, identificando contribuciones diferenciales de la arquitectura propuesta frente al estado del arte.
+
+\subsection{Comparación con Literatura Académica}
 \label{sec:res-comparacion-literatura}
 
-% CONTENIDO REDUCIDO: Comparación breve vs papers estado del arte
-% USER DECISION: Mantener conciso, no extenso
-
-\subsection{Comparación Latencia}
+\subsubsection{Comparación Latencia}
 
 \begin{table}[H]
 \centering
@@ -634,8 +648,8 @@ Li et al. (2022) & 97.8\% & \$210 & Simulación NS-3 \\
 \end{tabular}
 \end{table}
 
-\section{Discusión de Resultados}
-\label{sec:res-discusion}
+\subsection{Implicaciones Prácticas y Limitaciones}
+\label{sec:res-implicaciones}
 
 \subsection{Validación de Hipótesis}
 
