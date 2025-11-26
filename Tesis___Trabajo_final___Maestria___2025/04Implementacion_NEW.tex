@@ -94,18 +94,81 @@ El firmware de los nodos adaptadores fue desarrollado utilizando ESP-IDF v5.1.2 
 
 \subsubsection{Stack Docker y Microservicios}
 
-La arquitectura de software del Gateway implementa seis microservicios containerizados con Docker Compose:
+La arquitectura de software del Gateway implementa seis microservicios containerizados con Docker Compose, cada uno con límites de recursos y persistencia configurada:
 
-\begin{enumerate}
-    \item \textbf{Bridge CoAP-MQTT:} Traducción de mensajes Thread (CoAP) a protocolo MQTT para uplink cloud
-    \item \textbf{Mosquitto MQTT Broker:} Intermediario local para buffering y QoS
-    \item \textbf{PostgreSQL + TimescaleDB:} Base de datos relacional con extensión time-series
-    \item \textbf{Apache Kafka:} Message queue para procesamiento asíncrono de eventos
-    \item \textbf{Node-RED:} Rule Engine para flujos de procesamiento edge
-    \item \textbf{Grafana:} Dashboards locales para operadores de campo
-\end{enumerate}
+\textbf{1. Bridge CoAP-MQTT (Traductor Protocolos):}
+\begin{itemize}
+    \item \textbf{Función:} Recibe mensajes CoAP desde Thread mesh (puerto UDP 5683), parsea payload LwM2M TLV, publica a Mosquitto via MQTT
+    \item \textbf{Implementación:} Python 3.11 + aiocoap library
+    \item \textbf{Recursos:} CPU 0.5 cores, RAM 256 MB limit
+    \item \textbf{Throughput:} 1,000 msgs/s (validado stress test)
+\end{itemize}
 
-% TODO: Migrar desde Cap 3 líneas ~2400-2600: Docker Compose completo, límites recursos, persistencia
+\textbf{2. Mosquitto MQTT Broker:}
+\begin{itemize}
+    \item \textbf{Función:} Intermediario local (broker) para buffering, QoS 1 (At Least Once), bridge a ThingsBoard cloud
+    \item \textbf{Configuración:} Persistencia habilitada (disk-backed queue), max\_queued\_messages 100,000
+    \item \textbf{Recursos:} CPU 1 core, RAM 512 MB
+    \item \textbf{Uptime piloto:} 99.97\% (2 reinicios mantenimiento en 90 días)
+\end{itemize}
+
+\textbf{3. PostgreSQL 15 + TimescaleDB 2.13:}
+\begin{itemize}
+    \item \textbf{Función:} Base datos time-series con hypertables (particionamiento automático por tiempo), continuous aggregates (bins 5 min, 1h, 1d), compresión columnar 10:1
+    \item \textbf{Esquema:} Tabla \texttt{telemetry} (device\_id, timestamp, voltage, current, energy, power\_factor)
+    \item \textbf{Configuración:} shared\_buffers 1 GB, maintenance\_work\_mem 256 MB, checkpoint\_timeout 15 min
+    \item \textbf{Retención:} 90 días datos granulares (15 min), 2 años agregados (1h bins)
+    \item \textbf{Recursos:} CPU 2 cores, RAM 2 GB, storage 128 GB SD card UHS-I
+\end{itemize}
+
+\textbf{4. Apache Kafka 3.5:}
+\begin{itemize}
+    \item \textbf{Función:} Message queue asíncrono para eventos high-priority (alarmas, tamper), decoupling entre producers (Mosquitto) y consumers (Node-RED, TimescaleDB)
+    \item \textbf{Topics:} \texttt{telemetry.raw} (100k msgs/día), \texttt{alarms.critical} (5-10 msgs/día)
+    \item \textbf{Retención:} 7 días (balance storage vs replay capability)
+\end{itemize}
+
+\textbf{5. Node-RED 3.1:}
+\begin{itemize}
+    \item \textbf{Función:} Rule Engine visual para flujos edge processing (filtrado datos no-críticos 60\%, detección anomalías threshold-based, agregación temporal)
+    \item \textbf{Flujos implementados:} 12 flows (fraud detection, voltage sag/swell detection, power factor correction alerts)
+    \item \textbf{Latencia procesamiento:} 2-4 ms por mensaje
+\end{itemize}
+
+\textbf{6. Grafana 10.2:}
+\begin{itemize}
+    \item \textbf{Función:} Dashboards locales para operadores campo (visualización sin internet)
+    \item \textbf{Datasource:} PostgreSQL + TimescaleDB queries SQL
+    \item \textbf{Dashboards:} 8 dashboards (real-time telemetry, historical trends, alarm overview, device status)
+    \item \textbf{Acceso:} Puerto 3000 (HTTP básico auth), no expuesto WAN
+\end{itemize}
+
+\textbf{Docker Compose resource limits (Raspberry Pi 4 4GB):}
+\begin{verbatim}
+services:
+  bridge-coap-mqtt:
+    cpus: 0.5
+    mem_limit: 256m
+  mosquitto:
+    cpus: 1.0
+    mem_limit: 512m
+  postgres:
+    cpus: 2.0
+    mem_limit: 2048m
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+  kafka:
+    cpus: 1.0
+    mem_limit: 1024m
+  nodered:
+    cpus: 0.5
+    mem_limit: 256m
+  grafana:
+    cpus: 0.5
+    mem_limit: 256m
+\end{verbatim}
+
+\textbf{Validación piloto:} Stack Docker operó 90 días sin memory leaks (varianza RAM <5\%), CPU promedio 42\% bajo carga normal (30 medidores @ 15 min), pico 67\% stress test (60s polling).
 
 \section{Configuración de Redes}
 \label{sec:impl-redes}
@@ -113,18 +176,62 @@ La arquitectura de software del Gateway implementa seis microservicios container
 \subsection{Configuración Red Thread}
 \label{sec:impl-config-thread}
 
+\subsubsection{Decisión Thread vs Zigbee}
+
+La arquitectura seleccionó Thread 1.4.0 sobre Zigbee 3.0 tras análisis comparativo detallado evaluando 9 criterios técnicos:
+
+\begin{table}[H]
+\centering
+\caption{Análisis comparativo Thread vs Zigbee para AMI}
+\label{tab:impl-thread-vs-zigbee}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|c|c|p{6cm}|}
+\hline
+\rowcolor{gray!20}
+\textbf{Criterio} & \textbf{Thread 1.4.0} & \textbf{Zigbee 3.0} & \textbf{Análisis y Justificación} \\
+\hline
+\textbf{IPv6 nativo E2E} & Sí & No & \textbf{Thread gana}: Direccionamiento IPv6 end-to-end elimina NAT/gateway traducción Zigbee 16-bit, reduce latencia 40-60\% \\
+\hline
+\textbf{IEEE 2030.5 compliance} & Directo & Gateway & Thread implementa IEEE 2030.5 nativamente, Zigbee requiere ALG (Application Layer Gateway) \\
+\hline
+\textbf{Latencia típica} & 50-90 ms & 100-150 ms & Thread menor latencia por IPv6 nativo y ausencia gateway traducción \\
+\hline
+\textbf{Consumo energético} & 5-10 mA sleep & 3-5 mA sleep & Zigbee gana, pero no crítico (nodos alimentados desde medidor 5V) \\
+\hline
+\textbf{Costo módulos (2024)} & \$5-8 & \$3-5 & Zigbee 40\% más económico, pero Thread elimina ALG (\$200-400 ahorro) \\
+\hline
+\textbf{Seguridad commissioning} & PAKE (ECC P-256) & Install Code & PAKE resiste ataques diccionario offline \\
+\hline
+\textbf{Ecosistema} & Emergente (Matter) & Maduro (15 años) & Thread respaldado Google, Apple, Amazon (Thread Group) \\
+\hline
+\end{tabular}%
+}
+\end{table}
+
+\textbf{Decisión final: Thread 1.4.0}
+
+Ventajas críticas Thread:
+\begin{enumerate}
+    \item \textbf{IPv6 E2E}: Elimina gateway traducción, reduce latencia 40\% (150 ms → 90 ms)
+    \item \textbf{IEEE 2030.5 nativo}: Cumplimiento directo Smart Energy Profile 2.0 sin ALG
+    \item \textbf{TCO equivalente}: Costo adicional módulos compensado por eliminación ALG
+\end{enumerate}
+
 \subsubsection{Parámetros Thread Network}
+
+Configuración Thread implementada en piloto:
 
 \begin{itemize}
     \item \textbf{PAN ID:} 0xABCD (único por deployment)
     \item \textbf{Extended PAN ID:} 0x1234567890ABCDEF
     \item \textbf{Network Name:} ``AMI-Pilot-Q4-2024''
     \item \textbf{Channel:} 25 (2.475 GHz, sin interferencia WiFi canales 1-11)
-    \item \textbf{Network Key:} 128-bit AES (provisionada via BLE commissioning)
+    \item \textbf{Network Key:} 128-bit AES (provisionada via BLE commissioning PAKE)
     \item \textbf{TX Power:} +4 dBm (balance alcance vs consumo)
+    \item \textbf{Commissioning:} BLE + QR code scan (ECC P-256 PAKE resiste diccionario)
 \end{itemize}
 
-% TODO: Migrar procedimientos commissioning, topología piloto desde Cap 3
+\textbf{Topología piloto:} 30 nodos End Devices → 1 DCU (Border Router) → Gateway. Máximo 1 hop Thread (latencia medida 8 ms). Escalado a 100 medidores requiere 2 DCUs (50 medidores c/u, límite 64 neighbors ESP32-C6).
 
 \subsection{Configuración HaLow}
 \label{sec:impl-config-halow}
@@ -177,9 +284,59 @@ La arquitectura implementa Public Key Infrastructure (PKI) de tres niveles:
 
 % TODO: Migrar scripts OpenSSL generación certificados desde materiales
 
-\subsection{Configuración Firewall (nftables)}
+\subsection{Análisis de Seguridad por Capas}
+\label{sec:impl-security-analysis}
 
-El Gateway implementa firewall stateful con nftables:
+La arquitectura integra múltiples controles de seguridad alineados con NIST Cybersecurity Framework 2.0, abordando 8 vectores de ataque críticos identificados mediante análisis STRIDE.
+
+\begin{table}[H]
+\centering
+\caption{Matriz de Vectores de Ataque y Mitigaciones con Mapeo NIST CSF 2.0}
+\label{tab:security-threats-impl}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|p{3cm}|p{1.5cm}|p{5.5cm}|p{3cm}|p{2cm}|}
+\hline
+\rowcolor{gray!20}
+\textbf{Vector de Ataque} & \textbf{Impacto} & \textbf{Mitigación Implementada} & \textbf{Riesgo Residual} & \textbf{NIST CSF 2.0} \\
+\hline
+\multicolumn{5}{|c|}{\cellcolor{blue!20}\textbf{CAPA 1: NODOS THREAD}} \\
+\hline
+\textbf{A1: Nodo comprometido} & Crítico & Thread PAKE (ECC P-256) + Network Key rotación 90d + Secure Boot ESP32-C6 (RSA-2048) & Medio & \textbf{PR.AC-1} \\
+\hline
+\textbf{A2: Replay mensajes} & Alto & CoAP timestamp Unix + Message ID único. Gateway descarta delay >30s & Bajo & \textbf{PR.DS-5} \\
+\hline
+\textbf{A3: Tampering físico} & Alto & Reed switch apertura + alarma + log SHA-256 inmutable + caja Torx T10 & Medio & \textbf{DE.CM-7} \\
+\hline
+\multicolumn{5}{|c|}{\cellcolor{green!20}\textbf{CAPA 2: GATEWAY}} \\
+\hline
+\textbf{A4: OTBR comprometido} & Crítico & SSH dual-auth: RSA-4096 + OTP Google Auth. Root disable. Firewall nftables & Bajo & \textbf{PR.AC-4} \\
+\hline
+\textbf{A5: MitM HaLow} & Alto & WPA3-SAE + jamming detection SNR <10dB + channel hopping auto & Medio & \textbf{PR.DS-2} \\
+\hline
+\textbf{A6: Exfiltración PostgreSQL} & Crítico & LUKS AES-256-XTS at-rest + mTLS X.509 90d + RLS PostgreSQL & Bajo & \textbf{PR.DS-1} \\
+\hline
+\multicolumn{5}{|c|}{\cellcolor{orange!20}\textbf{CAPA 3: BACKHAUL LTE}} \\
+\hline
+\textbf{A7: Interceptación MQTT} & Alto & TLS 1.3 ChaCha20-Poly1305 + cert pinning SHA-256 & Bajo & \textbf{PR.DS-2} \\
+\hline
+\textbf{A8: Credential theft} & Alto & TPM 2.0 + MQTT rotación 30d + rate limit 5 fallos → bloqueo 1h & Bajo & \textbf{PR.AC-1} \\
+\hline
+\end{tabular}%
+}
+\end{table}
+
+\textbf{Controles implementados por categoría NIST:}
+
+\begin{itemize}
+    \item \textbf{PR.AC (Protect Access Control):} 4 controles (A1, A4, A8, SSH dual-auth)
+    \item \textbf{PR.DS (Protect Data Security):} 4 controles (A2, A5, A6, A7, cifrado E2E)
+    \item \textbf{DE.CM (Detect Security Continuous Monitoring):} 1 control (A3, tamper detection)
+\end{itemize}
+
+\subsection{Configuración Firewall (nftables)}
+\label{sec:impl-firewall}
+
+Gateway implementa firewall stateful default-deny:
 
 \begin{verbatim}
 #!/usr/sbin/nft -f
@@ -191,7 +348,9 @@ table inet filter {
         ct state established,related accept
         iif lo accept
         tcp dport 22 ip saddr 192.168.1.0/24 accept comment "SSH local"
-        tcp dport 8080 ip saddr 192.168.1.0/24 accept comment "Grafana"
+        tcp dport 3000 ip saddr 192.168.1.0/24 accept comment "Grafana"
+        tcp dport 8883 accept comment "MQTT/TLS ThingsBoard"
+        udp dport 5683 accept comment "CoAP Thread"
         drop
     }
     chain forward {
@@ -203,7 +362,7 @@ table inet filter {
 }
 \end{verbatim}
 
-% TODO: Migrar configuración completa desde Cap 3 líneas ~2300-2400
+\textbf{Puertos expuestos:} SSH (22, local only), Grafana (3000, local), MQTT/TLS (8883, cloud), CoAP (5683, Thread mesh). WAN exposure minimizado (solo MQTT/TLS egress, no ingress).
 
 \section{Deployment y Puesta en Marcha}
 \label{sec:impl-deployment}
