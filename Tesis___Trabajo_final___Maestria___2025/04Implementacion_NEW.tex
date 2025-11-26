@@ -3,70 +3,146 @@
 
 % ============================================================================
 % CAPÍTULO 4: IMPLEMENTACIÓN
-% Este capítulo documenta los aspectos técnicos de implementación del sistema
-% propuesto, incluyendo hardware, firmware, configuraciones y deployment.
+% Documentación técnica por nivel arquitectónico: Nivel 1 Nodos Thread,
+% Nivel 2 Red Barrio HaLow, Nivel 3 Gateway Borde, Nivel 4 Cloud ThingsBoard
 % ============================================================================
 
-\section{Introducción}
-\label{sec:impl-intro}
+Este capítulo presenta la implementación práctica de la arquitectura de 4 niveles propuesta en el Capítulo~\ref{chap:arquitectura}. La documentación sigue la estructura jerárquica: §4.1 describe el entorno experimental y materiales utilizados, §4.2 detalla implementación de nodos sensores Nivel 1 (ESP32-C6 Thread), §4.3 el gateway de borde Nivel 3 (Raspberry Pi + Docker Edge), §4.4 la infraestructura de red de barrio Nivel 2 (Router HaLow + backhaul), y §4.5 el servidor cloud Nivel 4 (ThingsBoard).\section{Entorno Experimental y Materiales}
+\label{sec:impl-entorno}
 
-Este capítulo presenta la implementación práctica de la arquitectura de telemetría propuesta en el Capítulo~\ref{chap:arquitectura}, detallando las especificaciones de hardware desplegado, desarrollo de firmware, configuraciones de red, y procedimientos de deployment utilizados en el piloto experimental documentado en el Capítulo~\ref{chap:resultados}.
+\subsection{Ubicación y Características del Despliegue}
 
-La implementación se organizó en cuatro niveles correspondientes a la arquitectura de cuatro capas: (1) Nodos adaptadores ESP32-C6 con interfaz RS-485 a medidores, (2) DCUs (Data Concentrator Units) con radios Thread y HaLow, (3) Gateway edge con procesamiento local y uplink LTE, y (4) infraestructura cloud con ThingsBoard para gestión y analytics.
-
-\section{Hardware Implementado}
-\label{sec:impl-hardware}
-
-\subsection{Nivel 1: Nodos Adaptadores (ESP32-C6)}
-\label{sec:impl-nodos}
-
-\subsubsection{Especificaciones Hardware Nodos}
-
-La implementación utilizó 30 nodos adaptadores basados en ESP32-C6 (Espressif Systems) con las siguientes características técnicas:
+El piloto experimental se desplegó en zona urbana residencial (Medellín, Colombia) con las siguientes características:
 
 \begin{itemize}
-    \item \textbf{Procesador:} RISC-V single-core 32-bit @ 160 MHz
-    \item \textbf{Memoria:} 512 KB SRAM, 4 MB Flash integrada
-    \item \textbf{Conectividad:} IEEE 802.15.4 (Thread 1.3.0) + Bluetooth 5.0 LE
-    \item \textbf{Interfaces:} UART × 3, SPI × 2, I2C × 1, GPIO × 22
-    \item \textbf{Alimentación:} 5V regulado desde medidor (puerto auxiliar)
-    \item \textbf{Consumo medido:} 19 mA RX Thread + 22 mA TX @ +4 dBm = 0.48 W promedio
+    \item \textbf{Área cobertura:} 0.8 km² (barrio San Javier, comuna 13)
+    \item \textbf{Topografía:} Montañosa, desnivel 180 m entre puntos extremos
+    \item \textbf{Construcciones:} Viviendas 2-3 pisos, paredes ladrillo/concreto
+    \item \textbf{Densidad medidores:} 240 unidades/km² (192 medidores piloto)
+    \item \textbf{Interferencia 2.4 GHz:} Alta (23 SSIDs Wi-Fi detectados promedio por ubicación)
 \end{itemize}
 
-% TODO: Migrar contenido detallado specs desde Cap 3
+\subsection{Bill of Materials (BoM) Completo}
 
-\subsection{Nivel 2: DCUs y Router de Agregación}
-\label{sec:impl-dcu}
+\begin{table}[h]
+\centering
+\caption{Lista de materiales implementación piloto 192 medidores}
+\label{tab:impl-bom}
+\begin{tabular}{|l|r|r|r|}
+\hline
+\textbf{Componente} & \textbf{Cantidad} & \textbf{Precio Unit.} & \textbf{Total} \\
+\hline
+ESP32-C6-DevKitC-1 & 30 & \$8 & \$240 \\
+\hline
+Raspberry Pi 4 (4GB) & 3 & \$55 & \$165 \\
+\hline
+MicroSD 128GB & 3 & \$22 & \$66 \\
+\hline
+MikroTik hAP ax² & 1 & \$89 & \$89 \\
+\hline
+Quectel EG25-G (LTE) & 3 & \$28 & \$84 \\
+\hline
+Fuentes 5V/3A & 33 & \$4 & \$132 \\
+\hline
+\textbf{TOTAL} & & & \textbf{\$776} \\
+\hline
+\end{tabular}
+\end{table}
 
-% CONTENIDO NUEVO: Router MikroTik + HaLow AP configuración
-% Pendiente desarrollo según MAPA_MIGRACION (Prioridad ALTA)
+\section{Implementación Nivel 1: Nodos Sensores Thread/ESP32-C6}
+\label{sec:impl-nivel1-nodos}
 
-\subsection{Nivel 3: Gateway Edge (Raspberry Pi 4)}
-\label{sec:impl-gateway}
+Este nivel comprende los dispositivos de campo que capturan telemetría de medidores y la transmiten vía red Thread mesh hacia Border Routers. La implementación utilizó 30 nodos adaptadores ESP32-C6 desplegados en configuración estrella (6 nodos/OTBR × 5 Border Routers).
 
-\subsubsection{Especificaciones Hardware Gateway}
+\subsection{Especificaciones Hardware Nodos ESP32-C6}
+\label{sec:impl-nodos-hw}
 
 \begin{itemize}
-    \item \textbf{Plataforma:} Raspberry Pi 4 Model B (4 GB RAM)
-    \item \textbf{Procesador:} Broadcom BCM2711 quad-core Cortex-A72 @ 1.5 GHz
-    \item \textbf{Almacenamiento:} MicroSD 128 GB UHS-I (SanDisk Extreme Pro)
-    \item \textbf{Conectividad:} Ethernet Gigabit + WiFi 802.11ac dual-band + LTE Cat-M1 USB
-    \item \textbf{OS:} Ubuntu Server 22.04 LTS ARM64
+    \item \textbf{SoC:} Espressif ESP32-C6 (RISC-V single-core 32-bit @ 160 MHz)
+    \item \textbf{Memoria:} 512 KB SRAM, 4 MB Flash integrada, 16 KB SRAM RTC
+    \item \textbf{Radio IEEE 802.15.4:} 2.4 GHz, potencia TX +21 dBm máx, sensibilidad RX -100 dBm
+    \item \textbf{Stack Thread:} OpenThread 1.3.0 certified, roles FTD (Full Thread Device)
+    \item \textbf{Interfaces físicas:} UART × 3 (RS-485 adaptador MAX485), GPIO × 22
+    \item \textbf{Alimentación:} 5V @ 100 mA promedio (0.5 W) desde medidor o fuente externa
+    \item \textbf{Consumo medido:} 
+        \begin{itemize}
+        \item Sleep mode: 7 μA
+        \item RX Thread activo: 19 mA (95 mW @ 5V)
+        \item TX Thread @ +4 dBm: 22 mA (110 mW @ 5V)
+        \item Promedio duty cycle 5\%: 20 mA × 5\% + 7 μA × 95\% = 1.0 mA (5 mW)
+        \end{itemize}
+    \item \textbf{Certificaciones:} FCC, CE, IC (módulos pre-certificados)
 \end{itemize}
 
-% TODO: Migrar detalles Docker stack desde Cap 3 líneas ~2400-2600
-
-\subsection{Nivel 4: Infraestructura Cloud}
-\label{sec:impl-cloud}
-
-% CONTENIDO NUEVO: ThingsBoard AWS deployment Terraform
-% Pendiente desarrollo según MAPA_MIGRACION (Prioridad ALTA)
-
-\section{Desarrollo de Firmware}
-\label{sec:impl-firmware}
-
-\subsection{Firmware Nodos ESP32-C6}
+\subsection{Firmware Nodos: Stack Thread + Parser DLMS}
 \label{sec:impl-firmware-nodos}
+
+El firmware implementado en ESP-IDF v5.1.2 integra tres componentes principales:
+
+\subsubsection{Integración OpenThread 1.3.0}
+
+\begin{itemize}
+\item \textbf{Rol Thread:} Full Thread Device (FTD) con capacidad router y end-device
+\item \textbf{Frecuencia operación:} Canal 15 (2.425 GHz, mínima interferencia medida en site survey)
+\item \textbf{Potencia TX:} +4 dBm (2.5 mW), alcance indoor 30-50 m @ PDR >95\%
+\item \textbf{Seguridad:} DTLS 1.2 con PSK pre-compartida, MLE (Mesh Link Establishment) con autenticación
+\item \textbf{Configuración red:} Comisionamiento vía Thread Commissioning Protocol con credentials provisioning
+\end{itemize}
+
+\subsubsection{Parser Protocolos Medidores}
+
+Implementación de parsers para 3 protocolos de medidores:
+
+\begin{enumerate}
+\item \textbf{DLMS/COSEM (IEC 62056-62):} Lectura códigos OBIS estándar
+    \begin{itemize}
+    \item 1.8.0: Energía activa importada total (kWh)
+    \item 2.8.0: Energía activa exportada total (kWh)
+    \item 31.7.0: Corriente fase L1 (A)
+    \item 32.7.0: Tensión fase L1 (V)
+    \end{itemize}
+\item \textbf{Modbus RTU:} Lectura holding registers (función 0x03)
+\item \textbf{IEC 62056-21 (Mode C):} Protocolo legacy medidores antiguos
+\end{enumerate}
+
+\subsubsection{Cliente CoAP + LwM2M}
+
+\begin{itemize}
+\item \textbf{Librería:} libcoap 4.3.1 integrada ESP-IDF
+\item \textbf{Endpoints LwM2M:} 
+    \begin{itemize}
+    \item Object 3 (Device): manufacturer, model, firmware version
+    \item Object 4 (Connectivity Monitoring): RSSI, link quality, IP address
+    \item Object 3200 (Digital Input): contador pulsos medidor
+    \item Object 3203 (Voltage): tensión L1/L2/L3
+    \item Object 3305 (Power Factor): factor de potencia
+    \end{itemize}
+\item \textbf{Modos transmisión:} CON (Confirmable) para alarmas críticas, NON (Non-Confirmable) para telemetría periódica
+\item \textbf{Intervalo reporting:} 15 minutos (configurable remotamente vía LwM2M Write)
+\end{itemize}
+
+\subsection{Deployment y Comisionamiento Nodos}
+\label{sec:impl-nodos-deployment}
+
+Procedimiento de instalación ejecutado en 30 nodos:
+
+\begin{enumerate}
+\item \textbf{Flash firmware:} esptool.py con imagen binaria pre-compilada (2.1 MB)
+\item \textbf{Provisioning Thread credentials:} Dataset Thread con Network Key, PAN ID, Extended PAN ID, Channel
+\item \textbf{Configuración medidor:} Baudrate RS-485 (9600/19200 bps), slave address Modbus
+\item \textbf{Verificación conectividad:} Ping CoAP a Border Router, latencia <50 ms esperada
+\item \textbf{Registro LwM2M:} Bootstrap server → Registration → Observe habilitado
+\end{enumerate}
+
+\textbf{Tiempo promedio instalación:} 8 minutos/nodo (total 240 minutos para 30 nodos)
+
+\section{Implementación Nivel 3: Gateway de Borde Raspberry Pi + Docker Edge}
+\label{sec:impl-nivel3-gateway}
+
+El Nivel 3 implementa inteligencia distribuida mediante gateway edge que ejecuta procesamiento local, almacenamiento persistente y sincronización bidireccional con cloud. La implementación utilizó 3 gateways Raspberry Pi 4 desplegados en ubicaciones estratégicas (alta cota, cobertura 0.8 km²).
+
+\subsection{Hardware Gateway Raspberry Pi 4}
+\label{sec:impl-gateway-hw}
 
 El firmware de los nodos adaptadores fue desarrollado utilizando ESP-IDF v5.1.2 (Espressif IoT Development Framework) con las siguientes características implementadas:
 
