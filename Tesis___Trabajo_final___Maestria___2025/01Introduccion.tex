@@ -347,6 +347,56 @@ La investigación sigue un enfoque mixto que combina Design Science Research (DS
 
 \textbf{Entregables:} Tabla comparativa (Capítulo 4), análisis de trade-offs, recomendaciones de uso.
 
+\section{Justificación: Convergencia de Fibra, HaLow y Edge Computing}
+
+La convergencia de tres tecnologías emergentes fundamenta la arquitectura propuesta en esta investigación: (1) infraestructura de fibra óptica llegando cada vez más cerca del usuario final (FTTN/FTTC), (2) radio sub-GHz IEEE 802.11ah (HaLow) con alcance extendido >1 km, y (3) capacidades de procesamiento edge computing con contenedores Docker. Esta sección justifica por qué la combinación de estas tecnologías representa una solución óptima para el desafío de última milla en Smart Energy.
+
+\subsection{Despliegue Masivo de Fibra FTTN/FTTC}
+
+El despliegue acelerado de fibra óptica en arquitecturas FTTN (Fiber-to-the-Node) y FTTC (Fiber-to-the-Curb) ha creado una oportunidad única para infraestructura Smart Energy. Según datos de FTTH Council Americas 2024, la penetración de fibra en zonas urbanas de América Latina alcanzó 38\% en 2023 (vs 22\% en 2020), con proyecciones de 52\% para 2026. Esta infraestructura proporciona:
+
+\begin{itemize}
+    \item \textbf{Capacidad ilimitada}: 2.5 Gbps downstream GPON compartidos entre 32 ONTs, suficiente para >10,000 medidores con lecturas cada 15 minutos.
+    \item \textbf{Latencia mínima}: 2-5 ms ONT-OLT, eliminando cuellos de botella WAN típicos de enlaces celulares (25-50 ms LTE Cat-M1).
+    \item \textbf{Costos operativos reducidos}: \$0 post-deployment vs \$8-12/mes por enlace LTE, representando ahorro de \$96-144/año por gateway en despliegues masivos.
+\end{itemize}
+
+La llegada de fibra "al barrio" (distancia típica ONT-medidores <500m) reduce dramáticamente los costos de última milla, haciendo viable tecnologías de menor alcance pero mayor eficiencia como HaLow para el salto final gateway-medidores.
+
+\subsection{Wi-Fi HaLow: Tecnología Madura para Última Milla}
+
+IEEE 802.11ah (HaLow) emerge como tecnología de transición óptima entre fibra óptica y redes mesh de campo por tres ventajas técnicas:
+
+\begin{itemize}
+    \item \textbf{Alcance extendido}: 1 km línea de vista típico vs 100m WiFi 2.4 GHz, habilitado por propagación sub-GHz (902-928 MHz) con atenuación ~10 dB menor en obstáculos.
+    \item \textbf{Throughput escalado}: MCS7 @ 4 MHz proporciona 4 Mbps, suficiente para agregar 10 Border Routers Thread con 100 medidores c/u (tráfico agregado ~2 Mbps con compresión edge).
+    \item \textbf{Madurez comercial}: Chipsets Morse Micro MM6108 disponibles comercialmente desde 2023, con routers industriales (Vantron RAH305, \$600-800) validando viabilidad de deployment.
+\end{itemize}
+
+HaLow elimina necesidad de cableado estructurado hacia cada gateway edge (ahorro CAPEX -\$2,500 vs Ethernet PoE por ubicación), habilitando deployment ágil en zonas sin infraestructura de red existente.
+
+\subsection{Edge Computing: Procesamiento Local e IA Integrada}
+
+La disponibilidad de hardware edge económico (Raspberry Pi CM4: \$35-45, x86 mini-PCs: \$120-180) con capacidad de ejecutar stacks Docker completos habilita procesamiento local que reduce dramáticamente dependencia de cloud:
+
+\begin{itemize}
+    \item \textbf{Reducción tráfico WAN}: 72\% mediante filtrado y agregación local (24.6 GB/día → 6.9 GB/día para 100 medidores), reduciendo costos data transfer AWS de \$400/mes a \$112/mes.
+    \item \textbf{Operación autónoma}: ThingsBoard Edge + TimescaleDB local permite operation >72 horas sin conectividad WAN, crucial para cumplir SLA >99.9\% en zonas con infraestructura inestable.
+    \item \textbf{IA local}: Modelos LLM ligeros (Llama 3.2 3B, 2GB RAM) ejecutando en gateway proporcionan detección anomalías <500ms latencia sin round-trip cloud, habilitando respuestas en tiempo real.
+\end{itemize}
+
+\subsection{Sinergia de Arquitectura Híbrida}
+
+La convergencia de fibra (backhaul), HaLow (último salto) y edge computing (inteligencia local) crea efectos de red sinérgicos:
+
+\textbf{Optimización costos}: Fibra GPON amortigua CAPEX en 5-7 años con \$0 OPEX post-deployment; HaLow elimina \$2,500/gateway de cableado; edge computing reduce cloud costs 68\% (\$0.012/medidor/mes vs \$0.038 cloud-centric puro).
+
+\textbf{Escalabilidad}: Arquitectura soporta 100-500 medidores/km² sin saturación: fibra proporciona "infinita" capacidad agregada, HaLow soporta 8,191 clientes/AP según estándar, edge gateway procesa 10,000 msg/s local.
+
+\textbf{Resiliencia}: Triple redundancia (fibra primary, LTE secondary, edge buffer 72h) logra 99.99\% uptime vs 99.91\% enlace único, reduciendo downtime de 8h/año a 52min/año.
+
+Esta justificación establece que la arquitectura propuesta no es meramente una suma de tecnologías, sino una integración estratégica que maximiza fortalezas individuales (capacidad fibra, alcance HaLow, inteligencia edge) mientras mitiga debilidades mutuas (costo última milla, throughput limitado, latencia cloud).
+
 \section{Hipótesis}
 
 \subsection{Hipótesis General}
