@@ -136,6 +136,57 @@ Procedimiento de instalación ejecutado en 30 nodos:
 
 \textbf{Tiempo promedio instalación:} 8 minutos/nodo (total 240 minutos para 30 nodos)
 
+\subsection{Justificación Selección Thread 1.4.0 vs Zigbee 3.0}
+\label{sec:impl-thread-justification}
+
+La arquitectura seleccionó Thread 1.4.0 sobre Zigbee 3.0 tras análisis comparativo evaluando 9 criterios técnicos:
+
+\begin{table}[H]
+\centering
+\caption{Análisis comparativo Thread vs Zigbee para AMI}
+\label{tab:impl-thread-vs-zigbee}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{|l|c|c|p{6cm}|}
+\hline
+\rowcolor{gray!20}
+\textbf{Criterio} & \textbf{Thread 1.4.0} & \textbf{Zigbee 3.0} & \textbf{Análisis y Justificación} \\\\
+\hline
+\textbf{IPv6 nativo E2E} & Sí & No & \textbf{Thread gana}: IPv6 end-to-end elimina NAT/gateway traducción Zigbee, reduce latencia 40\% (150 ms → 90 ms) \\\\
+\hline
+\textbf{IEEE 2030.5 compliance} & Directo & Gateway & Thread implementa IEEE 2030.5 nativamente, Zigbee requiere ALG (Application Layer Gateway) \\\\
+\hline
+\textbf{Latencia típica} & 50-90 ms & 100-150 ms & Thread menor latencia por IPv6 nativo y ausencia gateway traducción \\\\
+\hline
+\textbf{Consumo energético} & 5-10 mA sleep & 3-5 mA sleep & Zigbee gana, pero no crítico (nodos alimentados desde medidor 5V) \\\\
+\hline
+\textbf{Costo módulos (2024)} & \$5-8 & \$3-5 & Zigbee 40\% más económico, pero Thread elimina ALG (\$200-400 ahorro) \\\\
+\hline
+\textbf{Seguridad commissioning} & PAKE (ECC P-256) & Install Code & PAKE resiste ataques diccionario offline \\\\
+\hline
+\textbf{Ecosistema} & Emergente (Matter) & Maduro (15 años) & Thread respaldado Google, Apple, Amazon (Thread Group) \\\\
+\hline
+\end{tabular}%
+}
+\end{table}
+
+\textbf{Decisión final: Thread 1.4.0} por ventajas críticas:
+\begin{enumerate}
+    \item \textbf{IPv6 E2E}: Elimina gateway traducción, reduce latencia 40\% (150 ms → 90 ms)
+    \item \textbf{IEEE 2030.5 nativo}: Cumplimiento directo Smart Energy Profile 2.0 sin ALG
+    \item \textbf{TCO equivalente}: Costo adicional módulos compensado por eliminación ALG
+\end{enumerate}
+
+\textbf{Parámetros Thread Network piloto:}
+\begin{itemize}
+    \item \textbf{PAN ID:} 0xABCD, \textbf{Extended PAN ID:} 0x1234567890ABCDEF
+    \item \textbf{Network Name:} ``AMI-Pilot-Q4-2024''
+    \item \textbf{Channel:} 25 (2.475 GHz, sin interferencia WiFi canales 1-11)
+    \item \textbf{Network Key:} 128-bit AES (provisionada via BLE commissioning PAKE)
+    \item \textbf{TX Power:} +4 dBm (balance alcance vs consumo)
+\end{itemize}
+
+\textbf{Topología:} 30 nodos End Devices → 1 DCU (Border Router) → Gateway. Máximo 1 hop Thread (latencia medida 8 ms). Escalado a 100 medidores requiere 2 DCUs (50 medidores c/u, límite 64 neighbors ESP32-C6).
+
 \section{Implementación Nivel 3: Gateway de Borde Raspberry Pi + Docker Edge}
 \label{sec:impl-nivel3-gateway}
 
@@ -219,68 +270,17 @@ services:
 
 \textbf{Validación piloto:} Stack Docker operó 90 días sin memory leaks (varianza RAM <5\%), CPU promedio 42\% bajo carga normal (30 medidores @ 15 min), pico 67\% stress test (60s polling).
 
-\section{Configuración de Redes}
-\label{sec:impl-redes}
+\section{Implementación Nivel 2: Infraestructura Red de Barrio HaLow}
+\label{sec:impl-nivel2-halow}
 
-\subsection{Configuración Red Thread}
-\label{sec:impl-config-thread}
+El Nivel 2 proporciona conectividad de última milla entre gateways edge (Nivel 3) y múltiples Border Routers Thread mediante tecnología Wi-Fi HaLow (IEEE 802.11ah) operando en banda sub-GHz 902-928 MHz. La implementación utiliza router MikroTik hAP ax² con módulos HaLow Alfa Tube-AHM.
 
-\subsubsection{Decisión Thread vs Zigbee}
+\subsection{Router MikroTik hAP ax² + Módulos HaLow}
+\label{sec:impl-halow-hardware}
 
-La arquitectura seleccionó Thread 1.4.0 sobre Zigbee 3.0 tras análisis comparativo detallado evaluando 9 criterios técnicos:
+\subsubsection{Especificaciones MikroTik hAP ax²}
 
-\begin{table}[H]
-\centering
-\caption{Análisis comparativo Thread vs Zigbee para AMI}
-\label{tab:impl-thread-vs-zigbee}
-\resizebox{\textwidth}{!}{%
-\begin{tabular}{|l|c|c|p{6cm}|}
-\hline
-\rowcolor{gray!20}
-\textbf{Criterio} & \textbf{Thread 1.4.0} & \textbf{Zigbee 3.0} & \textbf{Análisis y Justificación} \\
-\hline
-\textbf{IPv6 nativo E2E} & Sí & No & \textbf{Thread gana}: Direccionamiento IPv6 end-to-end elimina NAT/gateway traducción Zigbee 16-bit, reduce latencia 40-60\% \\
-\hline
-\textbf{IEEE 2030.5 compliance} & Directo & Gateway & Thread implementa IEEE 2030.5 nativamente, Zigbee requiere ALG (Application Layer Gateway) \\
-\hline
-\textbf{Latencia típica} & 50-90 ms & 100-150 ms & Thread menor latencia por IPv6 nativo y ausencia gateway traducción \\
-\hline
-\textbf{Consumo energético} & 5-10 mA sleep & 3-5 mA sleep & Zigbee gana, pero no crítico (nodos alimentados desde medidor 5V) \\
-\hline
-\textbf{Costo módulos (2024)} & \$5-8 & \$3-5 & Zigbee 40\% más económico, pero Thread elimina ALG (\$200-400 ahorro) \\
-\hline
-\textbf{Seguridad commissioning} & PAKE (ECC P-256) & Install Code & PAKE resiste ataques diccionario offline \\
-\hline
-\textbf{Ecosistema} & Emergente (Matter) & Maduro (15 años) & Thread respaldado Google, Apple, Amazon (Thread Group) \\
-\hline
-\end{tabular}%
-}
-\end{table}
-
-\textbf{Decisión final: Thread 1.4.0}
-
-Ventajas críticas Thread:
-\begin{enumerate}
-    \item \textbf{IPv6 E2E}: Elimina gateway traducción, reduce latencia 40\% (150 ms → 90 ms)
-    \item \textbf{IEEE 2030.5 nativo}: Cumplimiento directo Smart Energy Profile 2.0 sin ALG
-    \item \textbf{TCO equivalente}: Costo adicional módulos compensado por eliminación ALG
-\end{enumerate}
-
-\subsubsection{Parámetros Thread Network}
-
-Configuración Thread implementada en piloto:
-
-\begin{itemize}
-    \item \textbf{PAN ID:} 0xABCD (único por deployment)
-    \item \textbf{Extended PAN ID:} 0x1234567890ABCDEF
-    \item \textbf{Network Name:} ``AMI-Pilot-Q4-2024''
-    \item \textbf{Channel:} 25 (2.475 GHz, sin interferencia WiFi canales 1-11)
-    \item \textbf{Network Key:} 128-bit AES (provisionada via BLE commissioning PAKE)
-    \item \textbf{TX Power:} +4 dBm (balance alcance vs consumo)
-    \item \textbf{Commissioning:} BLE + QR code scan (ECC P-256 PAKE resiste diccionario)
-\end{itemize}
-
-\textbf{Topología piloto:} 30 nodos End Devices → 1 DCU (Border Router) → Gateway. Máximo 1 hop Thread (latencia medida 8 ms). Escalado a 100 medidores requiere 2 DCUs (50 medidores c/u, límite 64 neighbors ESP32-C6).\n\n\section{Implementación Nivel 2: Infraestructura Red de Barrio HaLow}\n\label{sec:impl-nivel2-halow}\n\nEl Nivel 2 proporciona conectividad de última milla entre gateways edge (Nivel 3) y múltiples Border Routers Thread mediante tecnología Wi-Fi HaLow (IEEE 802.11ah) operando en banda sub-GHz 902-928 MHz. La implementación utiliza router MikroTik hAP ax² con módulos HaLow Alfa Tube-AHM.\n\n\subsection{Router MikroTik hAP ax² + Módulos HaLow}\n\label{sec:impl-halow-hardware}\n\n\subsubsection{Especificaciones MikroTik hAP ax²}\n\n\begin{itemize}\n    \item \textbf{CPU:} Qualcomm IPQ-6010 quad-core ARM Cortex-A53 @ 864 MHz\n    \item \textbf{RAM:} 512 MB DDR3\n    \item \textbf{Almacenamiento:} 128 MB NAND Flash\n    \item \textbf{Radios WiFi:} \n        \begin{itemize}\n        \item 2.4 GHz: 802.11ax 2×2 MIMO (574 Mbps máx)\n        \item 5 GHz: 802.11ax 2×2 MIMO (1201 Mbps máx)\n        \end{itemize}\n    \item \textbf{Ethernet:} 5× Gigabit (1× WAN, 4× LAN)\n    \item \textbf{USB:} 1× USB 3.0 (módulos HaLow Alfa Tube-AHM)\n    \item \textbf{OS:} RouterOS 7.13 (Linux kernel 5.6.3)\n    \item \textbf{Consumo:} 12V @ 2A máx (24W), promedio 8W operación\n\end{itemize}\n\n\subsubsection{Módulos HaLow Alfa Tube-AHM (Morse Micro MM6108)}\n\n\textbf{Especificaciones chipset MM6108:}\n\begin{itemize}\n    \item \textbf{Estándar:} IEEE 802.11ah-2016 compliant\n    \item \textbf{Frecuencia:} 902-928 MHz (USA), configurado canal 11 (915 MHz)\n    \item \textbf{Bandwidth:} 1/2/4/8 MHz seleccionable, implementado 4 MHz (balance alcance/throughput)\n    \item \textbf{Potencia TX:} +23 dBm máx (200 mW), configurado +20 dBm (100 mW)\n    \item \textbf{Sensibilidad RX:} -96 dBm @ MCS0 1 MHz, -91 dBm @ MCS7 4 MHz\n    \item \textbf{MCS soportados:} MCS0-MCS10, configurado MCS7 (16-QAM, rate 1/2, 4 Mbps @ 4 MHz)\n    \item \textbf{Alcance medido:} 1.2 km LOS (line-of-sight), 450 m NLOS (obstrucciones)\n    \item \textbf{Interfaz:} USB 2.0 High-Speed (480 Mbps), driver Linux mac80211\n\end{itemize}\n\n\subsection{Configuración Red HaLow}\n\label{sec:impl-config-halow}\n\n\subsubsection{Parámetros Operación 4 MHz}
+\begin{itemize}\n    \item \textbf{CPU:} Qualcomm IPQ-6010 quad-core ARM Cortex-A53 @ 864 MHz\n    \item \textbf{RAM:} 512 MB DDR3\n    \item \textbf{Almacenamiento:} 128 MB NAND Flash\n    \item \textbf{Radios WiFi:} \n        \begin{itemize}\n        \item 2.4 GHz: 802.11ax 2×2 MIMO (574 Mbps máx)\n        \item 5 GHz: 802.11ax 2×2 MIMO (1201 Mbps máx)\n        \end{itemize}\n    \item \textbf{Ethernet:} 5× Gigabit (1× WAN, 4× LAN)\n    \item \textbf{USB:} 1× USB 3.0 (módulos HaLow Alfa Tube-AHM)\n    \item \textbf{OS:} RouterOS 7.13 (Linux kernel 5.6.3)\n    \item \textbf{Consumo:} 12V @ 2A máx (24W), promedio 8W operación\n\end{itemize}\n\n\subsubsection{Módulos HaLow Alfa Tube-AHM (Morse Micro MM6108)}\n\n\textbf{Especificaciones chipset MM6108:}\n\begin{itemize}\n    \item \textbf{Estándar:} IEEE 802.11ah-2016 compliant\n    \item \textbf{Frecuencia:} 902-928 MHz (USA), configurado canal 11 (915 MHz)\n    \item \textbf{Bandwidth:} 1/2/4/8 MHz seleccionable, implementado 4 MHz (balance alcance/throughput)\n    \item \textbf{Potencia TX:} +23 dBm máx (200 mW), configurado +20 dBm (100 mW)\n    \item \textbf{Sensibilidad RX:} -96 dBm @ MCS0 1 MHz, -91 dBm @ MCS7 4 MHz\n    \item \textbf{MCS soportados:} MCS0-MCS10, configurado MCS7 (16-QAM, rate 1/2, 4 Mbps @ 4 MHz)\n    \item \textbf{Alcance medido:} 1.2 km LOS (line-of-sight), 450 m NLOS (obstrucciones)\n    \item \textbf{Interfaz:} USB 2.0 High-Speed (480 Mbps), driver Linux mac80211\n\end{itemize}\n\n\subsection{Configuración Red HaLow}\n\label{sec:impl-config-halow}\n\n\subsubsection{Parámetros Operación 4 MHz}
 
 \begin{itemize}
     \item \textbf{Banda:} 902-928 MHz ISM (USA), 917-923.5 MHz (Colombia, Resolución 711 ANE 2020)
