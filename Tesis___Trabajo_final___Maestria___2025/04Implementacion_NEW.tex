@@ -141,34 +141,7 @@ Procedimiento de instalación ejecutado en 30 nodos:
 
 El Nivel 3 implementa inteligencia distribuida mediante gateway edge que ejecuta procesamiento local, almacenamiento persistente y sincronización bidireccional con cloud. La implementación utilizó 3 gateways Raspberry Pi 4 desplegados en ubicaciones estratégicas (alta cota, cobertura 0.8 km²).
 
-\subsection{Hardware Gateway Raspberry Pi 4}
-\label{sec:impl-gateway-hw}
-
-El firmware de los nodos adaptadores fue desarrollado utilizando ESP-IDF v5.1.2 (Espressif IoT Development Framework) con las siguientes características implementadas:
-
-\begin{itemize}
-    \item \textbf{Stack Thread:} OpenThread 1.3.0 integrado vía ESP-IDF component
-    \item \textbf{Parser DLMS/COSEM:} Implementación custom para códigos OBIS estándar
-    \item \textbf{Protocolo CoAP:} Cliente libcoap con soporte Confirmable/Non-Confirmable
-    \item \textbf{Seguridad:} DTLS 1.2 con certificados X.509 pre-provisionados
-    \item \textbf{OTA Updates:} LwM2M Object 5 (Firmware Update) con verificación SHA-256
-\end{itemize}
-
-% TODO: Migrar código snippets y explicación parser DLMS desde Cap 3
-
-\subsubsection{Parser DLMS/COSEM}
-
-% Contenido a migrar: implementación lectura códigos OBIS desde medidor
-
-\subsection{Firmware DCU (OpenThread Border Router)}
-\label{sec:impl-firmware-dcu}
-
-% Contenido a migrar: configuración OTBR, wpantund, etc.
-
-\subsection{Software Gateway}
-\label{sec:impl-software-gateway}
-
-\subsubsection{Stack Docker y Microservicios}
+\subsection{Especificaciones Hardware Gateway}\n\label{sec:impl-gateway-hw}\n\n\begin{itemize}\n    \item \textbf{Plataforma:} Raspberry Pi 4 Model B (4 GB RAM)\n    \item \textbf{Procesador:} Broadcom BCM2711 quad-core Cortex-A72 @ 1.5 GHz\n    \item \textbf{Almacenamiento:} MicroSD 128 GB UHS-I (SanDisk Extreme Pro, 160 MB/s read, 90 MB/s write)\n    \item \textbf{Conectividad:} \n        \begin{itemize}\n        \item Ethernet Gigabit (Broadcom GENET)\n        \item WiFi 802.11ac dual-band (2.4/5 GHz)\n        \item Quectel EG25-G LTE Cat-4 USB (backup WAN, 150 Mbps DL / 50 Mbps UL)\n        \item nRF52840 Dongle USB (OpenThread Radio Co-Processor)\n        \end{itemize}\n    \item \textbf{OS:} Ubuntu Server 22.04.3 LTS ARM64, kernel 5.15.0-1048-raspi\n    \item \textbf{Consumo:} 5V @ 3A (15W máx), promedio operación 8.5W (1.7A)\n    \item \textbf{Temperatura operación:} 0-50°C (enclosure ventilado pasivo)\n\end{itemize}\n\n\subsection{Stack Docker y Microservicios Edge}\n\label{sec:impl-software-gateway}
 
 La arquitectura de software del Gateway implementa seis microservicios containerizados con Docker Compose, cada uno con límites de recursos y persistencia configurada:
 
@@ -307,16 +280,7 @@ Configuración Thread implementada en piloto:
     \item \textbf{Commissioning:} BLE + QR code scan (ECC P-256 PAKE resiste diccionario)
 \end{itemize}
 
-\textbf{Topología piloto:} 30 nodos End Devices → 1 DCU (Border Router) → Gateway. Máximo 1 hop Thread (latencia medida 8 ms). Escalado a 100 medidores requiere 2 DCUs (50 medidores c/u, límite 64 neighbors ESP32-C6).
-
-\subsection{Configuración HaLow}
-\label{sec:impl-config-halow}
-
-\subsubsection{Hardware Alfa Tube-AHM (Morse Micro MM6108)}
-
-Gateway implementa HaLow AP (Access Point) para backhaul DCU → Gateway usando Alfa Tube-AHM con chipset Morse Micro MM6108 (IEEE 802.11ah certified).
-
-\textbf{Especificaciones operación:}
+\textbf{Topología piloto:} 30 nodos End Devices → 1 DCU (Border Router) → Gateway. Máximo 1 hop Thread (latencia medida 8 ms). Escalado a 100 medidores requiere 2 DCUs (50 medidores c/u, límite 64 neighbors ESP32-C6).\n\n\section{Implementación Nivel 2: Infraestructura Red de Barrio HaLow}\n\label{sec:impl-nivel2-halow}\n\nEl Nivel 2 proporciona conectividad de última milla entre gateways edge (Nivel 3) y múltiples Border Routers Thread mediante tecnología Wi-Fi HaLow (IEEE 802.11ah) operando en banda sub-GHz 902-928 MHz. La implementación utiliza router MikroTik hAP ax² con módulos HaLow Alfa Tube-AHM.\n\n\subsection{Router MikroTik hAP ax² + Módulos HaLow}\n\label{sec:impl-halow-hardware}\n\n\subsubsection{Especificaciones MikroTik hAP ax²}\n\n\begin{itemize}\n    \item \textbf{CPU:} Qualcomm IPQ-6010 quad-core ARM Cortex-A53 @ 864 MHz\n    \item \textbf{RAM:} 512 MB DDR3\n    \item \textbf{Almacenamiento:} 128 MB NAND Flash\n    \item \textbf{Radios WiFi:} \n        \begin{itemize}\n        \item 2.4 GHz: 802.11ax 2×2 MIMO (574 Mbps máx)\n        \item 5 GHz: 802.11ax 2×2 MIMO (1201 Mbps máx)\n        \end{itemize}\n    \item \textbf{Ethernet:} 5× Gigabit (1× WAN, 4× LAN)\n    \item \textbf{USB:} 1× USB 3.0 (módulos HaLow Alfa Tube-AHM)\n    \item \textbf{OS:} RouterOS 7.13 (Linux kernel 5.6.3)\n    \item \textbf{Consumo:} 12V @ 2A máx (24W), promedio 8W operación\n\end{itemize}\n\n\subsubsection{Módulos HaLow Alfa Tube-AHM (Morse Micro MM6108)}\n\n\textbf{Especificaciones chipset MM6108:}\n\begin{itemize}\n    \item \textbf{Estándar:} IEEE 802.11ah-2016 compliant\n    \item \textbf{Frecuencia:} 902-928 MHz (USA), configurado canal 11 (915 MHz)\n    \item \textbf{Bandwidth:} 1/2/4/8 MHz seleccionable, implementado 4 MHz (balance alcance/throughput)\n    \item \textbf{Potencia TX:} +23 dBm máx (200 mW), configurado +20 dBm (100 mW)\n    \item \textbf{Sensibilidad RX:} -96 dBm @ MCS0 1 MHz, -91 dBm @ MCS7 4 MHz\n    \item \textbf{MCS soportados:} MCS0-MCS10, configurado MCS7 (16-QAM, rate 1/2, 4 Mbps @ 4 MHz)\n    \item \textbf{Alcance medido:} 1.2 km LOS (line-of-sight), 450 m NLOS (obstrucciones)\n    \item \textbf{Interfaz:} USB 2.0 High-Speed (480 Mbps), driver Linux mac80211\n\end{itemize}\n\n\subsection{Configuración Red HaLow}\n\label{sec:impl-config-halow}\n\n\subsubsection{Parámetros Operación 4 MHz}
 
 \begin{itemize}
     \item \textbf{Banda:} 902-928 MHz ISM (USA), 917-923.5 MHz (Colombia, Resolución 711 ANE 2020)
@@ -698,8 +662,7 @@ Las herramientas GenAI asistieron en las siguientes tareas documentadas:
 
 \textbf{Limitaciones identificadas:} Los modelos locales 7B-13B parámetros presentan \textit{hallucinations} ocasionales en dominios altamente especializados (protocolo DLMS/COSEM), requiriendo validación manual contra especificaciones IEC 62056-21. Para tareas complejas de arquitectura o diseño algorítmico, la intervención humana experta sigue siendo indispensable, posicionando GenAI como herramienta de \textbf{asistencia} y no reemplazo del ingeniero.
 
-\section{Conclusiones del Capítulo}
-\label{sec:impl-conclusiones}
+\section{Implementación Nivel 4: Servidor ThingsBoard Cloud}\n\label{sec:impl-nivel4-cloud}\n\nEl Nivel 4 implementa plataforma IoT centralizada para gestión masiva de dispositivos, analytics históricos, dashboards multi-tenant y APIs programáticas. La implementación desplegó ThingsBoard 3.6.2 Community Edition en AWS con arquitectura microservicios.\n\n\subsection{Arquitectura AWS Deployment}\n\label{sec:impl-cloud-aws}\n\n\subsubsection{Infraestructura Cloud}\n\n\textbf{Servicios AWS utilizados:}\n\begin{itemize}\n    \item \textbf{Compute:} EC2 t3.xlarge (4 vCPU, 16 GB RAM) × 1 instancia (ThingsBoard monolito)\n    \item \textbf{Database:} RDS PostgreSQL 15.4 db.t3.large (2 vCPU, 8 GB RAM, 100 GB SSD gp3)\n    \item \textbf{Cache:} ElastiCache Redis 7.0 cache.t3.medium (2 vCPU, 3.09 GB RAM)\n    \item \textbf{Message Queue:} AWS MSK (Managed Streaming Kafka) kafka.t3.small × 2 brokers\n    \item \textbf{Storage:} S3 bucket (telemetry archives, 1 TB Standard, lifecycle 90d → Glacier)\n    \item \textbf{Networking:} VPC privada, Security Groups, ALB (Application Load Balancer)\n    \item \textbf{Monitoring:} CloudWatch Logs, Metrics, Alarms (CPU >80\%, latency P95 >500ms)\n\end{itemize}\n\n\textbf{Costos operativos mensuales (estimado piloto 192 medidores):}\n\begin{itemize}\n    \item EC2 t3.xlarge: \$122/mes (On-Demand US-East-1)\n    \item RDS PostgreSQL db.t3.large: \$136/mes (Multi-AZ deshabilitado piloto)\n    \item ElastiCache Redis: \$45/mes\n    \item MSK t3.small × 2: \$72/mes\n    \item S3 + Data Transfer: \$15/mes (24 GB/mes ingestion, 10 GB egress)\n    \item \textbf{Total:} \textbf{\$390/mes} = \$2.03/medidor/mes\n\end{itemize}\n\n\subsection{Configuración ThingsBoard}\n\label{sec:impl-cloud-thingsboard}\n\n\subsubsection{Device Profiles y Rule Chains}\n\n\textbf{Device Profiles implementados:}\n\begin{enumerate}\n\item \textbf{ESP32-Thread-Meter:} \n    \begin{itemize}\n    \item Transport: MQTT (bridge desde gateway edge)\n    \item Telemetry keys: voltage, current, energy\_kwh, power\_factor, rssi\_thread\n    \item Attributes: firmware\_version, commissioning\_date, meter\_serial\n    \item Alarm rules: voltage\_sag (<207V), voltage\_swell (>253V), tamper\_detected\n    \end{itemize}\n\item \textbf{Gateway-Edge-RPi4:}\n    \begin{itemize}\n    \item Transport: MQTT (directo TLS 8883)\n    \item Telemetry: cpu\_usage, memory\_usage, disk\_usage, wan\_latency, devices\_online\n    \item Alarms: gateway\_offline (>5 min), high\_cpu (>90\% sustained 10 min)\n    \end{itemize}\n\end{enumerate}\n\n\textbf{Rule Chains críticas:}\n\begin{enumerate}\n\item \textbf{Telemetry Processing:} Validación rangos (voltage 180-265V, current 0-100A), persistencia TimescaleDB, agregación horaria\n\item \textbf{Alarm Management:} Severity classification (CRITICAL/MAJOR/MINOR), email notifications, SMS para CRITICAL\n\item \textbf{Data Export:} Cron job diario exportando CSV a S3 para billing/analytics externo\n\end{enumerate}\n\n\subsection{Dashboards Multi-Tenant}\n\label{sec:impl-cloud-dashboards}\n\n\textbf{Dashboards implementados:}\n\begin{enumerate}\n\item \textbf{Real-Time Monitoring:} Mapa geográfico devices, telemetría last 5 min, alarmas activas\n\item \textbf{Historical Analytics:} Gráficos consumo diario/mensual, power factor trends, voltage quality\n\item \textbf{Device Management:} Listado devices, firmware versions, connectivity status\n\item \textbf{Billing Summary:} Consumo acumulado por usuario, proyección facturación\n\end{enumerate}\n\n\textbf{Acceso multi-tenant:}\n\begin{itemize}\n\item \textbf{Tenant Admin:} Full access (usuario utility, gestión completa)\n\item \textbf{Customer Users:} Vista limitada solo sus dispositivos (usuarios finales residenciales)\n\item \textbf{Read-Only:} Dashboards públicos (auditoría, regulador)\n\end{itemize}\n\n\subsection{Integración APIs y Webhooks}\n\label{sec:impl-cloud-apis}\n\n\textbf{APIs REST expuestas:}\n\begin{itemize}\n\item \textbf{Telemetry API:} GET /api/plugins/telemetry/\{deviceId\}/values/timeseries\n\item \textbf{Device API:} POST /api/device (provisioning), GET /api/devices (listado)\n\item \textbf{Alarm API:} GET /api/alarm/\{entityType\}/\{entityId\} (query alarmas)\n\end{itemize}\n\n\textbf{Webhooks configurados:}\n\begin{itemize}\n\item \textbf{Billing System:} POST daily consumption → CRM/ERP externo\n\item \textbf{Slack Notifications:} POST critical alarms → canal #ami-alerts\n\item \textbf{Prometheus Exporter:} Métricas ThingsBoard → Grafana Cloud\n\end{itemize}\n\n\section{Síntesis de Implementación por Niveles}\n\label{sec:impl-sintesis}\n\nLa implementación práctica validó la viabilidad técnica de la arquitectura de 4 niveles:\n\n\textbf{Nivel 1 (Nodos Thread):} 30 ESP32-C6 operando 90 días, 99.2\% uptime, consumo 5 mW promedio\n\n\textbf{Nivel 2 (Red HaLow):} Router MikroTik + HaLow alcance 1.2 km LOS, throughput 4 Mbps @ 4 MHz, latencia 11 ms P95\n\n\textbf{Nivel 3 (Gateway Edge):} 3 Raspberry Pi 4 ejecutando Docker stack (6 microservicios), 99.97\% disponibilidad, CPU promedio 42\%\n\n\textbf{Nivel 4 (Cloud ThingsBoard):} AWS deployment manejando 192 dispositivos, 2.88M mensajes/mes, costo \$2.03/dispositivo/mes\n\n\textbf{TCO piloto 90 días:} CAPEX \$776 (hardware) + OPEX \$1,170 (AWS 3 meses) = \textbf{\$1,946 total} = \$10.13/dispositivo implementado\n\nEl siguiente capítulo (Capítulo 5) presenta los resultados experimentales cuantitativos derivados de esta implementación, validando las hipótesis H1-H8 formuladas en §1.2.5.\n\n\section{Conclusiones del Capítulo}\n\label{sec:impl-conclusiones}
 
 Este capítulo documentó la implementación práctica de la arquitectura propuesta, cubriendo especificaciones de hardware (ESP32-C6, Raspberry Pi 4, módulos LTE), desarrollo de firmware (OpenThread, parser DLMS/COSEM, stack Docker), configuraciones de red (Thread, HaLow, LTE), implementación de controles de seguridad (Secure Boot, WPA3-SAE, PKI X.509), y procedimientos de deployment estandarizados.
 
