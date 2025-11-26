@@ -1,0 +1,61 @@
+\section{Limitaciones del Trabajo y Futuras Líneas de Investigación}
+
+Esta sección documenta las principales limitaciones del trabajo presentado, con el objetivo de contextualizar los alcances y facilitar la reproducibilidad de resultados, así como identificar oportunidades de extensión para investigaciones futuras.
+
+\subsection{Limitaciones del Piloto Experimental}
+
+\subsubsection{Escala Reducida (30 Medidores)}
+
+El piloto se limitó a 30 medidores inteligentes durante 90 días (Q4 2024). Si bien la extrapolación a 100 medidores se validó mediante análisis de capacidad (§4.11.2), la validación experimental directa de deployments $>$100 medidores queda como trabajo futuro. Limitaciones específicas:
+
+\begin{itemize}
+    \item \textbf{Topología simplificada}: Piloto en edificio 4 pisos con máximo 3 hops Thread. Deployments urbanos reales pueden tener topologías $>$5 hops, aumentando latencia Thread de 15 ms medidos a potencialmente 30+ ms.
+    
+    \item \textbf{Efectos long-term no evaluados}: 90 días insuficientes para evaluar: (1) Memory leaks en servicios containerizados, (2) Fragmentación Thread routing table, (3) Degradación baterías nodos por temperatura extrema (piloto operó 18-28°C, spec -20 a +60°C), (4) Drift RTC sin sincronización GPS.
+    
+    \item \textbf{Interferencia controlada}: Zona residencial con 12 APs WiFi vecinos (interferencia moderada). Zonas urbanas densas ($>$50 APs) podrían causar congestión HaLow más severa que 99.8\% disponibilidad medida.
+\end{itemize}
+
+\subsubsection{Vendor Lock-In en Componentes Críticos}
+
+\begin{itemize}
+    \item \textbf{Medidor Itron SL7000}: Selección basada en disponibilidad comercial Q4 2024 Colombia. DLMS/COSEM garantiza interoperabilidad teórica, pero códigos OBIS propietarios (e.g., eventos tamper específicos fabricante) requieren firmware adaptado por modelo.
+    
+    \item \textbf{Chipset HaLow Morse Micro MM6108}: Único fabricante con módulos USB comerciales disponibles (GW16167). Alternativas (Newracom NRC7292, Silex SX-NEWAH) sin drivers Linux mainline estables. Dependencia de roadmap único vendor para futuras actualizaciones (MM8108 proyectado 2026).
+    
+    \item \textbf{ESP32-C6 OpenThread Stack}: Implementación específica ESP-IDF 5.1. Thread 1.4.0 requiere ESP-IDF 5.3 (beta en Nov 2024), limitando upgrade inmediato.
+\end{itemize}
+
+\subsection{Limitaciones de la Arquitectura Propuesta}
+
+\subsubsection{Centralización en Gateway Único}
+
+Arquitectura actual con 1 Gateway (Raspberry Pi 4) introduce single point of failure (SPOF) para los 100 medidores conectados. Si bien disponibilidad Gateway medida fue 99.95\%, fallo catastrófico (e.g., hardware damage) requiere intervención manual on-site. Mitigación propuesta (dual Gateway con VRRP, Anexo F.2) no implementada en piloto por restricción presupuesto.
+
+\subsubsection{Seguridad: Ausencia de Hardware Security Module (HSM) Dedicado}
+
+Claves criptográficas (Thread Network Key, MQTT credentials, certificados X.509) almacenadas en TPM 2.0 software emulado en Raspberry Pi. Para deployments $>$1,000 nodos o infraestructura crítica regulada (e.g., NERC CIP para utilities USA), HSM hardware dedicado (Thales Luna, AWS CloudHSM) requerido pero no evaluado en esta tesis (costo \$5K-20K por unidad).
+
+\subsubsection{Escalabilidad $>$250 Nodos por Gateway}
+
+Thread protocol limite 250 devices/partition. Arquitectura propuesta asume múltiples DCUs (10 DCUs × 25 nodos = 250 total por Gateway). Escalabilidad $>$250 requiere múltiples Gateways con coordinación (no implementado), o Thread Backbone Router multi-partition (funcionalidad experimental en OpenThread, no certificado Thread Group).
+
+\subsection{Limitaciones del Análisis Económico}
+
+\begin{itemize}
+    \item \textbf{Precios unitarios 2024 no indexados}: Análisis TCO usa precios Nov 2024 (\$85 Itron, \$150 MM6108, \$0.70 LTE Cat-M1). Inflación no proyectada en análisis 10 años. Chipsets HaLow proyectados bajar 40\% para 2027 (economías de escala) pero no reflejado en cálculo conservador.
+    
+    \item \textbf{Sin considerar revenue uplift}: TCO calcula costos de deployment pero no cuantifica ingresos incrementales por: (1) Reducción pérdidas no técnicas (fraude), (2) Demand Response revenue (peak shaving), (3) Prepayment billing (reduce cartera vencida). Literatura estima 15-25\% ROI uplift no modelado.
+\end{itemize}
+
+\subsection{Trabajo Futuro Recomendado}
+
+\begin{enumerate}
+    \item \textbf{Deployment multi-sitio}: Validar arquitectura en 3 ubicaciones (urbano denso, suburbano, rural) para caracterizar impacto interferencia y topología en SLA. Duración: 12 meses, 200 medidores/sitio.
+    
+    \item \textbf{Evaluación Thread 1.4.0}: Upgrade piloto a Thread 1.4.0 (ESP-IDF 5.3+) para validar mejoras: latencia -15-25\%, 500 devices/partition, Border Router redundancy $<$2s. Comparación cuantitativa con resultados actuales Thread 1.3.0.
+    
+    \item \textbf{Machine Learning para detección anomalías}: Baseline comportamiento normal (tráfico, latencias, patrones consumo) con ML para detectar: (1) Fraude sofisticado (consumo anómalo sin trigger magnético/apertura), (2) Pre-fallo equipos (degradación performance gradual), (3) Ataques APT (exfiltración sutil datos).
+    
+    \item \textbf{Integración Vehicle-to-Grid (V2G)}: Extensión arquitectura para carga bidireccional vehículos eléctricos (IEEE 2030.5 DER Function Set). Requiere: (1) Medición 4-quadrant (activa/reactiva import/export), (2) Control fast switching relay ($<$10 ms), (3) Demand Response automático (ISO 15118 PLC).
+\end{enumerate}

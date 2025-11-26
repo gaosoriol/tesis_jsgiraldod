@@ -1,0 +1,67 @@
+\section{Escalabilidad}
+
+\subsection{Crecimiento Horizontal}
+
+El sistema permite agregar más DCUs sin modificar gateway (hasta 10 DCUs por gateway) y agregar más gateways sin modificar ThingsBoard (clúster horizontal).
+
+\subsection{Límites Teóricos}
+
+Los límites teóricos son: 250 nodos Thread por DCU (límite de protocolo), 10 DCUs HaLow por Gateway (límite de asociación simultánea), e ilimitado por sistema (ThingsBoard clúster + load balancer).
+
+\subsection{Path de Actualización Modular: Upgrade Hardware Futuro}
+
+\textbf{Contexto tecnológico:} La arquitectura propuesta basada en interfaces estándar (USB 2.0 para módulos wireless, M.2 slots en SBCs modernos) permite actualizaciones incrementales de componentes sin reemplazo completo del gateway. Esta sección analiza el TCO de upgrade a tecnologías emergentes.
+
+\textbf{Escenario: Upgrade a Morse Micro MM8108 (2026-2027)}
+
+\textbf{Motivación:} Como documentado en Cap 2, chipset MM8108 ofrece mejoras significativas sobre MM6108 baseline: +3 dB TX power (+26 dBm vs +23 dBm), +33\% throughput (43.3 Mbps vs 32.5 Mbps), +3 dB RX sensitivity (-101 dBm vs -98 dBm). Link budget +6 dB total extiende alcance teórico de 1-2 km (MM6108 urbano) a 2-3 km (MM8108), reduciendo cantidad de gateways requeridos en despliegues utility-scale.
+
+\textbf{Análisis de costo upgrade modular:}
+
+\begin{table}[H]
+\centering
+\caption{Comparación Costo Upgrade Modular vs Reemplazo Completo Gateway}
+\label{tab:upgrade-cost-comparison}
+\small
+\begin{tabular}{|l|r|r|p{4cm}|}
+\hline
+\textbf{Opción} & \textbf{Costo Unitario} & \textbf{Tiempo Instalación} & \textbf{Notas} \\
+\hline
+\textbf{A) Swap módulo M.2 HaLow} & \textbf{\$175} & \textbf{30 min} & Módulo GW16167 \$150 + labor \$25 \\
+ \hline
+ - Módulo MM8108 (GW16167) & \$150 & - & Precio volumen >100 unidades \\
+ - Labor técnico (on-site) & \$25 & 30 min & Swap M.2, prueba conectividad \\
+ - Downtime sistema & \$0 & - & Hot-swap, sin interrupción medición \\
+\hline
+\textbf{B) Reemplazo gateway completo} & \textbf{\$295} & \textbf{4-6 horas} & Gateway nuevo + reconfiguración \\
+\hline
+ - Gateway nuevo (BOM Cap 4) & \$295 & - & Raspberry Pi 4 + módulos completos \\
+ - Labor técnico (on-site) & \$100-150 & 4-6 h & Instalación, configuración, pruebas \\
+ - Downtime sistema & \$50-100 & 2-4 h & Ventana mantenimiento programado \\
+ - Costo total opción B & \textbf{\$445-545} & - & Incluye labor + downtime \\
+\hline
+\multicolumn{4}{|p{14cm}|}{\textbf{Ahorro upgrade modular:} \$270-370 por gateway (60-68\% savings vs reemplazo completo). En despliegue 1000 medidores con 50 gateways (ratio 20:1), ahorro acumulado = \$13.5K-18.5K.} \\
+\hline
+\end{tabular}
+\end{table}
+
+\textbf{TCO 10 años con refresh tecnológico (1000 medidores, 50 gateways):}
+
+\textbf{Supuestos:} (1) Refresh hardware cada 5 años para mantener soporte fabricante y actualizaciones seguridad. (2) Primera generación 2025: gateways con MM6108 (\$295 × 50 = \$14.75K). (3) Segundo refresh 2030: upgrade modular a MM8108 o sucesor (\$175 × 50 = \$8.75K).
+
+\textbf{Comparación opciones:}
+\begin{itemize}
+    \item \textbf{Opción A - Upgrade modular:} \$14.75K (2025 inicial) + \$8.75K (2030 upgrade) = \textbf{\$23.5K total 10 años}
+    \item \textbf{Opción B - Reemplazo completo:} \$14.75K (2025) + \$22.25K (2030 reemplazo, \$445 × 50) = \textbf{\$37K total 10 años}
+    \item \textbf{Ahorro absoluto opción A:} \$13.5K (36\% savings)
+    \item \textbf{Ahorro relativo por gateway:} \$270/gateway en ciclo 10 años
+\end{itemize}
+
+\textbf{Beneficios adicionales arquitectura modular:}
+\begin{itemize}
+    \item \textbf{Reducción vendor lock-in:} M.2 E-Key es estándar industria. Si Morse Micro discontinúa línea MM, alternativas de NewRadek, AsiaRF, o nuevos entrants son drop-in compatible.
+    \item \textbf{Flexibilidad tecnológica:} Arquitectura abierta a upgrades selectivos: solo gateways en zonas alta densidad (centros urbanos) reciben MM8108 para extender alcance, gateways rurales mantienen MM6108 suficiente.
+    \item \textbf{Obsolescencia mitigada:} Vida útil gateway extendida de 5 años (típico HW monolítico) a 10+ años con upgrades modulares componentes críticos (radio HaLow, modem LTE).
+\end{itemize}
+
+\textbf{Conclusión TCO upgrade:} Decisión de diseño gateway con interfaces estándar (USB 2.0, M.2 slots) no solo simplifica integración inicial (Cap 3), sino que reduce TCO largo plazo mediante upgrades modulares 60-68\% más económicos que reemplazos completos. \textbf{Payback upgrade modular: inmediato} (ahorros labor + downtime compensan diferencial costo módulo MM8108 vs nuevo gateway en primer refresh).

@@ -56,7 +56,8 @@
 \setlength{\LTcapwidth}{6in}
 \usepackage[utf8]{inputenc}
 \usepackage{epsfig,epic,eepic,threeparttable,amscd,here,lscape,tabularx,subfigure}
-\usepackage{tabu,array}
+\usepackage{array}
+\usepackage{tabu}
 \usepackage[rgb,table]{xcolor}
 \usepackage{colortbl}
 
@@ -364,8 +365,10 @@ Albert Einstein
 %%\include{00Objetivos}
 \include{01Introduccion} % Introducción (802.3, 802.11ah, 802.15.4, etc.)
 \include{02MarcoTeorico} % Marco Teórico
-\include{03Gateway_NEW} % Gateway (Software) - NUEVO
-\include{04Arquitectura_NEW} % Arquitectura (Caso de Estudio) - NUEVO
+\include{03Arquitectura_REFACTORED} % Arquitectura del Sistema (REFACTORIZADO: 2180→349 líneas, solo diseño)
+\include{04Implementacion_NEW} % Implementación Práctica del Sistema (NUEVO Cap 4)
+\include{05Resultados_NEW} % Resultados Experimentales y Validación (NUEVO Cap 5)
+%\include{04Gateway_NEW} % DEPRECADO - Comentado por itemize sin cerrar, contenido ya migrado a Cap 4/5
 \include{05Conclusiones} % Conclusiones y trabajo futuro
 %%\include{06Seccion06}
 %%\include{07Seccion07}
@@ -378,6 +381,7 @@ Albert Einstein
 \include{12AnexoD_EspecificacionesIEEE}
 \include{13AnexoE_NodoIoT}
 \include{14AnexoF_ConfiguracionesOpenWRT}
+\include{15AnexoG_HipotesisDetalladas}
 \end{appendix}
 
 %Permite visualizar la bibliografía en la tabla de contenido

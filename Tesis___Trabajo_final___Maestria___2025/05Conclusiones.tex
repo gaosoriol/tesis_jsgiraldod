@@ -14,7 +14,7 @@ Esta tesis abordó el diseño, implementación y validación de una arquitectura
 Se diseñó, implementó y validó exitosamente una arquitectura IoT en el borde (\textit{edge}) que demostró~\cite{scharerPushingWiFiHaLow2025,saidiIoTGatewayPowered2024,zhouGatewayArchitectureSecurity}:
 
 \begin{itemize}
-\item \textbf{Reducción de latencia >60\%:} La arquitectura propuesta logró latencia extremo-a-extremo (\textit{end-to-end}) estimada de 248 ms (calculada por suma de componentes individuales medidos, ver Cap 4 §4.13.1) vs 3247±118 ms en arquitectura centrada en la nube (\textit{cloud-centric}) línea base (\textit{baseline}), representando reducción estimada de 92.4\%. Adicionalmente, la latencia de procesamiento en el borde (\textit{edge}) fue medida experimentalmente alcanzando 8±2 ms promedio (P99=12 ms), cumpliendo requisitos IEC 62056 (<1s) para telemetría AMI con margen de 75\%.\footnote{Latencia E2E 248 ms no fue medida experimentalmente por limitaciones sincronización temporal (medidores sin NTP). Estimación basada en metodología latency budgeting IEC 62056-2021, validada en deployment piloto 30 medidores 90 días.}
+\item \textbf{Reducción de latencia >60\%:} La arquitectura propuesta logró \textbf{latencia extremo-a-extremo (\textit{end-to-end}, E2E)} estimada de 248 ms (calculada por suma de componentes individuales medidos, ver Cap 4 §4.13.1) vs 3247±118 ms en arquitectura centrada en la nube (\textit{cloud-centric}) línea base (\textit{baseline}), representando reducción estimada de 92.4\%. La \textbf{latencia de procesamiento local en el borde (\textit{edge processing})} fue medida experimentalmente alcanzando 8±2 ms promedio (P99=12 ms), representando solo 3.2\% del tiempo E2E total, cumpliendo requisitos IEC 62056 (<1s) para telemetría AMI con margen de 75\%.\footnote{Latencia E2E 248 ms no fue medida experimentalmente por limitaciones sincronización temporal (medidores sin NTP). Estimación basada en metodología latency budgeting IEC 62056-2021, validada en deployment piloto 30 medidores 90 días.}
 \item \textbf{Disponibilidad >99\% durante desconexiones WAN:} Validación de operación autónoma durante particiones WAN de 48 horas con disponibilidad de 99.7\% de servicios locales (dashboards ThingsBoard Edge, rule chains, alarmas), cumpliendo objetivo de >99\%.
 \item \textbf{Integración multi-protocolo funcional:} Comunicación bidireccional Thread → HaLow mediante bridge Ethernet transparente, con 10 nodos Thread ESP32-C6 comunicándose con sistema de gestión vía Access Point HaLow sin pérdida de mensajes en pruebas de 72 horas continuas.
 \end{itemize}
@@ -81,7 +81,7 @@ La Tabla \ref{tab:hipotesis-validacion} presenta un resumen ejecutivo de la vali
 \hline
 \textbf{H7} & CEP local procesa >10k eventos/seg con latencia <10 ms P99 & >10k evt/s, <10 ms P99 & 12.3k evt/s procesados, 8±2 ms P99 (12 ms máx) & \textbf{PARCIAL} & Cap. 4 §4.5 \\
 \hline
-\textbf{H8} & Arquitectura supera baseline en 5/7 métricas clave & Mejora en ≥5 métricas & Mejora en 7/7 métricas: latencia E2E (-79.3\%, p<0.0001), overhead headers (-78.1\%), tráfico WAN (-64.1\%), disponibilidad (+1.8 pp), throughput (+6380\%), alcance (+1540\%), pérdida paquetes (-95.0\%) & \textbf{VALIDADA} & Cap. 3 §3.4 \\
+\textbf{H8} & Arquitectura supera baseline en 5/7 métricas clave & Mejora en $\geq$5 métricas & Mejora en 7/7 métricas: latencia E2E (-79.3\%, p<0.0001), overhead headers (-78.1\%), tráfico WAN (-64.1\%), disponibilidad (+1.8 pp), throughput (+6380\%), alcance (+1540\%), pérdida paquetes (-95.0\%) & \textbf{VALIDADA} & Cap. 3 §3.4 \\
 \hline
 \end{tabular}
 \end{table}
@@ -582,7 +582,7 @@ Docker daemon + overhead & 4\% & 210 \\
 \item \textbf{Backhaul:} 40 gateways RPI4 conectan vía HaLow STA mode a 2 HaLow APs centrales
 \item \textbf{Throughput uplink:} 40 × 16 kbps = 640 kbps (dentro capacidad 442 kbps × 2 APs)
 \item \textbf{Latencia HaLow hop:} 11 ms medida (Cap. 4)
-\item \textbf{Redundancia:} Failover automático entre AP1 ↔ AP2 (<3 segundos mwan3)
+\item \textbf{Redundancia:} Failover automático entre AP1 $\leftrightarrow$ AP2 (<3 segundos mwan3)
 \end{itemize}
 
 \textbf{Nivel 3 - Gateway Central (servidor x86):}
@@ -988,7 +988,7 @@ L1.1 - Validación 1000+ dispositivos & \cellcolor{green!30}{\textbf{Sim}} & \ce
 \hline
 L1.2 - Clustering HA & & & \cellcolor{green!30}{\textbf{Raft}} & \cellcolor{green!30}{\textbf{VRRP}} & \cellcolor{yellow!30}{\textbf{PG Rep}} & \cellcolor{orange!30}{\textbf{Test}} & & \textbf{8-9} \\
 \hline
-\textit{Hito crítico L1} & \multicolumn{4}{c|}{\cellcolor{red!20}\textbf{▶ Q4 2027: Arquitectura validada 5K dispositivos}} & \multicolumn{3}{c|}{} & \\
+\textit{Hito crítico L1} & \multicolumn{4}{c|}{\cellcolor{red!20}\textbf{$\blacktriangleright$ Q4 2027: Arquitectura validada 5K dispositivos}} & \multicolumn{3}{c|}{} & \\
 \hline
 \multicolumn{9}{|c|}{\cellcolor{blue!10}\textbf{LÍNEA 2: Machine Learning Avanzado}} \\
 \hline
@@ -998,7 +998,7 @@ L2.2 - Forecasting renovable & & & & \cellcolor{green!30}{\textbf{XGB}} & \cellc
 \hline
 \textit{Dependencia L2} & \multicolumn{4}{c|}{\textit{Requiere dataset masivo de L1.1 (6-12 meses telemetría)}} & \multicolumn{3}{c|}{} & \\
 \hline
-\textit{Hito crítico L2} & \multicolumn{5}{c|}{} & \multicolumn{2}{c|}{\cellcolor{red!20}\textbf{▶ Q2 2029: Modelos en producción}} & \\
+\textit{Hito crítico L2} & \multicolumn{5}{c|}{} & \multicolumn{2}{c|}{\cellcolor{red!20}\textbf{$\blacktriangleright$ Q2 2029: Modelos en producción}} & \\
 \hline
 \multicolumn{9}{|c|}{\cellcolor{blue!10}\textbf{LÍNEA 3: Seguridad Avanzada}} \\
 \hline
@@ -1008,7 +1008,7 @@ L3.2 - Zero Trust (mTLS) & \cellcolor{green!30}{\textbf{Istio}} & \cellcolor{gre
 \hline
 L3.3 - Post-Quantum Crypto & & & & & \cellcolor{green!30}{\textbf{NIST}} & \cellcolor{yellow!30}{\textbf{Kyber}} & \cellcolor{yellow!30}{\textbf{Dilith}} & \textbf{5-6} \\
 \hline
-\textit{Hito crítico L3} & \multicolumn{3}{c|}{\cellcolor{red!20}\textbf{▶ Q4 2026: Zero Trust MVP}} & \multicolumn{4}{c|}{\cellcolor{red!20}\textbf{▶ Q4 2029: PQC roadmap definido}} & \\
+\textit{Hito crítico L3} & \multicolumn{3}{c|}{\cellcolor{red!20}\textbf{$\blacktriangleright$ Q4 2026: Zero Trust MVP}} & \multicolumn{4}{c|}{\cellcolor{red!20}\textbf{$\blacktriangleright$ Q4 2029: PQC roadmap definido}} & \\
 \hline
 \multicolumn{9}{|c|}{\cellcolor{blue!10}\textbf{LÍNEA 4: Interoperabilidad Extendida}} \\
 \hline
@@ -1018,7 +1018,7 @@ L4.2 - Federación gateways & & & & \cellcolor{green!30}{\textbf{mDNS}} & \cellc
 \hline
 \textit{Dependencia L4.2} & \multicolumn{4}{c|}{\textit{Requiere L1.2 clustering HA completado}} & \multicolumn{3}{c|}{} & \\
 \hline
-\textit{Hito crítico L4} & \multicolumn{4}{c|}{\cellcolor{red!20}\textbf{▶ Q2 2027: Protocolos legacy integrados}} & \multicolumn{3}{c|}{\cellcolor{red!20}\textbf{▶ Q4 2029: Federación activa}} & \\
+\textit{Hito crítico L4} & \multicolumn{4}{c|}{\cellcolor{red!20}\textbf{$\blacktriangleright$ Q2 2027: Protocolos legacy integrados}} & \multicolumn{3}{c|}{\cellcolor{red!20}\textbf{$\blacktriangleright$ Q4 2029: Federación activa}} & \\
 \hline
 \multicolumn{9}{|c|}{\cellcolor{blue!10}\textbf{LÍNEA 5: Estándares Emergentes}} \\
 \hline
@@ -1261,7 +1261,7 @@ L5.3 - 5G RedCap WAN & & & & \cellcolor{green!30}{\textbf{Spec}} & \cellcolor{ye
 \begin{itemize}
 \item Pasarela de modo dual (\textit{Gateway dual-mode}): Interfaz RS-485 para Modbus RTU (PLCs, RTUs antiguos) + Ethernet para Modbus TCP/DNP3.
 \item Traductor de protocolo en contenedor (\textit{Protocol translator} containerizado): Servicio que lee registros Modbus (\textit{Modbus registers}) periódicamente, mapea a objetos IEEE 2030.5, publica vía MQTT.
-\item Configuración de mapeo (\textit{Mapping configuration}): Archivo YAML (\textit{YAML file}) define correspondencia dirección Modbus (\textit{Modbus address}) ↔ recurso IEEE 2030.5 (\textit{IEEE 2030.5 resource}). Ejemplo: \texttt{40001: {type: voltage, phase: A, unit: V}}.
+\item Configuración de mapeo (\textit{Mapping configuration}): Archivo YAML (\textit{YAML file}) define correspondencia dirección Modbus (\textit{Modbus address}) $\leftrightarrow$ recurso IEEE 2030.5 (\textit{IEEE 2030.5 resource}). Ejemplo: \texttt{40001: {type: voltage, phase: A, unit: V}}.
 \item Bidireccional: No solo telemetría sino también comandos. Mensaje MQTT (\textit{MQTT message}) para desconectar interruptor (\textit{trip breaker}) se traduce a código de función Modbus (\textit{Modbus function code}) 05 (Escribir Bobina Única (\textit{Write Single Coil})).
 \end{itemize}
 

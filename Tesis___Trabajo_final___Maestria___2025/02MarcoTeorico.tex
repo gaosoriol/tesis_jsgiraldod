@@ -1,8 +1,10 @@
 ﻿\chapter{Marco Teórico}
 
-\section{Contexto Smart Energy y Estándares de Interoperabilidad}
+Este capítulo establece las bases teóricas que sustentan la arquitectura propuesta, estructuradas según la jerarquía de 4 niveles. Iniciamos con el ecosistema de estandarización IoT y Smart Energy que define el marco regulatorio (§2.1). Luego progresamos a través de las tecnologías específicas de cada nivel arquitectónico: tecnologías de red de campo para Nivel 1 - sensores (§2.2), infraestructura de distribución híbrida para Nivel 2 - conectividad de barrio (§2.3), y finalmente las plataformas de edge computing y cloud que implementan Niveles 3-4 (§2.4).
 
-Este capítulo establece las bases teóricas y conceptuales que sustentan la arquitectura propuesta, siguiendo una estructura narrativa de lo general hacia lo particular. Iniciamos con el contexto de Energía Inteligente (\textit{Smart Energy}) y los estándares de interoperabilidad que definen el marco regulatorio y arquitectónico (§2.1), para luego profundizar en la pila de protocolos IoT (\textit{protocol stack}) que implementa estas especificaciones (§2.2), las tecnologías de computación en el borde (\textit{edge computing}) que materializan la arquitectura distribuida (§2.3), los aspectos de seguridad transversales (§2.4), y finalmente el posicionamiento respecto al estado del arte (§2.5).
+\section{Ecosistema de Estandarización IoT y Smart Energy}
+
+Esta sección presenta el marco de estándares internacionales que guían el diseño de infraestructuras AMI interoperables, desde el modelo de referencia NIST para Smart Grid hasta los protocolos de comunicación mandatorios (IEEE 2030.5) y los frameworks de arquitectura IoT (ISO/IEC 30141).
 
 \subsection{Evolución de las Infraestructuras Eléctricas}
 
@@ -127,7 +129,7 @@ La arquitectura propuesta en esta tesis implementa las 7 entidades funcionales r
 \textbf{Application Support FE} \newline \footnotesize{APIs} & REST + WebSocket & ThingsBoard REST API, WebSocket telemetry streaming, IEEE 2030.5 adapter CoAP$\leftrightarrow$HTTP \\
 \hline
 \rowcolor{yellow!20}
-\textbf{Conformidad} & \textcolor{green}{\textbf{✓ Completa}} & 7/7 FEs implementadas con protocolos concretos, interfaces estandarizadas, mapeo verificable \\
+\textbf{Conformidad} & \textcolor{green}{\textbf{$\checkmark$ Completa}} & 7/7 FEs implementadas con protocolos concretos, interfaces estandarizadas, mapeo verificable \\
 \hline
 \end{tabular}
 }
@@ -224,13 +226,15 @@ IEC 61850 es la familia de estándares internacionales para comunicación en sis
 
 Aunque excede el alcance de esta tesis (enfocada en distribución/consumidor), IEC 61850 es relevante para futuras integraciones con sistemas SCADA y DMS~\cite{alsafranChallengesImplementingIoT2025}. El mapeo entre IEEE 2030.5 (dominio Customer) e IEC 61850 (dominio Distribution) se define en IEEE 2030.7~\cite{basnetNetworkingPowerGrid2025}, estableciendo puentes de interoperabilidad entre diferentes segmentos de la Smart Grid.
 
-\subsection{Síntesis de Estándares y Transición a la Pila Técnica (\textit{Technical Stack})}
+\subsection{Síntesis de Estándares y Transición a Tecnologías por Nivel}
 
-Los estándares IEEE 2030.5, ISO/IEC 30141 e IEC 61850 establecen el marco conceptual y regulatorio para sistemas de Energía Inteligente (\textit{Smart Energy}) interoperables~\cite{IEEERecommendedPractice,tangResearchInteroperabilityIoT,basnetNetworkingPowerGrid2025}. Sin embargo, su implementación práctica requiere una pila de protocolos IoT (\textit{protocol stack}) optimizada para dispositivos restringidos (\textit{constrained}) con recursos limitados de CPU, memoria y energía~\cite{choudharyInternetThingsComprehensive2024}. La siguiente sección describe la pila 6LoWPAN/CoAP/LwM2M que materializa estos requisitos~\cite{shelby6LoWPANWirelessEmbedded2009,haEnablingDynamicLightweight2018}, cubriendo desde la capa física (IEEE 802.15.4) hasta la gestión de dispositivos (LwM2M), proporcionando la base técnica sobre la cual se construye la arquitectura propuesta en el Capítulo 3.
+Los estándares IEEE 2030.5, ISO/IEC 30141 e IEC 61850 establecen el marco conceptual para sistemas Smart Energy interoperables~\cite{IEEERecommendedPractice,tangResearchInteroperabilityIoT,basnetNetworkingPowerGrid2025}. Las siguientes secciones detallan las tecnologías concretas que implementan estos estándares a través de los 4 niveles de la arquitectura: red de campo (§2.2), distribución (§2.3), y procesamiento edge/cloud (§2.4).
 
-\section{Pila de Protocolos IoT para Energía Inteligente (\textit{Protocol Stack for Smart Energy})}
+\section{Tecnologías de Red de Campo (Nivel 1: Sensores y Medidores)}
 
-La pila de protocolos (\textit{stack}) para redes IoT en aplicaciones de Energía Inteligente (\textit{Smart Energy}) integra múltiples capas del modelo OSI, optimizando cada una para operar en entornos con restricciones severas: dispositivos con <256 KB RAM, <1 MB Flash, y operación con batería~\cite{abdulsalamOverviewRecentWireless2024}. La arquitectura completa utiliza IEEE 802.15.4 como base PHY/MAC, 6LoWPAN para compresión de IPv6, y CoAP/LwM2M en capa de aplicación, creando una pila extremo-a-extremo (\textit{end-to-end stack}) eficiente y estandarizada~\cite{shelby6LoWPANWirelessEmbedded2009,shahinzadehSmartHomeConnectivity2024}.
+El Nivel 1 de la arquitectura comprende dispositivos de campo con restricciones severas: <256 KB RAM, <1 MB Flash, operación con batería. Esta sección presenta las tecnologías de red de área personal (WPAN) optimizadas para estos entornos: IEEE 802.15.4 como base PHY/MAC, 6LoWPAN para compresión IPv6, CoAP para aplicaciones RESTful ligeras, LwM2M para gestión de dispositivos, y stacks comerciales Thread/Wi-SUN~\cite{shelby6LoWPANWirelessEmbedded2009,abdulsalamOverviewRecentWireless2024}.
+
+Esta revisión incorpora investigación reciente (2023-2025) sobre eficiencia energética~\cite{krawiecEnergyFootprintReliability2025}, compresión de headers~\cite{vanderveldenEvaluation6LoWPANGeneric2023}, y protocolos de gestión~\cite{alkwiefiM2MProtocolsOverview2024}, fundamentando las decisiones arquitecturales del Capítulo~\ref{chap:arquitectura} e implementación del Capítulo~\ref{chap:implementacion}.
 
 \subsection{Visión General de la Pila de Protocolos (\textit{Protocol Stack Overview})}
 
@@ -293,7 +297,7 @@ IEEE 802.15.4 define las capas física (PHY) y de control de acceso al medio (MA
 
 6LoWPAN (IPv6 over Low-Power Wireless Personal Area Networks, RFC 6282/4944) es una capa de adaptación que permite transmisión de paquetes IPv6 sobre redes IEEE 802.15.4, superando la limitación del MTU de 127 bytes mediante compresión de headers y fragmentación~\cite{shelby6LoWPANWirelessEmbedded2009,thungonSurvey6LoWPANSecurity2024,abood6LoWPANTechnicalFeatures2024}.
 
-\textbf{Motivación:} El stack IPv6 tradicional presenta overhead prohibitivo: header IPv6 (40 bytes, 31.5\% del MTU) + header UDP (8 bytes, 6.3\%) = 48 bytes (37.8\%) dejando solo 79 bytes útiles (62.2\%)~\cite{shelby6LoWPANWirelessEmbedded2009,mamoImplementationStandardized6LoWPAN2015}. Cada retransmisión en mesh consume energía crítica en dispositivos battery-powered, motivando optimización extrema del overhead~\cite{shelby6LoWPANWirelessEmbedded2009}.
+\textbf{Motivación y Contexto Histórico:} El stack IPv6 tradicional presenta overhead prohibitivo para redes constrained: header IPv6 (40 bytes, 31.5\% del MTU de 127 bytes) + header UDP (8 bytes, 6.3\%) = 48 bytes (37.8\%) dejando solo 79 bytes útiles (62.2\%)~\cite{shelby6LoWPANWirelessEmbedded2009,mamoImplementationStandardized6LoWPAN2015}. Cada retransmisión en mesh consume energía crítica en dispositivos battery-powered: en redes Thread típicas (3 hops), overhead sin compresión consume 48×3 = 144 bytes adicionales de radio energy, equivalente a ~12 mA×8 ms = 96 µJ @ 3.3V por mensaje~\cite{vanderveldenEvaluation6LoWPANGeneric2023}. Esta motivación llevó al desarrollo de RFC 4944 (2007) y su evolución RFC 6282 (2011) que introdujo IPHC context-based compression~\cite{shelby6LoWPANWirelessEmbedded2009}. Estudios empíricos recientes validan eficiencia IPHC pero revelan trade-off crítico data-rate dependent: Vandervelden et al.~\cite{vanderveldenEvaluation6LoWPANGeneric2023} reportan 11-29\% energy gains @ 10 kbit/s para paquetes RPL con 6LoWPAN-GHC (extensión RFC 7400 de IPHC), pero 2-26\% energy penalty @ 250 kbit/s donde overhead computacional de compresión/decompresión excede savings de transmisión. Este hallazgo sugiere que compresión IPHC es más efectiva en redes sub-GHz de bajo data rate (Wi-SUN, HaLow @ <1 Mbps) que en IEEE 802.15.4 @ 250 kbps estándar~\cite{vanderveldenEvaluation6LoWPANGeneric2023}.
 
 \textbf{Compresión IPHC (IPv6 Header Compression):} RFC 6282 reduce headers IPv6 de 40 bytes a 2-7 bytes explotando redundancias~\cite{shelby6LoWPANWirelessEmbedded2009}: \textbf{(1) Direcciones:} Link-local derivadas de MAC se omiten (16 bytes → 0)~\cite{shelby6LoWPANWirelessEmbedded2009}, multicast con prefijos conocidos (ff02::/16) se comprimen a 1-6 bytes, context-based compression referencia prefijos Thread (fd00::/64) por ID de 4 bits~\cite{shelby6LoWPANWirelessEmbedded2009}. \textbf{(2) Campos IPv6:} Version (4 bits) siempre 6 se omite~\cite{shelby6LoWPANWirelessEmbedded2009}, Traffic Class/Flow Label se omiten si 0~\cite{shelby6LoWPANWirelessEmbedded2009}, Hop Limit se comprime a 2 bits si $\leq$64.
 
@@ -362,30 +366,7 @@ vs 79 bytes (62\%) sin compresión → **Ganancia 14-16 bytes (18-20\% más payl
 
 \textbf{Fragmentación y Reensamblado:} Cuando payload IPv6 excede MTU (incluso con compresión), 6LoWPAN fragmenta~\cite{shelby6LoWPANWirelessEmbedded2009}: First Fragment contiene header (4 bytes: datagram\_size, datagram\_tag) + primeros N bytes; Subsequent Fragments tienen header (5 bytes: datagram\_size, datagram\_tag, datagram\_offset) + siguientes N bytes~\cite{shelby6LoWPANWirelessEmbedded2009,abood6LoWPANTechnicalFeatures2024}. \textbf{Limitaciones:} aumenta latencia (espera de fragmentos), reduce confiabilidad (pérdida de 1 fragmento = descarte completo)~\cite{shelby6LoWPANWirelessEmbedded2009}, consume buffers RAM en receptor. \textbf{Best Practice:} diseñar payloads $\leq$70 bytes para evitar fragmentación en mesh (headers Thread/6LoWPAN/UDP consumen ~25-30 bytes)~\cite{shelby6LoWPANWirelessEmbedded2009}.
 
-\textbf{Impacto en Latencia:}
-
-\begin{table}[h]
-\small
-\centering
-\caption{Latencia por hop en Thread mesh con/sin compresión 6LoWPAN~\cite{shelby6LoWPANWirelessEmbedded2009}. Escenario: topología lineal 5 hops, IEEE 802.15.4 @ 250 kbps, canal 15 (2.4 GHz). Reducción latencia total: 71\% (7.7 ms → 2.2 ms) mediante IPHC+NHC.}
-\label{tab:6lowpan-latency}
-\begin{tabular}{p{4cm}p{2.8cm}p{2.8cm}p{2cm}}
-\hline
-\rowcolor{gray!20}
-\textbf{Escenario Mesh Thread} & \textbf{Sin Compresión} & \textbf{Con IPHC+NHC} & \textbf{Reducción} \\
-\hline
-TX @ 250 kbps (headers) & 1.54 ms (48B) & \textcolor{blue}{0.29 ms (7B)} & \textcolor{green}{81\%} \\
-\hline
-Procesamiento & 0 ms & 0.15 ms & — \\
-\hline
-Total por hop & 1.54 ms & \textcolor{blue}{0.44 ms} & \textcolor{green}{71\%} \\
-\hline
-\textbf{Latencia 5 hops} & \textbf{7.7 ms} & \textbf{\textcolor{yellow}{2.2 ms}} & \textbf{\textcolor{yellow}{71\%}} \\
-\hline
-\end{tabular}
-\end{table}
-
-La compresión 6LoWPAN reduce latencia en topologías mesh multi-hop >70\%~\cite{shelby6LoWPANWirelessEmbedded2009,abood6LoWPANTechnicalFeatures2024}, crítico para Smart Energy con requisitos <100 ms.
+\textbf{Impacto en Latencia Multi-hop:} La compresión 6LoWPAN reduce significativamente latencia en topologías mesh mediante disminución del tiempo de transmisión de headers: paquetes sin compresión requieren transmitir 48 bytes de headers IPv6+UDP a 250 kbps (1.54 ms), mientras paquetes comprimidos transmiten ~6-7 bytes (0.22-0.27 ms), logrando reducción teórica de ~85\% en tiempo de transmisión de headers por hop~\cite{shelby6LoWPANWirelessEmbedded2009,abood6LoWPANTechnicalFeatures2024}. En redes mesh multi-hop, este beneficio se acumula: una ruta de 5 hops ahorra aproximadamente 5×(1.54-0.27) = 6.35 ms solo en transmisión de headers, aunque debe considerarse overhead de procesamiento de compresión/decompresión en cada nodo (típicamente 0.1-0.2 ms por hop)~\cite{vanderveldenEvaluation6LoWPANGeneric2023}. La reducción neta de latencia end-to-end depende del balance entre savings de transmisión y overhead computacional, siendo más favorable en redes de bajo data rate donde tiempo de transmisión domina sobre tiempo de procesamiento~\cite{vanderveldenEvaluation6LoWPANGeneric2023}.
 
 \textbf{Thread - Protocolo Mesh sobre 6LoWPAN:} Thread es un protocolo IPv6 sobre IEEE 802.15.4 (ver sección~\ref{sec:ieee802154}) diseñado para IoT doméstico/industrial~\cite{abdulsalamOverviewRecentWireless2024}. Implementa routing mesh adaptativo basado en métricas LQI (Link Quality Indicator) y path cost~\cite{choudharyInternetThingsComprehensive2024}. Topología jerárquica: Leader (gestiona Router IDs y Network Data), Router (forwarding con tabla de rutas completa), REED (Router Eligible End Device, promueve si necesario), End Device (leaf sin routing). Routing utiliza MLE (Mesh Link Establishment) con métrica path cost = $\sum_{i=1}^{n} \frac{100}{\text{LQI}_i}$ donde LQI $\in$ [0,255]. Thread Border Router (OTBR) actúa como gateway hacia redes IP tradicionales, proveyendo traducción IPv6, NAT64/DNS64, multicast forwarding y commissioning seguro~\cite{choudharyInternetThingsComprehensive2024,openthread2024}.
 
@@ -427,7 +408,7 @@ La compresión 6LoWPAN reduce latencia en topologías mesh multi-hop >70\%~\cite
 \textbf{Trade-off analizado en profundidad:} Thread seleccionado sobre Zigbee maduro (>15 años deployment en utilities, >300M devices instalados) por tres razones arquitectónicas críticas para AMI con integración IEEE 2030.5:
 
 \begin{enumerate}
-    \item \textbf{IPv6 native end-to-end:} Zigbee utiliza Application Support (APS) sublayer propietaria sobre 802.15.4, requiriendo gateway con traducción APS↔IP. Esta conversión introduce: (a) \textbf{Latencia adicional +5-10 ms} por frame translation y buffering, (b) \textbf{Punto único de falla} en Zigbee Coordinator (SPOF), (c) \textbf{Complejidad arquitectónica} manteniendo dual-stack (Zigbee + IP) con translation tables. Thread elimina translation layer: 6LoWPAN IPHC comprime headers IPv6 (40 bytes → 2-7 bytes) pero mantiene semántica IP nativa, permitiendo IEEE 2030.5 Function Sets (metering, pricing, DER control) operar directamente sobre CoAP/UDP sin gateways intermedios.
+    \item \textbf{IPv6 native end-to-end:} Zigbee utiliza Application Support (APS) sublayer propietaria sobre 802.15.4, requiriendo gateway con traducción APS$\leftrightarrow$IP. Esta conversión introduce: (a) \textbf{Latencia adicional +5-10 ms} por frame translation y buffering, (b) \textbf{Punto único de falla} en Zigbee Coordinator (SPOF), (c) \textbf{Complejidad arquitectónica} manteniendo dual-stack (Zigbee + IP) con translation tables. Thread elimina translation layer: 6LoWPAN IPHC comprime headers IPv6 (40 bytes → 2-7 bytes) pero mantiene semántica IP nativa, permitiendo IEEE 2030.5 Function Sets (metering, pricing, DER control) operar directamente sobre CoAP/UDP sin gateways intermedios.
     
     \item \textbf{Routing proactivo vs reactivo:} Zigbee AODV (Ad-hoc On-Demand Distance Vector) descubre rutas reactivamente mediante RREQ/RREP flooding cuando necesita transmitir, causando \textbf{latencia inicial 100-500 ms} y \textbf{broadcast storms} en redes densas (>50 nodes). Thread MLE (Mesh Link Establishment) mantiene tabla de rutas proactiva con advertisements periódicos cada 32 s, convergencia <5 s ante fallas, path selection basado en metrics ETX (Expected Transmission Count). Para AMI con reportes periódicos cada 15-60 min, overhead proactive MLE (32 bytes cada 32 s = 8 bps por node) es despreciable vs beneficio de latencia determinista.
     
@@ -485,9 +466,13 @@ CoAP (Constrained Application Protocol, RFC 7252) es un protocolo web RESTful op
 
 \textbf{Ejemplo:} GET CoAP 18 bytes total vs HTTP 120+ bytes (6.7$\times$ overhead).
 
-\textbf{Modos de Confiabilidad:} \textbf{(1) Confirmable (CON)} requiere ACK con retransmisiones exponenciales (usado para comandos críticos, firmware OTA), \textbf{(2) Non-Confirmable (NON)} es fire-and-forget sin ACK (telemetría periódica donde pérdida ocasional es aceptable, reduciendo overhead de red).
+\textbf{Modos de Confiabilidad:} \textbf{(1) Confirmable (CON)} requiere ACK con retransmisiones exponenciales timeout$_0$ = 2-3s, timeout$_n$ = timeout$_{n-1} \times 2$ hasta 4 retries (usado para comandos críticos, firmware OTA)~\cite{shelby6LoWPANWirelessEmbedded2009}, \textbf{(2) Non-Confirmable (NON)} es fire-and-forget sin ACK (telemetría periódica donde pérdida ocasional es aceptable), reduciendo radio duty cycle ~50\% vs CON mode~\cite{krawiecEnergyFootprintReliability2025}.
 
-\textbf{Observe - Subscripciones CoAP:} RFC 7641 define extensión Observe para subscripciones a recursos, eliminando polling mediante notificaciones push cuando hay cambios. Reduce tráfico 90-95\% vs polling HTTP~\cite{amezvaValdDesignImplementation2024}, latencia <50 ms (vs 0.5×polling\_interval promedio), menor consumo energético (no requiere wake-up periódico).
+\textbf{Comparación Energética Empírica:} Estudio reciente de Krawiec et al. (2025)~\cite{krawiecEnergyFootprintReliability2025} sobre 7 protocolos IoT con payload 1000 bytes en hardware real (NodeMCU, SBC) revela: \textbf{(1)} CoAP (non-confirmable) exhibe segundo menor consumo energético después de MQTT-SN, con potencial extensión de vida útil de batería hasta 35\% vs HTTP/3. \textbf{(2)} Trade-off crítico: MQTT-SN requiere 30\% menos SRAM que CoAP (crítico para Arduino/ESP8266-class devices), pero CoAP ofrece 99\% reliability en single-hop networks según Sarkar et al. (2025)~\cite{sarkarDevelopmentCoAPProtocol2025}. \textbf{(3)} Radio energy: MQTT-SN usa ~12\% menos que CoAP en multi-hop mesh (simulaciones COOJA/Powertrace)~\cite{krawiecEnergyFootprintReliability2025}. Estudios de estabilidad long-term (Hong et al. 2024)~\cite{hongImplementationSmartFarm2024} en deployment real de 10 días muestran MQTT exhibe packet loss rate más estable (0.3\% vs CoAP 0.8\%) sobre cellular backhaul LTE debido a persistent TCP connections vs UDP-based CoAP susceptible a handover disruptions, mientras CoAP mantiene ventaja de latencia (42 ms vs MQTT 68 ms) para comunicaciones locales.
+
+\textbf{Observe - Subscripciones CoAP:} RFC 7641 define extensión Observe para subscripciones push a recursos, eliminando polling ineficiente~\cite{shelby6LoWPANWirelessEmbedded2009}. Cliente registra observe request (opción Observe=0) y servidor envía notificaciones asíncronas cuando recurso cambia. Reduce tráfico 90-95\% vs polling HTTP según benchmarks~\cite{amezvaValdDesignImplementation2024}, latencia notification <50 ms (vs 0.5×polling\_interval promedio), menor consumo energético (no requiere wake-up periódico para poll).
+
+\textbf{Aplicabilidad Smart Energy:} Estudios comparativos para smart grids (Devanagavi 2025~\cite{devanagaviPerformanceEvaluationIoT2025}, Hong et al. 2024~\cite{hongImplementationSmartFarm2024}) recomiendan CoAP para: \textbf{(1)} Demand response con latencia <2s (CON mode garantiza entrega), \textbf{(2)} Telemetría frecuente (>1 mensaje/minuto) con NON mode, \textbf{(3)} Integración LwM2M (especificación OMA requiere CoAP como transporte obligatorio). Mientras MQTT/MQTT-SN preferible para: \textbf{(a)} Telemetría esporádica (<1 mensaje/hora) minimizando energy, \textbf{(b)} Dispositivos ultra-constrained (Clase 0: <10 KB RAM) donde footprint CoAP stack (~50-80 KB Flash) es prohibitivo~\cite{alkwiefiM2MProtocolsOverview2024}.
 
 \subsection{Gestión de Dispositivos: LwM2M}
 
@@ -555,7 +540,9 @@ Q & MQTT & TLS + MQTT auth & Brokers existentes \\
 \end{tabular}
 \end{table}
 
-\textbf{Seguridad:} Modos: \textbf{PSK} (clave simétrica 128-256 bits, overhead mínimo ~16 bytes, handshake ~200 bytes), \textbf{RPK} (claves públicas ECC sin X.509), \textbf{Certificate} (PKI completa, overhead ~2 KB), \textbf{NoSec} (testing). PSK preconfigurado reduce overhead 60\% vs TLS/TCP (15 bytes/msg vs 40+ bytes)~\cite{bahardimanSecureHybridGateway2024}.
+\textbf{Eficiencia de Protocolo - Comparación LwM2M vs XMPP:} Análisis exhaustivo por Alkwiefi \& Khalifeh (2024)~\cite{alkwiefiM2MProtocolsOverview2024} compara LwM2M (sobre CoAP/UDP) vs XMPP (XML sobre TCP persistente) para IoT M2M: \textbf{(1) Message overhead:} LwM2M típico 8-20 bytes header+payload para sensor reading vs XMPP 200-500 bytes XML stanza, representando 10-25$\times$ efficiency advantage para LwM2M en bandwidth-constrained networks. \textbf{(2) Energy consumption:} LwM2M CoAP stateless UDP no requiere keep-alive vs XMPP TCP keep-alive cada 30-60s consumiendo 15-25\% de battería en sleeping device scenarios. \textbf{(3) Protocol complexity:} LwM2M client implementations requieren 40-80 KB Flash ROM vs XMPP 200-400 KB debido a XML parser y TLS stack, restringiendo XMPP a gateway-class devices. \textbf{(4) Reliability:} LwM2M CON mode + exponential backoff alcanza 99.2\% delivery vs XMPP TCP's >99.9\% pero a mayor costo energético~\cite{alkwiefiM2MProtocolsOverview2024}.
+
+\textbf{Seguridad:} Modos: \textbf{PSK} (clave simétrica 128-256 bits, overhead mínimo ~16 bytes, handshake ~200 bytes), \textbf{RPK} (claves públicas ECC sin X.509), \textbf{Certificate} (PKI completa, overhead ~2 KB), \textbf{NoSec} (testing). PSK preconfigurado reduce overhead 60\% vs TLS/TCP (15 bytes/msg vs 40+ bytes)~\cite{bahardimanSecureHybridGateway2024}. Protocolos lightweight authentication para AMI (Zhang et al. 2024~\cite{zhangLightweightAuthentication2024}) demuestran ECC-256 alcanza 6$\times$ faster authentication (45 ms vs 280 ms RSA-2048) con seguridad equivalente 128-bit, consumiendo solo 0.42 mJ por authentication event, con <10\% overhead para authentication headers en typical 150-byte metering payloads. Esto valida uso de DTLS 1.2 PSK con LwM2M como arquitectura segura y eficiente para smart meters Cortex-M class (64-256 KB RAM)~\cite{zhangLightweightAuthentication2024}.
 
 \textbf{LwM2M vs Soluciones Alternativas:}
 
@@ -688,9 +675,49 @@ Thread 1.3.1 (Thread Group 2024) implementa el mismo stack 6LoWPAN/CoAP/LwM2M so
 
 \textbf{Validación Industria:} Radiocrafts (vendor noruego módulos RF) reporta migración clientes DESDE ZigBee/Wi-SUN/LoRa HACIA mesh propietario RIIM para solar tracking, citando limitaciones throughput Wi-SUN (1000-2000 nodos antes de fragmentación) vs alternativas higher-capacity~\cite{radiocraftsCommissioningLargeSolar2025}. Pattern replica trend utilities modernizando hacia Thread/propietarios + backhauls RF de mayor capacidad (HaLow, LTE-M, 5G RedCap).
 
-\section{Arquitectura de Edge Computing para Smart Energy}
+\section{Tecnologías de Distribución e Interconexión (Nivel 2: Backhaul Híbrido)}
 
-El stack de protocolos IoT descrito en §2.2 (IEEE 802.15.4 → 6LoWPAN → CoAP → LwM2M) permite comunicación eficiente entre dispositivos constrained y gateways edge. Sin embargo, la arquitectura Smart Energy completa requiere capacidades adicionales en el gateway: orquestación de servicios heterogéneos, almacenamiento persistente de series temporales, procesamiento de reglas CEP (Complex Event Processing), y conectividad resiliente hacia cloud. Esta sección describe las tecnologías de edge computing (Docker, TimescaleDB, Kafka, ThingsBoard Edge) que implementan estas capacidades, transformando el gateway en una plataforma de agregación y procesamiento intermedio entre redes IoT locales y sistemas backend cloud.
+El Nivel 2 interconecta múltiples redes de campo (Nivel 1) hacia gateways de procesamiento edge (Nivel 3), requiriendo tecnologías con alcance >1 km y throughput >1 Mbps para agregar cientos de medidores. Esta sección revisa las dos tecnologías implementadas en la arquitectura híbrida:
+
+\subsection{Fibra Óptica FTTN/FTTC - Capacidad Ilimitada}
+
+Las redes de fibra hasta el nodo (FTTN) y hasta la acera (FTTC) constituyen la opción de backhaul con mayor capacidad, típicamente basadas en tecnología GPON (Gigabit Passive Optical Network) con capacidad 2.5 Gbps downstream / 1.25 Gbps upstream compartida entre 32-64 ONUs (Optical Network Units)~\cite{ITU-TG.984,broadbandcommissionStateofBroadband2023}.
+
+\textbf{Características GPON Relevantes para AMI:}
+\begin{itemize}
+\item \textbf{Latencia}: 2-5 ms entre OLT (Central Office) y ONU (típicamente <20 km fibra)
+\item \textbf{Alcance}: 20 km máximo según ITU-T G.984, típicamente 10-15 km en despliegues urbanos
+\item \textbf{CAPEX}: \$500-800 por ONU instalada (incluye fibra drop, splitters pasivos)
+\item \textbf{OPEX}: \$0/mes energía (ONUs pasivos sin fuente), \$0/mes mantenimiento RF (inmune interferencias)
+\item \textbf{Penetración}: 38\% hogares con fibra 2023 (ITU), proyección 52\% para 2026~\cite{broadbandcommissionStateofBroadband2023}
+\end{itemize}
+
+\textbf{Ventajas Estratégicas para AMI:} Donde existe infraestructura fibra desplegada (38\% penetración hogares), el costo marginal de conectar DCU/gateway adicional es \$0 (aprovecha ONU ya instalada). La arquitectura híbrida fibra+HaLow propuesta explota esta oportunidad: backhaul primario vía fibra (latencia 2ms, capacidad ilimitada), backup HaLow (latencia 11ms, 4 Mbps) para resiliencia.
+
+\subsection{Wi-Fi HaLow (IEEE 802.11ah) - Última Milla Sub-GHz}
+
+IEEE 802.11ah (comercialmente denominado Wi-Fi HaLow) opera en bandas sub-1 GHz (902-928 MHz USA, 863-868 MHz Europa) optimizando alcance y penetración~\cite{IEEE802.11ah-2016,adameTimeVariantChannelModeling2019,liEstimatingPropagationCharacteristics2024}.
+
+\textbf{Características Técnicas IEEE 802.11ah:}
+\begin{itemize}
+\item \textbf{Alcance}: >1 km outdoor line-of-sight, 200-400 m indoor obstructed según propagación sub-GHz~\cite{adameTimeVariantChannelModeling2019,liEstimatingPropagationCharacteristics2024}
+\item \textbf{Throughput}: 150 kbps (MCS0, más robusto) hasta 86.7 Mbps (MCS10, 4 spatial streams), típicamente 4 Mbps @ MCS7 para AMI~\cite{IEEE802.11ah-2016}
+\item \textbf{Latencia}: 8-15 ms típica según mediciones experimentales con chipsets Morse Micro~\cite{khorovSurveyIEEE802112016}
+\item \textbf{Eficiencia energética}: Target Wake Time (TWT) permite dormir 99.9\% del tiempo, consumo pico 500 mW Tx (vs 3-5 W Wi-Fi 2.4/5 GHz)~\cite{IEEE802.11ah-2016}
+\item \textbf{Disponibilidad comercial}: Morse Micro MM6108 (SoC HaLow + host ARM), Newracom NRC7292 (módulos AP/STA), Silex SX-NEWAH (módulos industriales) disponibles desde 2023~\cite{morsemicroMM61082024}
+\end{itemize}
+
+\textbf{Ventajas HaLow vs Alternativas Sub-GHz:} Comparado con LoRaWAN (50 kbps máx, latencia >1s) o Wi-SUN (300 kbps máx), HaLow provee 10-100× mayor throughput manteniendo alcance similar~\cite{khorovSurveyIEEE802112016}. Comparado con LTE-M/NB-IoT, HaLow elimina OPEX mensual carrier (\$8-12/mes/dispositivo) y opera en banda ISM libre~\cite{adameTimeVariantChannelModeling2019}.
+
+\textbf{Aplicabilidad AMI:} Un Access Point HaLow puede servir 100-500 medidores en radio 1 km (densidad urbana típica 200-300 medidores/km²), agregando 4 Mbps × 0.6 duty cycle = 2.4 Mbps efectivo. Asumiendo 2.5 KB/lectura × 96 lecturas/día/medidor = 240 KB/día/medidor, 500 medidores generan 120 MB/día = 11 kbps promedio, bien dentro de capacidad HaLow~\cite{alsafranChallengesImplementingIoT2025}.
+
+\subsection{Síntesis de Tecnologías Nivel 2 y Transición a Edge Computing}
+
+La arquitectura híbrida fibra+HaLow combina capacidad ilimitada (donde fibra disponible, 38\% cobertura actual) con alcance radio sub-GHz (HaLow backhaul/backup, 100\% cobertura teórica). Esta redundancia dual-path implementa resiliencia 99.99\% requerida para infraestructura crítica Smart Energy~\cite{alsafranChallengesImplementingIoT2025}. Las siguientes secciones describen las plataformas de procesamiento edge (Nivel 3) y cloud (Nivel 4) que consumen estos backhauls.
+
+\section{Plataformas IoT y Edge Computing (Niveles 3-4: Gateway y Cloud)}
+
+Los niveles de distribución (1-2) transportan datos de telemetría hacia plataformas de procesamiento. Esta sección describe las tecnologías de edge computing (Nivel 3: Docker, TimescaleDB, Kafka, ThingsBoard Edge) que implementan agregación y procesamiento local en gateways, y plataformas cloud (Nivel 4: ThingsBoard Cloud) que proveen analytics históricos y dashboards~\cite{liangReviewEdgeComputing2024}.
 
 \subsection{Containerización con Docker}
 
@@ -879,15 +906,11 @@ L_{cloud} = 40 + 33 + 80 \text{ (LTE RTT)} + 50 \text{ (WAN)} + 30 \text{ (cloud
 
 Reducción: $(243-81)/243 = 66.7\%$
 
-\subsection{Síntesis de Edge Computing y Transición a Seguridad}
+\subsection{Seguridad Transversal en Arquitecturas IoT}
 
-Las tecnologías de edge computing descritas (Docker para orquestación, TimescaleDB para series temporales, Kafka para buffering, ThingsBoard Edge para gestión/visualización) transforman el gateway en una plataforma integral de procesamiento intermedio que implementa las entidades funcionales de ISO/IEC 30141:2024 (Processing FE, Storage FE, Management FE)~\cite{ISOIEC30141v2024}. La containerización mediante Docker proporciona aislamiento y portabilidad de servicios heterogéneos (rule engines, bridges protocolares, APIs). TimescaleDB optimiza almacenamiento y consultas de telemetría mediante hypertables particionadas temporalmente y continuous aggregates, reduciendo carga en bases de datos cloud. Kafka actúa como buffer persistente durante particiones WAN, garantizando entrega confiable mediante replicación. ThingsBoard Edge replica funcionalidad completa de gestión/visualización en el edge, con sincronización bidireccional gRPC hacia cloud, permitiendo operación autónoma durante offline.
+Las tecnologías de edge computing descritas transforman el gateway en plataforma integral implementando entidades funcionales ISO/IEC 30141:2024~\cite{ISOIEC30141v2024}. La reducción de latencia 66.7\% (243→81 ms según M/M/1) es crítica para Smart Energy, pero esta arquitectura distribuida introduce superficie de ataque ampliada: dispositivos constrained, wireless expuesto, containers, APIs. Esta subsección presenta amenazas específicas IoT y estrategias defensa en profundidad.
 
-La reducción de latencia end-to-end de 66.7\% (243 ms cloud-centric → 81 ms edge, según modelado M/M/1) es crítica para aplicaciones Smart Energy con requisitos <100 ms (protecciones, DR). Sin embargo, esta arquitectura distribuida introduce superficie de ataque ampliada: dispositivos IoT constrained, interfaces wireless expuestas, servicios containerizados, APIs programáticas. La siguiente sección (§2.4) analiza las amenazas específicas de sistemas IoT y estrategias de defensa en profundidad (defence in depth) aplicables a gateways edge, vinculando contramedidas de seguridad con las capas del stack de protocolos IoT descrito en §2.2.
-
-\section{Seguridad en Sistemas IoT}
-
-\subsection{Amenazas Específicas de IoT}
+\subsubsection{Amenazas Específicas de IoT}
 
 Los sistemas IoT presentan superficie de ataque ampliada respecto a IT tradicional~\cite{BlockchainBasedSecureAuthentication2025,nandalSECURITYRISKSIoT2025}:
 
@@ -900,11 +923,11 @@ Los sistemas IoT presentan superficie de ataque ampliada respecto a IT tradicion
 \item \textbf{Data exfiltration}: Acceso no autorizado a datos de telemetría sensibles~\cite{thungonSurvey6LoWPANSecurity2024,pandeyRecentLightweightCryptography2024}.
 \end{enumerate}
 
-\subsection{Defence in Depth para Edge Gateways}
+\subsubsection{Defence in Depth para Edge Gateways}
 
-Estrategia de seguridad en capas~\cite{m.mijwilPostQuantumSecureBlockchainBased2025,ramakrishnaAnalysisLightweightCryptographic2024,iec62443-4-2}: (1) Física: Secure Boot, TPM, enclosure anti-tamper; (2) Red: Firewall nftables, VLANs (Management/IoT/Backhaul/WAN), WPA3-SAE (Simultaneous Authentication of Equals para HaLow)~\cite{IEEE80211ah2016}, TLS 1.2/1.3 mutual auth; (3) Aplicación: RBAC ThingsBoard, input validation, rate limiting, logging centralizado; (4) Datos: cifrado at-rest LUKS, backup con GPG, anonymization de identificadores.
+Estrategia de seguridad en capas~\cite{m.mijwilPostQuantumSecureBlockchainBased2025,ramakrishnaAnalysisLightweightCryptographic2024,iec62443-4-2}: (1) Física: Secure Boot, TPM, enclosure anti-tamper; (2) Red: Firewall nftables, VLANs (Management/IoT/Backhaul/WAN), WPA3-SAE HaLow~\cite{IEEE80211ah2016}, TLS 1.2/1.3 mutual auth; (3) Aplicación: RBAC ThingsBoard, input validation, rate limiting; (4) Datos: cifrado at-rest LUKS, backup GPG, anonymization.
 
-\subsection{Seguridad por Capa del Stack de Protocolos IoT}
+\subsubsection{Seguridad por Capa del Stack de Protocolos IoT}
 
 La arquitectura del stack de protocolos IoT descrita en §2.2 requiere medidas de seguridad específicas en cada capa para mitigar amenazas particulares. La Tabla~\ref{tab:security-stack-mapping} mapea las amenazas identificadas en §2.4.1 con las capas del stack y sus contramedidas correspondientes, estableciendo un modelo de defensa integrado que vincula los aspectos de protocolo con los requisitos de seguridad.
 
@@ -941,23 +964,19 @@ La arquitectura del stack de protocolos IoT descrita en §2.2 requiere medidas d
 
 Esta tabla establece la correspondencia directa entre el stack de protocolos (§2.2), las amenazas de seguridad (§2.4.1), y las tecnologías de implementación (§2.3). Por ejemplo, la contramedida DTLS-PSK para CoAP se ejecuta dentro del contenedor Docker del gateway edge (§2.3.1), mientras que el cifrado at-rest de TimescaleDB (§2.3.2) protege contra exfiltración de datos históricos. Esta integración vertical seguridad-stack-implementación es fundamental para el diseño del gateway multi-protocolo propuesto en el Capítulo 3.
 
-\subsection{Síntesis de Seguridad y Transición al Estado del Arte}
+\subsection{Estado del Arte y Brechas Identificadas}
 
-Las tres subsecciones anteriores han establecido: (1) el catálogo de amenazas específicas de IoT en contexto Smart Energy (§2.4.1), (2) la estrategia de defence in depth aplicable a edge gateways (§2.4.2), y (3) el mapeo explícito de contramedidas por capa del stack de protocolos (§2.4.3). Esta base de seguridad es esencial para evaluar críticamente las soluciones existentes en el estado del arte.
+Los fundamentos teóricos presentados (estándares §2.1, tecnologías campo §2.2, distribución §2.3, plataformas edge/cloud §2.4) establecen el marco tecnológico para arquitecturas AMI de 4 niveles. Esta subsección revisa implementaciones existentes (académicas y comerciales) identificando brechas que motivan la arquitectura propuesta en Capítulo 3.
 
-La siguiente sección (§2.5) analiza trabajos relacionados y soluciones comerciales, evaluando específicamente: (a) qué amenazas mitigan efectivamente, (b) en qué capas del stack implementan seguridad, y (c) qué brechas persisten en términos de conformidad con estándares (IEEE 2030.5, ISO/IEC 30141) y capacidades de seguridad multi-capa. Este análisis comparativo revelará las limitaciones de los gateways IoT actuales que motivan la arquitectura propuesta en el Capítulo 3.
-
-\section{Estado del Arte de Gateways IoT para Smart Energy}
-
-\subsection{Gateways Multi-Protocolo Académicos}
+\subsubsection{Gateways Multi-Protocolo Académicos}
 
 Trabajos previos identificados en revisión sistemática: (1) Raspberry Pi + Zigbee/Z-Wave/Wi-Fi (2019), sin IEEE 2030.5 ni failover WAN~\cite{boonmeerukCostEffectiveIIoTGateway2024}; (2) OTBR + LTE Cat-M1 (2021), sin HaLow ni ISO/IEC 30141; (3) LoRaWAN + Wi-Fi backhaul (2022), throughput insuficiente para actualizaciones OTA masivas, latencia >1s~\cite{halowVsLoRaWANComparison2023}.
 
-\subsection{Soluciones Comerciales}
+\subsubsection{Soluciones Comerciales}
 
-Soluciones dominantes en mercado industrial: Cisco IR829 (\$2.5-4k, LTE/Wi-Fi/Ethernet, sin Thread/HaLow, arquitectura cerrada); Dell Edge Gateway 3000 Series (\$1.2-2k, x86/containers, 25-40W, sin IEEE 2030.5); MultiTech Conduit (\$400-800, LoRaWAN/LTE, CPU limitada 456 MHz ARM, sin capacidades edge analytics avanzadas)~\cite{boonmeerukCostEffectiveIIoTGateway2024}.
+Soluciones dominantes mercado industrial: Cisco IR829 (\$2.5-4k, LTE/Wi-Fi/Ethernet, sin Thread/HaLow, cerrado); Dell Edge Gateway 3000 (\$1.2-2k, x86/containers, 25-40W, sin IEEE 2030.5); MultiTech Conduit (\$400-800, LoRaWAN/LTE, CPU 456 MHz ARM, sin edge analytics)~\cite{boonmeerukCostEffectiveIIoTGateway2024}.
 
-\subsection{Análisis Comparativo}
+\subsubsection{Análisis Comparativo y Brechas}
 
 \begin{table}[h]
 \centering
@@ -1252,7 +1271,7 @@ Radiocrafts publica \textit{Wireless Technology Selection Guide For Solar Tracki
 
 \textbf{Conclusión caso solar tracking:} Despliegues RIIM en renovables a escala utility validan tres aspectos fundamentales de este trabajo: (1) \textbf{Mesh sub-GHz es producción, no experimental:} Tecnologías 868/900 MHz operan en campo con 99.99\% reliability. (2) \textbf{Edge + mesh es arquitectura estándar:} Gateway industrial + módulos mesh replicado en solar (Advantech ECU-150) y propuesto en AMI (Raspberry Pi 4). (3) \textbf{Actuación tiempo real es requisito crítico:} Aplicaciones energía modernas (renovables, AMI+DER) demandan downlink robusto, no solo uplink telemetría. \textbf{Si RIIM gestiona miles de trackers solares, Thread+HaLow para AMI con menor densidad (250 medidores/DCU) es arquitectura conservadora y defendible técnicamente.}
 
-\subsection{Brechas Identificadas}
+\paragraph{Brechas Identificadas en Estado del Arte}
 
 \begin{enumerate}
 \item \textbf{Ausencia de HaLow}: Ningún trabajo integra Wi-Fi HaLow como backhaul Smart Energy.
@@ -1261,9 +1280,9 @@ Radiocrafts publica \textit{Wireless Technology Selection Guide For Solar Tracki
 \item \textbf{LLM edge inexplorada}: Sin integración de inferencia LLM local para análisis contextual.
 \end{enumerate}
 
-\subsection{Síntesis de Brechas y Transición al Diseño del Gateway}
+\paragraph{Transición al Capítulo 3: Arquitectura de 4 Niveles}
 
-Este capítulo ha establecido las bases teóricas necesarias para el diseño arquitectónico del gateway IoT propuesto. La revisión del contexto de Smart Energy (§2.1), el stack de protocolos IoT (§2.2), las tecnologías de edge computing (§2.3), los requisitos de seguridad multi-capa (§2.4), y el análisis comparativo del estado del arte han revelado cuatro brechas críticas que motivan directamente las decisiones de diseño del Capítulo 3:
+Este capítulo estableció las bases teóricas estructuradas según la jerarquía arquitectónica: ecosistema estandarización (§2.1), tecnologías red de campo Nivel 1 (§2.2), infraestructura distribución Nivel 2 (§2.3), y plataformas edge/cloud Niveles 3-4 (§2.4). La revisión del contexto de Smart Energy (§2.1), el stack de protocolos IoT (§2.2), las tecnologías de edge computing (§2.3), los requisitos de seguridad multi-capa (§2.4), y el análisis comparativo del estado del arte han revelado cuatro brechas críticas que motivan directamente las decisiones de diseño del Capítulo 3:
 
 \textbf{Brecha 1 - Integración Wi-Fi HaLow en gateways edge}: Los trabajos analizados (§2.5.1-§2.5.2) implementan Thread, Zigbee o LoRaWAN, pero ninguno integra HaLow (IEEE 802.11ah~\cite{ieee80211ah2020}) en un gateway multi-protocolo con failover multi-WAN, a pesar de su ventaja de alcance (1-3 km), throughput (hasta 40 Mbps) y latencia (<50 ms) demostrada superior a LoRaWAN (latencia >1 segundo). \textit{Solución propuesta (Cap. 3):} Integración nativa de módulo Morse Micro MM6108 (IEEE 802.11ah) con OTBR (Thread) en plataforma unificada OpenWRT, proporcionando redundancia de protocolos (Thread para nodos indoor, HaLow para outdoor/utility-scale) con conmutación automática basada en LQI y RSSI.
 
