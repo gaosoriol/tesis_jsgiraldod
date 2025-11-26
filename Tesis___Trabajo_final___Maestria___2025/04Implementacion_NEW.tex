@@ -1,0 +1,269 @@
+\chapter{Implementación del Sistema}
+\label{chap:implementacion}
+
+% ============================================================================
+% CAPÍTULO 4: IMPLEMENTACIÓN
+% Este capítulo documenta los aspectos técnicos de implementación del sistema
+% propuesto, incluyendo hardware, firmware, configuraciones y deployment.
+% ============================================================================
+
+\section{Introducción}
+\label{sec:impl-intro}
+
+Este capítulo presenta la implementación práctica de la arquitectura de telemetría propuesta en el Capítulo~\ref{chap:arquitectura}, detallando las especificaciones de hardware desplegado, desarrollo de firmware, configuraciones de red, y procedimientos de deployment utilizados en el piloto experimental documentado en el Capítulo~\ref{chap:resultados}.
+
+La implementación se organizó en cuatro niveles correspondientes a la arquitectura de cuatro capas: (1) Nodos adaptadores ESP32-C6 con interfaz RS-485 a medidores, (2) DCUs (Data Concentrator Units) con radios Thread y HaLow, (3) Gateway edge con procesamiento local y uplink LTE, y (4) infraestructura cloud con ThingsBoard para gestión y analytics.
+
+\section{Hardware Implementado}
+\label{sec:impl-hardware}
+
+\subsection{Nivel 1: Nodos Adaptadores (ESP32-C6)}
+\label{sec:impl-nodos}
+
+\subsubsection{Especificaciones Hardware Nodos}
+
+La implementación utilizó 30 nodos adaptadores basados en ESP32-C6 (Espressif Systems) con las siguientes características técnicas:
+
+\begin{itemize}
+    \item \textbf{Procesador:} RISC-V single-core 32-bit @ 160 MHz
+    \item \textbf{Memoria:} 512 KB SRAM, 4 MB Flash integrada
+    \item \textbf{Conectividad:} IEEE 802.15.4 (Thread 1.3.0) + Bluetooth 5.0 LE
+    \item \textbf{Interfaces:} UART × 3, SPI × 2, I2C × 1, GPIO × 22
+    \item \textbf{Alimentación:} 5V regulado desde medidor (puerto auxiliar)
+    \item \textbf{Consumo medido:} 19 mA RX Thread + 22 mA TX @ +4 dBm = 0.48 W promedio
+\end{itemize}
+
+% TODO: Migrar contenido detallado specs desde Cap 3
+
+\subsection{Nivel 2: DCUs y Router de Agregación}
+\label{sec:impl-dcu}
+
+% CONTENIDO NUEVO: Router MikroTik + HaLow AP configuración
+% Pendiente desarrollo según MAPA_MIGRACION (Prioridad ALTA)
+
+\subsection{Nivel 3: Gateway Edge (Raspberry Pi 4)}
+\label{sec:impl-gateway}
+
+\subsubsection{Especificaciones Hardware Gateway}
+
+\begin{itemize}
+    \item \textbf{Plataforma:} Raspberry Pi 4 Model B (4 GB RAM)
+    \item \textbf{Procesador:} Broadcom BCM2711 quad-core Cortex-A72 @ 1.5 GHz
+    \item \textbf{Almacenamiento:} MicroSD 128 GB UHS-I (SanDisk Extreme Pro)
+    \item \textbf{Conectividad:} Ethernet Gigabit + WiFi 802.11ac dual-band + LTE Cat-M1 USB
+    \item \textbf{OS:} Ubuntu Server 22.04 LTS ARM64
+\end{itemize}
+
+% TODO: Migrar detalles Docker stack desde Cap 3 líneas ~2400-2600
+
+\subsection{Nivel 4: Infraestructura Cloud}
+\label{sec:impl-cloud}
+
+% CONTENIDO NUEVO: ThingsBoard AWS deployment Terraform
+% Pendiente desarrollo según MAPA_MIGRACION (Prioridad ALTA)
+
+\section{Desarrollo de Firmware}
+\label{sec:impl-firmware}
+
+\subsection{Firmware Nodos ESP32-C6}
+\label{sec:impl-firmware-nodos}
+
+El firmware de los nodos adaptadores fue desarrollado utilizando ESP-IDF v5.1.2 (Espressif IoT Development Framework) con las siguientes características implementadas:
+
+\begin{itemize}
+    \item \textbf{Stack Thread:} OpenThread 1.3.0 integrado vía ESP-IDF component
+    \item \textbf{Parser DLMS/COSEM:} Implementación custom para códigos OBIS estándar
+    \item \textbf{Protocolo CoAP:} Cliente libcoap con soporte Confirmable/Non-Confirmable
+    \item \textbf{Seguridad:} DTLS 1.2 con certificados X.509 pre-provisionados
+    \item \textbf{OTA Updates:} LwM2M Object 5 (Firmware Update) con verificación SHA-256
+\end{itemize}
+
+% TODO: Migrar código snippets y explicación parser DLMS desde Cap 3
+
+\subsubsection{Parser DLMS/COSEM}
+
+% Contenido a migrar: implementación lectura códigos OBIS desde medidor
+
+\subsection{Firmware DCU (OpenThread Border Router)}
+\label{sec:impl-firmware-dcu}
+
+% Contenido a migrar: configuración OTBR, wpantund, etc.
+
+\subsection{Software Gateway}
+\label{sec:impl-software-gateway}
+
+\subsubsection{Stack Docker y Microservicios}
+
+La arquitectura de software del Gateway implementa seis microservicios containerizados con Docker Compose:
+
+\begin{enumerate}
+    \item \textbf{Bridge CoAP-MQTT:} Traducción de mensajes Thread (CoAP) a protocolo MQTT para uplink cloud
+    \item \textbf{Mosquitto MQTT Broker:} Intermediario local para buffering y QoS
+    \item \textbf{PostgreSQL + TimescaleDB:} Base de datos relacional con extensión time-series
+    \item \textbf{Apache Kafka:} Message queue para procesamiento asíncrono de eventos
+    \item \textbf{Node-RED:} Rule Engine para flujos de procesamiento edge
+    \item \textbf{Grafana:} Dashboards locales para operadores de campo
+\end{enumerate}
+
+% TODO: Migrar desde Cap 3 líneas ~2400-2600: Docker Compose completo, límites recursos, persistencia
+
+\section{Configuración de Redes}
+\label{sec:impl-redes}
+
+\subsection{Configuración Red Thread}
+\label{sec:impl-config-thread}
+
+\subsubsection{Parámetros Thread Network}
+
+\begin{itemize}
+    \item \textbf{PAN ID:} 0xABCD (único por deployment)
+    \item \textbf{Extended PAN ID:} 0x1234567890ABCDEF
+    \item \textbf{Network Name:} ``AMI-Pilot-Q4-2024''
+    \item \textbf{Channel:} 25 (2.475 GHz, sin interferencia WiFi canales 1-11)
+    \item \textbf{Network Key:} 128-bit AES (provisionada via BLE commissioning)
+    \item \textbf{TX Power:} +4 dBm (balance alcance vs consumo)
+\end{itemize}
+
+% TODO: Migrar procedimientos commissioning, topología piloto desde Cap 3
+
+\subsection{Configuración HaLow}
+\label{sec:impl-config-halow}
+
+% CONTENIDO NUEVO: Configuración Alfa Tube-AHM OpenWRT
+% Pendiente desarrollo según MAPA_MIGRACION (Prioridad ALTA)
+
+\subsection{Configuración LTE Cat-M1}
+\label{sec:impl-config-lte}
+
+\subsubsection{Módulo Quectel BG96}
+
+\begin{itemize}
+    \item \textbf{Operador:} Claro Colombia (APN: \texttt{internet.comcel.com.co})
+    \item \textbf{Plan datos:} 50 MB/mes IoT M2M
+    \item \textbf{eDRX:} Cycle 10.24 s (Power Save Mode habilitado)
+    \item \textbf{PSM:} T3324 = 30 s active, T3412 = 24 h periodic TAU
+\end{itemize}
+
+% TODO: Migrar AT commands configuración desde Cap 3 líneas ~2100-2300
+
+\section{Implementación de Seguridad}
+\label{sec:impl-seguridad}
+
+\subsection{Secure Boot ESP32-C6}
+
+Todos los nodos fueron provisionados con Secure Boot habilitado mediante eFUSE burning:
+
+\begin{itemize}
+    \item \textbf{Bootloader signing:} RSA-2048 signature verification
+    \item \textbf{Anti-rollback:} Version counter en eFUSE incrementa con cada OTA
+    \item \textbf{Flash encryption:} AES-256-XTS para protección firmware at-rest
+\end{itemize}
+
+% TODO: Migrar comandos esptool.py desde materiales
+
+\subsection{Configuración WPA3-SAE (HaLow)}
+
+% Contenido a migrar: configuración hostapd WPA3, PSK derivation
+
+\subsection{Certificados X.509 y PKI}
+
+La arquitectura implementa Public Key Infrastructure (PKI) de tres niveles:
+
+\begin{itemize}
+    \item \textbf{Root CA:} Certificado raíz auto-firmado (validez 10 años)
+    \item \textbf{Intermediate CA:} Certificado intermedio para firma dispositivos (validez 5 años)
+    \item \textbf{Device Certificates:} Certificados únicos por nodo (validez 2 años, renovación automática)
+\end{itemize}
+
+% TODO: Migrar scripts OpenSSL generación certificados desde materiales
+
+\subsection{Configuración Firewall (nftables)}
+
+El Gateway implementa firewall stateful con nftables:
+
+\begin{verbatim}
+#!/usr/sbin/nft -f
+flush ruleset
+
+table inet filter {
+    chain input {
+        type filter hook input priority 0; policy drop;
+        ct state established,related accept
+        iif lo accept
+        tcp dport 22 ip saddr 192.168.1.0/24 accept comment "SSH local"
+        tcp dport 8080 ip saddr 192.168.1.0/24 accept comment "Grafana"
+        drop
+    }
+    chain forward {
+        type filter hook forward priority 0; policy drop;
+    }
+    chain output {
+        type filter hook output priority 0; policy accept;
+    }
+}
+\end{verbatim}
+
+% TODO: Migrar configuración completa desde Cap 3 líneas ~2300-2400
+
+\section{Deployment y Puesta en Marcha}
+\label{sec:impl-deployment}
+
+\subsection{Procedimiento de Instalación Nodos}
+
+El deployment de los 30 nodos en el piloto siguió el siguiente procedimiento estandarizado:
+
+\begin{enumerate}
+    \item Verificación instalación medidor Itron SL7000 (puerto RS-485 accesible)
+    \item Montaje nodo ESP32-C6 en caja IP65 con tornillos Torx T10
+    \item Conexión RS-485: Terminal A (RX+), Terminal B (RX-), GND común
+    \item Alimentación desde puerto auxiliar medidor: 5V DC @ 100 mA
+    \item Commissioning BLE: Escaneo QR code con app Android custom
+    \item Provisión credenciales Thread: Network Key, PAN ID, Channel 25
+    \item Verificación conectividad: ICMP ping a DCU (fe80::dcdc:dcdc:dcdc:0001)
+    \item Test lectura DLMS: Código OBIS 1-0:1.8.0.255 (energía activa)
+\end{enumerate}
+
+Tiempo promedio instalación por nodo: 15 minutos (técnico experimentado).
+
+% TODO: Expandir con fotos deployment, checklist completo
+
+\subsection{Configuración DCU y Gateway}
+
+% Contenido a migrar: procedimiento setup DCU, Gateway, validación end-to-end
+
+\subsection{Troubleshooting Común}
+
+Durante el deployment piloto se identificaron los siguientes problemas recurrentes y sus soluciones:
+
+\begin{table}[H]
+\centering
+\caption{Problemas comunes durante deployment y soluciones aplicadas}
+\label{tab:troubleshooting-deployment}
+\begin{tabular}{|p{4cm}|p{4cm}|p{5cm}|}
+\hline
+\rowcolor{gray!20}
+\textbf{Problema} & \textbf{Causa Raíz} & \textbf{Solución} \\
+\hline
+Nodo no se une a Thread & Credenciales incorrectas o Channel ocupado & Re-commissioning con app BLE, verificar Channel 25 libre \\
+\hline
+Lectura DLMS timeout & Cable RS-485 A/B invertido & Intercambiar terminales A↔B \\
+\hline
+Gateway sin uplink LTE & APN incorrecto u operador no registrado & Configurar APN Claro: \texttt{internet.comcel.com.co} \\
+\hline
+Pérdida paquetes HaLow & Interferencia WiFi 2.4 GHz & Cambiar canal HaLow 902→915 MHz \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Conclusiones del Capítulo}
+\label{sec:impl-conclusiones}
+
+Este capítulo documentó la implementación práctica de la arquitectura propuesta, cubriendo especificaciones de hardware (ESP32-C6, Raspberry Pi 4, módulos LTE), desarrollo de firmware (OpenThread, parser DLMS/COSEM, stack Docker), configuraciones de red (Thread, HaLow, LTE), implementación de controles de seguridad (Secure Boot, WPA3-SAE, PKI X.509), y procedimientos de deployment estandarizados.
+
+La implementación piloto con 30 medidores durante 90 días (Q4 2024) validó la viabilidad técnica de la arquitectura, con resultados experimentales presentados en detalle en el Capítulo~\ref{chap:resultados}.
+
+% Aspectos clave implementación:
+% - Hardware COTS (Commercial Off-The-Shelf) reduce costos vs soluciones propietarias
+% - Firmware open-source (ESP-IDF, OpenThread) facilita auditoría seguridad
+% - Arquitectura containerizada (Docker) simplifica deployment y updates
+% - Procedimientos deployment estandarizados permiten escalado a cientos de nodos
